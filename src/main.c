@@ -1,13 +1,56 @@
 /* vim: noet ts=4 sw=4 */
 #include <arpa/inet.h>
+#include <netdb.h>
 #include <sys/socket.h>
+#include <sys/types.h>
+#include <stdio.h>
 #include <unistd.h>
 
 #define DEBUG 0
 
+const char FOURCHAN_API_HOST[] = "a.4cdn.org";
+const char FOURCHAN_API_URL[] = "http://a.4cdn.org/b/catalog.json";
 int main_sock_fd = 0;
 
+int new_API_request() {
+	struct addrinfo hints = {0};
+	struct addrinfo *res = NULL;
+	int request_fd;
+
+	hints.ai_family = AF_INET;
+	hints.ai_socktype = SOCK_STREAM;
+
+	getaddrinfo(FOURCHAN_API_HOST, "80", &hints, &res);
+
+	request_fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+	if (request_fd < 0)
+		return -1;
+
+	// connect!
+	int rc = connect(request_fd, res->ai_addr, res->ai_addrlen);
+	if (rc == -1) {
+		close(request_fd);
+		return -1;
+	}
+	printf("Connected to 4chan.\n");
+
+	close(request_fd);
+	return 0;
+}
+
+void background_work(int debug) {
+	printf("BGWorker chuggin'\n");
+	if (new_API_request() != 0)
+		return;
+}
+
 int start_bg_worker(int debug) {
+	pid_t PID = fork();
+	if (PID == 0) {
+		background_work(debug);
+	} else if (PID < 0) {
+		return -1;
+	}
 	return 0;
 }
 
@@ -34,9 +77,9 @@ int http_serve() {
 }
 
 int main(int argc, char *argv[]) {
-	if (!start_bg_worker(DEBUG))
+	if (start_bg_worker(DEBUG) != 0)
 		return -1;
-	if (!http_serve())
+	if (http_serve() != 0)
 		return -1;
 	return 0;
 }
