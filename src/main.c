@@ -4,6 +4,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -46,19 +47,32 @@ int new_API_request() {
 		goto error;
 
 	printf("Sent request to 4chan.\n");
+	size_t last_size = 0;
+	size_t current_size = SOCK_RECV_MAX;
+	void *msg = malloc(current_size);
+	memset(msg, '\0', SOCK_RECV_MAX);
+
 	while(1) {
 		int n = 0;
-		char msg[SOCK_RECV_MAX] = {0};
-		n = recv(request_fd, msg, SOCK_RECV_MAX, 0);
+		n = recv(request_fd, msg + last_size, SOCK_RECV_MAX, 0);
 		if (n <= 0)
 			break;
-		printf("%s", msg);
+		printf("%s", msg + last_size);
+		void *rc = realloc(msg, current_size + SOCK_RECV_MAX);
+		if (rc == NULL)
+			goto error;
+		memset(msg + current_size, '\0', SOCK_RECV_MAX);
+		last_size = current_size;
+		current_size += SOCK_RECV_MAX;
 	}
+	printf("Response was at least %zu bytes.\n", current_size);
+	free(msg);
 
 	close(request_fd);
 	return 0;
 
 error:
+	printf("ERROR.\n");
 	close(request_fd);
 	return -1;
 }
