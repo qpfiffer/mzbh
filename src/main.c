@@ -1,4 +1,4 @@
-/* vim: noet ts=4 sw=4 */
+// vim: noet ts=4 sw=4
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <sys/socket.h>
@@ -19,6 +19,27 @@ const char API_REQUEST[] =
 	"User-Agent: Mozilla/5.0 (Windows NT 5.1; rv:31.0) Gecko/20100101 Firefox/31.0\r\n"
 	"Host: a.4cdn.org\r\n"
 	"Accept text/html\r\n\r\n";
+
+char *get_catalog(const int request_fd) {
+	size_t msg_siz = SOCK_RECV_MAX;
+	char *msg = malloc(SOCK_RECV_MAX);
+	int num_bytes_read = 0;
+	num_bytes_read = recv(request_fd, msg, SOCK_RECV_MAX, 0);
+
+	/* 4Chan throws us data as chunk-encoded HTTP. Rad. */
+	char *header_end = strstr(msg, "\r\n\r\n");
+	/* This is where the data begins. */
+	char *chunk_size_start = header_end + (sizeof(char) * 4);
+	char *chunk_size_end = strstr(chunk_size_start, "\r\n");
+
+	/* We cheat a little and set the first \r to a \0 so strtol will
+	 * do the right thing. */
+	chunk_size_start[chunk_size_end - chunk_size_start] = '\0';
+	chunk_size_end = NULL;
+	size_t chunk_size = strtol(chunk_size_start, NULL, 16);
+
+	return msg;
+}
 
 int new_API_request() {
 	struct addrinfo hints = {0};
@@ -47,27 +68,9 @@ int new_API_request() {
 		goto error;
 
 	printf("Sent request to 4chan.\n");
-	size_t last_size = 0;
-	size_t current_size = SOCK_RECV_MAX;
-	void *msg = malloc(current_size);
-	memset(msg, '\0', SOCK_RECV_MAX);
+	char *all_json = get_catalog(request_fd);
 
-	while(1) {
-		int n = 0;
-		n = recv(request_fd, msg + last_size, SOCK_RECV_MAX, 0);
-		if (n <= 0)
-			break;
-		printf("%s", msg + last_size);
-		void *rc = realloc(msg, current_size + SOCK_RECV_MAX);
-		if (rc == NULL)
-			goto error;
-		memset(msg + current_size, '\0', SOCK_RECV_MAX);
-		last_size = current_size;
-		current_size += SOCK_RECV_MAX;
-	}
-	printf("Response was at least %zu bytes.\n", current_size);
-	free(msg);
-
+	free(all_json);
 	close(request_fd);
 	return 0;
 
