@@ -1,6 +1,7 @@
 // vim: noet ts=4 sw=4
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <stdio.h>
@@ -21,22 +22,53 @@ const char API_REQUEST[] =
 	"Accept text/html\r\n\r\n";
 
 char *get_catalog(const int request_fd) {
-	size_t msg_siz = SOCK_RECV_MAX;
-	char *msg = malloc(SOCK_RECV_MAX);
-	int num_bytes_read = 0;
-	num_bytes_read = recv(request_fd, msg, SOCK_RECV_MAX, 0);
+	char *msg = NULL;
+	char *raw_buf = malloc(0);
+	size_t buf_size = 0;
+	int times_read = 0;
+
+	fd_set chan_fds;
+	FD_ZERO(&chan_fds);
+	FD_SET(request_fd, &chan_fds);
+	const int maxfd = request_fd;
+
+	while (1) {
+		times_read++;
+		int num_bytes_read = 0;
+
+		/* Wait for data to be read. */
+		struct timeval tv = {2, 0};
+		select(maxfd + 1, &chan_fds, NULL, NULL, &tv);
+
+		int count;
+		/* How many bytes should we read: */
+		ioctl(request_fd, FIONREAD, &count);
+		if (count <= 0)
+			break;
+		int old_offset = buf_size;
+		buf_size += count;
+		raw_buf = realloc(raw_buf, buf_size);
+		printf("IOCTL: %i.\n", count);
+
+		num_bytes_read = recv(request_fd, raw_buf + old_offset, count, 0);
+	}
+	printf("Full message is %s\n.", raw_buf);
 
 	/* 4Chan throws us data as chunk-encoded HTTP. Rad. */
-	char *header_end = strstr(msg, "\r\n\r\n");
+	char *header_end = strstr(raw_buf, "\r\n\r\n");
 	/* This is where the data begins. */
 	char *chunk_size_start = header_end + (sizeof(char) * 4);
 	char *chunk_size_end = strstr(chunk_size_start, "\r\n");
+	const int chunk_size_end_oft = chunk_size_end - chunk_size_start;
 
 	/* We cheat a little and set the first \r to a \0 so strtol will
 	 * do the right thing. */
-	chunk_size_start[chunk_size_end - chunk_size_start] = '\0';
+	chunk_size_start[chunk_size_end_oft] = '\0';
 	chunk_size_end = NULL;
-	size_t chunk_size = strtol(chunk_size_start, NULL, 16);
+	int chunk_size = strtol(chunk_size_start, NULL, 16);
+	printf("Chunk size is %i.\n", chunk_size);
+
+	/* So at this point we just read shit into an ever expanding buffer. */
 
 	return msg;
 }
