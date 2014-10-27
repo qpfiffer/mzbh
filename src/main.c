@@ -1,12 +1,15 @@
 // vim: noet ts=4 sw=4
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+#include "parson.h"
 
 #define DEBUG 0
 #define SOCK_RECV_MAX 4096
@@ -21,24 +24,98 @@ const char API_REQUEST[] =
 	"Accept text/html\r\n\r\n";
 
 char *get_catalog(const int request_fd) {
-	size_t msg_siz = SOCK_RECV_MAX;
-	char *msg = malloc(SOCK_RECV_MAX);
-	int num_bytes_read = 0;
-	num_bytes_read = recv(request_fd, msg, SOCK_RECV_MAX, 0);
+	char *raw_buf = malloc(0);
+	size_t buf_size = 0;
+	int times_read = 0;
+
+	fd_set chan_fds;
+	FD_ZERO(&chan_fds);
+	FD_SET(request_fd, &chan_fds);
+	const int maxfd = request_fd;
+
+	printf("Receiving message...\n");
+	while (1) {
+		times_read++;
+		int num_bytes_read = 0;
+
+		/* Wait for data to be read. */
+		struct timeval tv = {2, 0};
+		select(maxfd + 1, &chan_fds, NULL, NULL, &tv);
+
+		int count;
+		/* How many bytes should we read: */
+		ioctl(request_fd, FIONREAD, &count);
+		if (count <= 0)
+			break;
+		int old_offset = buf_size;
+		buf_size += count;
+		raw_buf = realloc(raw_buf, buf_size);
+		/* printf("IOCTL: %i.\n", count); */
+
+		num_bytes_read = recv(request_fd, raw_buf + old_offset, count, 0);
+	}
+	/* printf("Full message is %s\n.", raw_buf); */
 
 	/* 4Chan throws us data as chunk-encoded HTTP. Rad. */
-	char *header_end = strstr(msg, "\r\n\r\n");
-	/* This is where the data begins. */
-	char *chunk_size_start = header_end + (sizeof(char) * 4);
-	char *chunk_size_end = strstr(chunk_size_start, "\r\n");
+	char *header_end = strstr(raw_buf, "\r\n\r\n");
+	char *cursor_pos = header_end  + (sizeof(char) * 4);
 
-	/* We cheat a little and set the first \r to a \0 so strtol will
-	 * do the right thing. */
-	chunk_size_start[chunk_size_end - chunk_size_start] = '\0';
-	chunk_size_end = NULL;
-	size_t chunk_size = strtol(chunk_size_start, NULL, 16);
+	size_t json_total = 0;
+	char *json_buf = malloc(0);
 
-	return msg;
+	while (1) {
+		/* This is where the data begins. */
+		char *chunk_size_start = cursor_pos;
+		char *chunk_size_end = strstr(chunk_size_start, "\r\n");
+		const int chunk_size_end_oft = chunk_size_end - chunk_size_start;
+
+		/* We cheat a little and set the first \r to a \0 so strtol will
+		 * do the right thing. */
+		chunk_size_start[chunk_size_end_oft] = '\0';
+		const int chunk_size = strtol(chunk_size_start, NULL, 16);
+
+		/* printf("Chunk size is %i. Thing is: %s.\n", chunk_size, chunk_size_start); */
+		/* The chunk string, the \r\n after it, the chunk itself and then another \r\n: */
+		cursor_pos += chunk_size + chunk_size_end_oft + 4;
+
+		/* Copy the json into a pure buffer: */
+		int old_offset = json_total;
+		json_total += chunk_size;
+		json_buf = realloc(json_buf, json_total);
+		/* Copy it from after the <chunk_size>\r\n to the end of the chunk. */
+		memcpy(json_buf + old_offset, chunk_size_end + 2, chunk_size);
+		/* Stop reading if we am play gods: */
+		if ((cursor_pos - raw_buf) > buf_size || chunk_size <= 0)
+			break;
+	}
+	printf("The total json size is %zu.\n", json_total);
+	/* printf("JSON:\n%s", json_buf); */
+	free(raw_buf);
+
+	return json_buf;
+}
+int parse_json(const char *all_json) {
+	JSON_Value *catalog = json_parse_string(all_json);
+
+	if (json_value_get_type(catalog) != JSONArray)
+		printf("Well, the root isn't a JSONArray.\n");
+
+	JSON_Array *all_objects = json_value_get_array(catalog);
+	for (int i = 0; i < json_array_get_count(all_objects); i++) {
+		JSON_Object *obj = json_array_get_object(all_objects, i);
+		printf("Page: %f\n", json_object_get_number(obj, "page"));
+
+		JSON_Array *threads = json_object_get_array(obj, "threads");
+		for (int j = 0; j < json_array_get_count(threads); j++) {
+			JSON_Object *thread = json_array_get_object(threads, j);
+			const char *id = json_object_get_string(thread, "id");
+			const char *file_ext = json_object_get_string(thread, "ext");
+			printf("File ext for thread %s is %s.\n", id, file_ext);
+		}
+	}
+
+	json_value_free(catalog);
+	return 0;
 }
 
 int new_API_request() {
@@ -69,6 +146,10 @@ int new_API_request() {
 
 	printf("Sent request to 4chan.\n");
 	char *all_json = get_catalog(request_fd);
+	parse_json(all_json);
+
+	/* So at this point we just read shit into an ever expanding buffer. */
+	printf("BGWorker exiting.\n");
 
 	free(all_json);
 	close(request_fd);
