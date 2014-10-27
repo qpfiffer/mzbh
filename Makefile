@@ -9,5 +9,5 @@ all: $(NAME)
 %.o: ./src/%.c
 	$(CC) $(CFLAGS) $(INCLUDES) -c $<
 
-$(NAME): main.o
+$(NAME): main.o parson.o
 	$(CC) $(CLAGS) $(INCLUDES) -o $(NAME) $^

@@ -9,6 +9,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "parson.h"
+
 #define DEBUG 0
 #define SOCK_RECV_MAX 4096
 
@@ -72,7 +74,7 @@ char *get_catalog(const int request_fd) {
 		chunk_size_start[chunk_size_end_oft] = '\0';
 		const int chunk_size = strtol(chunk_size_start, NULL, 16);
 
-		printf("Chunk size is %i. Thing is: %s.\n", chunk_size, chunk_size_start);
+		/* printf("Chunk size is %i. Thing is: %s.\n", chunk_size, chunk_size_start); */
 		/* The chunk string, the \r\n after it, the chunk itself and then another \r\n: */
 		cursor_pos += chunk_size + chunk_size_end_oft + 4;
 
@@ -87,11 +89,8 @@ char *get_catalog(const int request_fd) {
 			break;
 	}
 	printf("The total json size is %zu.\n", json_total);
-	printf("JSON:\n%s", json_buf);
+	/* printf("JSON:\n%s", json_buf); */
 	free(raw_buf);
-
-	/* So at this point we just read shit into an ever expanding buffer. */
-	printf("BGWorker exiting.\n");
 
 	return json_buf;
 }
@@ -124,6 +123,21 @@ int new_API_request() {
 
 	printf("Sent request to 4chan.\n");
 	char *all_json = get_catalog(request_fd);
+	JSON_Value *catalog = json_parse_string(all_json);
+
+	if (json_value_get_type(catalog) != JSONArray)
+		printf("Well, the root isn't a JSONArray.\n");
+
+	JSON_Array *all_objects = json_value_get_array(catalog);
+	for (int i = 0; i < json_array_get_count(all_objects); i++) {
+		JSON_Object *obj = json_array_get_object(all_objects, i);
+		printf("Page: %f\n", json_object_dotget_number(obj, "page"));
+	}
+
+	json_value_free(catalog);
+
+	/* So at this point we just read shit into an ever expanding buffer. */
+	printf("BGWorker exiting.\n");
 
 	free(all_json);
 	close(request_fd);
