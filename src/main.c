@@ -32,6 +32,7 @@ char *get_catalog(const int request_fd) {
 	FD_SET(request_fd, &chan_fds);
 	const int maxfd = request_fd;
 
+	printf("Receiving message...\n");
 	while (1) {
 		times_read++;
 		int num_bytes_read = 0;
@@ -48,27 +49,34 @@ char *get_catalog(const int request_fd) {
 		int old_offset = buf_size;
 		buf_size += count;
 		raw_buf = realloc(raw_buf, buf_size);
-		printf("IOCTL: %i.\n", count);
+		/* printf("IOCTL: %i.\n", count); */
 
 		num_bytes_read = recv(request_fd, raw_buf + old_offset, count, 0);
 	}
-	printf("Full message is %s\n.", raw_buf);
+	/* printf("Full message is %s\n.", raw_buf); */
 
 	/* 4Chan throws us data as chunk-encoded HTTP. Rad. */
 	char *header_end = strstr(raw_buf, "\r\n\r\n");
-	/* This is where the data begins. */
-	char *chunk_size_start = header_end + (sizeof(char) * 4);
-	char *chunk_size_end = strstr(chunk_size_start, "\r\n");
-	const int chunk_size_end_oft = chunk_size_end - chunk_size_start;
+	char *cursor_pos = header_end  + (sizeof(char) * 4);
 
-	/* We cheat a little and set the first \r to a \0 so strtol will
-	 * do the right thing. */
-	chunk_size_start[chunk_size_end_oft] = '\0';
-	chunk_size_end = NULL;
-	int chunk_size = strtol(chunk_size_start, NULL, 16);
-	printf("Chunk size is %i.\n", chunk_size);
+	while (1) {
+		/* This is where the data begins. */
+		char *chunk_size_start = cursor_pos;
+		char *chunk_size_end = strstr(chunk_size_start, "\r\n");
+		const int chunk_size_end_oft = chunk_size_end - chunk_size_start;
+
+		/* We cheat a little and set the first \r to a \0 so strtol will
+		 * do the right thing. */
+		chunk_size_start[chunk_size_end_oft] = '\0';
+		const int chunk_size = strtol(chunk_size_start, NULL, 16);
+		printf("Chunk size is %i. Thing is: %s.\n", chunk_size, chunk_size_start);
+		cursor_pos += chunk_size + chunk_size_end_oft + 4;
+		if ((cursor_pos - raw_buf) > buf_size || chunk_size <= 0)
+			break;
+	}
 
 	/* So at this point we just read shit into an ever expanding buffer. */
+	printf("BGWorker exiting.\n");
 
 	return msg;
 }
