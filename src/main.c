@@ -94,6 +94,29 @@ char *get_catalog(const int request_fd) {
 
 	return json_buf;
 }
+int parse_json(const char *all_json) {
+	JSON_Value *catalog = json_parse_string(all_json);
+
+	if (json_value_get_type(catalog) != JSONArray)
+		printf("Well, the root isn't a JSONArray.\n");
+
+	JSON_Array *all_objects = json_value_get_array(catalog);
+	for (int i = 0; i < json_array_get_count(all_objects); i++) {
+		JSON_Object *obj = json_array_get_object(all_objects, i);
+		printf("Page: %f\n", json_object_get_number(obj, "page"));
+
+		JSON_Array *threads = json_object_get_array(obj, "threads");
+		for (int j = 0; j < json_array_get_count(threads); j++) {
+			JSON_Object *thread = json_array_get_object(threads, j);
+			const char *id = json_object_get_string(thread, "id");
+			const char *file_ext = json_object_get_string(thread, "ext");
+			printf("File ext for thread %s is %s.\n", id, file_ext);
+		}
+	}
+
+	json_value_free(catalog);
+	return 0;
+}
 
 int new_API_request() {
 	struct addrinfo hints = {0};
@@ -123,18 +146,7 @@ int new_API_request() {
 
 	printf("Sent request to 4chan.\n");
 	char *all_json = get_catalog(request_fd);
-	JSON_Value *catalog = json_parse_string(all_json);
-
-	if (json_value_get_type(catalog) != JSONArray)
-		printf("Well, the root isn't a JSONArray.\n");
-
-	JSON_Array *all_objects = json_value_get_array(catalog);
-	for (int i = 0; i < json_array_get_count(all_objects); i++) {
-		JSON_Object *obj = json_array_get_object(all_objects, i);
-		printf("Page: %f\n", json_object_dotget_number(obj, "page"));
-	}
-
-	json_value_free(catalog);
+	parse_json(all_json);
 
 	/* So at this point we just read shit into an ever expanding buffer. */
 	printf("BGWorker exiting.\n");
