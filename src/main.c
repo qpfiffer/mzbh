@@ -22,7 +22,6 @@ const char API_REQUEST[] =
 	"Accept text/html\r\n\r\n";
 
 char *get_catalog(const int request_fd) {
-	char *msg = NULL;
 	char *raw_buf = malloc(0);
 	size_t buf_size = 0;
 	int times_read = 0;
@@ -59,6 +58,9 @@ char *get_catalog(const int request_fd) {
 	char *header_end = strstr(raw_buf, "\r\n\r\n");
 	char *cursor_pos = header_end  + (sizeof(char) * 4);
 
+	size_t json_total = 0;
+	char *json_buf = malloc(0);
+
 	while (1) {
 		/* This is where the data begins. */
 		char *chunk_size_start = cursor_pos;
@@ -69,16 +71,29 @@ char *get_catalog(const int request_fd) {
 		 * do the right thing. */
 		chunk_size_start[chunk_size_end_oft] = '\0';
 		const int chunk_size = strtol(chunk_size_start, NULL, 16);
+
 		printf("Chunk size is %i. Thing is: %s.\n", chunk_size, chunk_size_start);
+		/* The chunk string, the \r\n after it, the chunk itself and then another \r\n: */
 		cursor_pos += chunk_size + chunk_size_end_oft + 4;
+
+		/* Copy the json into a pure buffer: */
+		int old_offset = json_total;
+		json_total += chunk_size;
+		json_buf = realloc(json_buf, json_total);
+		/* Copy it from after the <chunk_size>\r\n to the end of the chunk. */
+		memcpy(json_buf + old_offset, chunk_size_end + 2, chunk_size);
+		/* Stop reading if we am play gods: */
 		if ((cursor_pos - raw_buf) > buf_size || chunk_size <= 0)
 			break;
 	}
+	printf("The total json size is %zu.\n", json_total);
+	printf("JSON:\n%s", json_buf);
+	free(raw_buf);
 
 	/* So at this point we just read shit into an ever expanding buffer. */
 	printf("BGWorker exiting.\n");
 
-	return msg;
+	return json_buf;
 }
 
 int new_API_request() {
