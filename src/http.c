@@ -14,11 +14,17 @@
 
 const char FOURCHAN_API_HOST[] = "a.4cdn.org";
 
-const char API_REQUEST[] =
+const char B_API_REQUEST[] =
 	"GET /b/catalog.json HTTP/1.1\r\n"
 	"User-Agent: Mozilla/5.0 (Windows NT 5.1; rv:31.0) Gecko/20100101 Firefox/31.0\r\n"
 	"Host: a.4cdn.org\r\n"
-	"Accept text/html\r\n\r\n";
+	"Accept: application/json\r\n\r\n";
+
+const char THREAD_REQUEST[] =
+	"GET /%c/thread/%i.json HTTP/1.1\r\n"
+	"User-Agent: Mozilla/5.0 (Windows NT 5.1; rv:31.0) Gecko/20100101 Firefox/31.0\r\n"
+	"Host: a.4cdn.org\r\n"
+	"Accept: application/json\r\n\r\n";
 
 char *receive_chunked_http(const int request_fd) {
 	char *raw_buf = malloc(0);
@@ -118,8 +124,8 @@ int new_API_request() {
 		goto error;
 
 	printf("Connected to 4chan.\n");
-	rc = send(request_fd, API_REQUEST, strlen(API_REQUEST), 0);
-	if (strlen(API_REQUEST) != rc)
+	rc = send(request_fd, B_API_REQUEST, strlen(B_API_REQUEST), 0);
+	if (strlen(B_API_REQUEST) != rc)
 		goto error;
 
 	printf("Sent request to 4chan.\n");
@@ -127,7 +133,22 @@ int new_API_request() {
 	ol_stack *matches = parse_catalog_json(all_json);
 
 	while (matches->next != NULL) {
+		/* Pop our thread_match off the stack */
 		thread_match *match = (thread_match*) spop(&matches);
+		printf("Requesting %i...\n", match->thread_num);
+
+		/* Template out a request to the 4chan API for it */
+		/* (The 30 is because I don't want to find the length of the
+		 * integer thread number) */
+		const size_t thread_req_size = sizeof(THREAD_REQUEST) + 30;
+		char templated_req[thread_req_size] = {0};
+		snprintf(templated_req, thread_req_size, THREAD_REQUEST,
+				match->board, match->thread_num);
+
+		/* Send that shit over the wire */
+		rc = send(request_fd, templated_req, strlen(templated_req), 0);
+		char *thread_json = receive_chunked_http(request_fd);
+		free(thread_json);
 		free(match);
 	}
 	free(matches);
