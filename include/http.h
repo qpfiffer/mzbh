@@ -3,5 +3,5 @@
 
 #define SOCK_RECV_MAX 4096
 
-char *get_catalog(const int request_fd);
+char *receieve_chunked_http(const int request_fd);
 int new_API_request();

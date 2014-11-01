@@ -20,8 +20,7 @@ const char API_REQUEST[] =
 	"Host: a.4cdn.org\r\n"
 	"Accept text/html\r\n\r\n";
 
-
-char *get_catalog(const int request_fd) {
+char *receieve_chunked_http(const int request_fd) {
 	char *raw_buf = malloc(0);
 	size_t buf_size = 0;
 	int times_read = 0;
@@ -37,7 +36,10 @@ char *get_catalog(const int request_fd) {
 		int num_bytes_read = 0;
 
 		/* Wait for data to be read. */
-		struct timeval tv = {2, 0};
+		struct timeval tv = {
+			.tv_sec = 1,
+			.tv_usec = 0
+		};
 		select(maxfd + 1, &chan_fds, NULL, NULL, &tv);
 
 		int count;
@@ -79,7 +81,8 @@ char *get_catalog(const int request_fd) {
 		/* Copy the json into a pure buffer: */
 		int old_offset = json_total;
 		json_total += chunk_size;
-		json_buf = realloc(json_buf, json_total);
+		if (json_total >= old_offset)
+			json_buf = realloc(json_buf, json_total);
 		/* Copy it from after the <chunk_size>\r\n to the end of the chunk. */
 		memcpy(json_buf + old_offset, chunk_size_end + 2, chunk_size);
 		/* Stop reading if we am play gods: */
@@ -120,7 +123,7 @@ int new_API_request() {
 		goto error;
 
 	printf("Sent request to 4chan.\n");
-	char *all_json = get_catalog(request_fd);
+	char *all_json = receieve_chunked_http(request_fd);
 	parse_catalog_json(all_json);
 
 	/* So at this point we just read shit into an ever expanding buffer. */
@@ -128,6 +131,7 @@ int new_API_request() {
 
 	free(all_json);
 	close(request_fd);
+	freeaddrinfo(res);
 	return 0;
 
 error:

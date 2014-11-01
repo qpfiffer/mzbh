@@ -1,8 +1,16 @@
+// vim: noet ts=4 sw=4
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "parse.h"
 #include "parson.h"
+#include "stack.h"
+
+typedef struct thread_match {
+	const char board;
+	const int thread_num;
+} thread_match;
 
 int parse_catalog_json(const char *all_json) {
 	JSON_Value *catalog = json_parse_string(all_json);
@@ -10,7 +18,12 @@ int parse_catalog_json(const char *all_json) {
 	if (json_value_get_type(catalog) != JSONArray)
 		printf("Well, the root isn't a JSONArray.\n");
 
+	ol_stack *matches = NULL;
+	matches = malloc(sizeof(ol_stack));
+	memset(matches, 0, sizeof(ol_stack));
+
 	JSON_Array *all_objects = json_value_get_array(catalog);
+
 	for (int i = 0; i < json_array_get_count(all_objects); i++) {
 		JSON_Object *obj = json_array_get_object(all_objects, i);
 		printf("Page: %f\n", json_object_get_number(obj, "page"));
@@ -24,9 +37,25 @@ int parse_catalog_json(const char *all_json) {
 
 			if (strstr(file_ext, "webm") || strstr(post, "webm")) {
 				printf("%i probably has a webm. Ext: %s\n%s\n", thread_num, file_ext, post);
+
+				thread_match _match = {
+					.board = 'b',
+					.thread_num = thread_num
+				};
+
+				thread_match *match = malloc(sizeof(thread_match));
+				memcpy(match, &_match, sizeof(_match));
+
+				spush(&matches, match);
 			}
 		}
 	}
+
+	while (matches->next != NULL) {
+		thread_match *match = (thread_match*) spop(&matches);
+		free(match);
+	}
+	free(matches);
 
 	json_value_free(catalog);
 	return 0;
