@@ -6,8 +6,12 @@ NAME=waifu.xyz
 
 all: $(NAME)
 
+clean:
+	rm *.o
+	rm $(NAME)
+
 %.o: ./src/%.c
 	$(CC) $(CFLAGS) $(INCLUDES) -c $<
 
-$(NAME): main.o parson.o
+$(NAME): parse.o http.o main.o parson.o
 	$(CC) $(CLAGS) $(INCLUDES) -o $(NAME) $^
