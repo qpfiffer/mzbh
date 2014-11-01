@@ -48,3 +48,27 @@ ol_stack *parse_catalog_json(const char *all_json) {
 	json_value_free(catalog);
 	return matches;
 }
+
+int parse_thread_json(const char *all_json) {
+	JSON_Value *thread_raw = json_parse_string(all_json);
+	JSON_Object *root = json_value_get_object(thread_raw);
+
+	JSON_Array *posts = json_object_get_array(root, "posts");
+	for (int i = 0; i < json_array_get_count(posts); i++) {
+		JSON_Object *post = json_array_get_object(posts, i);
+		const char *file_ext = json_object_get_string(post, "ext");
+		const double tim = json_object_get_number(post, "tim");
+
+		if (file_ext == NULL)
+			continue;
+
+		if (strstr(file_ext, "webm")) {
+			printf("Score: %f.%s.\n", tim, file_ext);
+			/* Images: http(s)://i.4cdn.org/<board>/<tim>.ext
+			 * Thumbnails: http(s)://t.4cdn.org/<board>/<tim>s.jpg
+			 */
+		}
+	}
+
+	return 0;
+}
