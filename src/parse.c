@@ -5,14 +5,8 @@
 
 #include "parse.h"
 #include "parson.h"
-#include "stack.h"
 
-typedef struct thread_match {
-	const char board;
-	const int thread_num;
-} thread_match;
-
-int parse_catalog_json(const char *all_json) {
+ol_stack *parse_catalog_json(const char *all_json) {
 	JSON_Value *catalog = json_parse_string(all_json);
 
 	if (json_value_get_type(catalog) != JSONArray)
@@ -51,12 +45,6 @@ int parse_catalog_json(const char *all_json) {
 		}
 	}
 
-	while (matches->next != NULL) {
-		thread_match *match = (thread_match*) spop(&matches);
-		free(match);
-	}
-	free(matches);
-
 	json_value_free(catalog);
-	return 0;
+	return matches;
 }

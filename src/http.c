@@ -20,7 +20,7 @@ const char API_REQUEST[] =
 	"Host: a.4cdn.org\r\n"
 	"Accept text/html\r\n\r\n";
 
-char *receieve_chunked_http(const int request_fd) {
+char *receive_chunked_http(const int request_fd) {
 	char *raw_buf = malloc(0);
 	size_t buf_size = 0;
 	int times_read = 0;
@@ -123,8 +123,14 @@ int new_API_request() {
 		goto error;
 
 	printf("Sent request to 4chan.\n");
-	char *all_json = receieve_chunked_http(request_fd);
-	parse_catalog_json(all_json);
+	char *all_json = receive_chunked_http(request_fd);
+	ol_stack *matches = parse_catalog_json(all_json);
+
+	while (matches->next != NULL) {
+		thread_match *match = (thread_match*) spop(&matches);
+		free(match);
+	}
+	free(matches);
 
 	/* So at this point we just read shit into an ever expanding buffer. */
 	printf("BGWorker exiting.\n");
