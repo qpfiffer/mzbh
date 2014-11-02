@@ -1,17 +1,25 @@
 // vim: noet ts=4 sw=4
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <signal.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 
 #include "http.h"
 
 #define DEBUG 0
 int main_sock_fd = 0;
+pid_t bg_worker = 0;
+
+void term(int signum) {
+	kill(bg_worker, signum);
+	exit(0);
+}
 
 void background_work(int debug) {
 	printf("BGWorker chuggin'\n");
@@ -23,10 +31,10 @@ void background_work(int debug) {
 }
 
 int start_bg_worker(int debug) {
-	pid_t PID = fork();
-	if (PID == 0) {
+	bg_worker = fork();
+	if (bg_worker == 0) {
 		background_work(debug);
-	} else if (PID < 0) {
+	} else if (bg_worker < 0) {
 		return -1;
 	}
 	return 0;
@@ -67,9 +75,14 @@ error:
 }
 
 int main(int argc, char *argv[]) {
+	signal(SIGTERM, term);
+	signal(SIGINT, term);
+	signal(SIGKILL, term);
 	if (start_bg_worker(DEBUG) != 0)
 		return -1;
-	if (http_serve() != 0)
+	if (http_serve() != 0) {
+		term(SIGTERM);
 		return -1;
+	}
 	return 0;
 }

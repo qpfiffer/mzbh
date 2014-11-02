@@ -34,12 +34,14 @@ const char THREAD_REQUEST[] =
 const char IMAGE_REQUEST[] =
 	"GET /%c/%s%s HTTP/1.1\r\n"
 	"User-Agent: Mozilla/5.0 (Windows NT 5.1; rv:31.0) Gecko/20100101 Firefox/31.0\r\n"
-	"Host: i.4cdn.org\r\n";
+	"Host: i.4cdn.org\r\n"
+	"Accept: */*\r\n\r\n";
 
 const char THUMB_REQUEST[] =
 	"GET /%c/%ss.jpg HTTP/1.1\r\n"
 	"User-Agent: Mozilla/5.0 (Windows NT 5.1; rv:31.0) Gecko/20100101 Firefox/31.0\r\n"
-	"Host: t.4cdn.org\r\n";
+	"Host: t.4cdn.org\r\n"
+	"Accept: */*\r\n\r\n";
 
 static char *receive_chunked_http(const int request_fd) {
 	char *raw_buf = malloc(0);
@@ -148,38 +150,71 @@ error:
 }
 
 static char *receive_http(const int request_fd) {
-	const size_t buf_siz = 512;
-	char header[buf_siz] = {0};
+	char *raw_buf = malloc(0);
+	size_t buf_size = 0;
+	int times_read = 0;
 
-	char *result = NULL;
-	int bytes_read = 0;
+	fd_set chan_fds;
+	FD_ZERO(&chan_fds);
+	FD_SET(request_fd, &chan_fds);
+	const int maxfd = request_fd;
 
-	long result_size = -1;
-
-	/* Fuck this is a weird way to do this but whatever. */
+	printf("Receiving message...\n");
 	while (1) {
-		bytes_read += recv(request_fd, header, buf_siz, 0);
+		times_read++;
+		int num_bytes_read = 0;
 
-		char *offset_for_clength = strstr(header, "Content-Length: ");
-		if (offset_for_clength != NULL) {
-			char siz_buf[128] = {0};
-			int i = 0;
+		/* Wait for data to be read. */
+		struct timeval tv = {
+			.tv_sec = 1,
+			.tv_usec = 0
+		};
+		select(maxfd + 1, &chan_fds, NULL, NULL, &tv);
 
-			const char *to_read = offset_for_clength + strlen("Content-Length: ");
-			while (to_read[i] != ';' && i < sizeof(siz_buf)) {
-				siz_buf[i] = to_read[i];
-				i++;
-			}
-			result_size = strtol(siz_buf, NULL, 10);
+		int count;
+		/* How many bytes should we read: */
+		ioctl(request_fd, FIONREAD, &count);
+		if (count <= 0)
 			break;
+		int old_offset = buf_size;
+		buf_size += count;
+		raw_buf = realloc(raw_buf, buf_size);
+		/* printf("IOCTL: %i.\n", count); */
+
+		num_bytes_read = recv(request_fd, raw_buf + old_offset, count, 0);
+	}
+	/* printf("Full message is %s\n.", raw_buf); */
+
+	/* 4Chan throws us data as chunk-encoded HTTP. Rad. */
+	char *header_end = strstr(raw_buf, "\r\n\r\n");
+	char *cursor_pos = header_end  + (sizeof(char) * 4);
+
+	size_t result_size = 0;
+	char *offset_for_clength = strstr(raw_buf, "Content-Length: ");
+	if (offset_for_clength != NULL) {
+		char siz_buf[128] = {0};
+		int i = 0;
+
+		const char *to_read = offset_for_clength + strlen("Content-Length: ");
+		while (to_read[i] != ';' && i < sizeof(siz_buf)) {
+			siz_buf[i] = to_read[i];
+			i++;
 		}
+		result_size = strtol(siz_buf, NULL, 10);
 	}
 	printf("Result size is %lu.\n", result_size);
 
-	return result;
+	char *to_return = malloc(result_size);
+	strncpy(to_return, raw_buf, result_size);
+	free(raw_buf);
+
+	return cursor_pos;
 }
 
 int download_images() {
+	int thumb_request_fd = 0;
+	int image_request_fd = 0;
+
 	struct stat st = {0};
 	if (stat(WEBMS_DIR, &st) == -1)
 		mkdir(WEBMS_DIR, 0700);
@@ -234,11 +269,11 @@ int download_images() {
 	close(request_fd);
 	free(all_json);
 
-	int thumb_request_fd = connect_to_host(FOURCHAN_THUMBNAIL_HOST);
+	thumb_request_fd = connect_to_host(FOURCHAN_THUMBNAIL_HOST);
 	if (thumb_request_fd < 0)
 		goto error;
 
-	int image_request_fd = connect_to_host(FOURCHAN_IMAGE_HOST);
+	image_request_fd = connect_to_host(FOURCHAN_IMAGE_HOST);
 	if (image_request_fd < 0)
 		goto error;
 
@@ -251,16 +286,20 @@ int download_images() {
 		char thumb_request[256] = {0};
 		snprintf(thumb_request, sizeof(thumb_request), THUMB_REQUEST,
 				p_match->board, p_match->filename);
-		send(thumb_request_fd, thumb_request, strlen(thumb_request), 0);
+		rc = send(thumb_request_fd, thumb_request, strlen(thumb_request), 0);
+		if (rc != strlen(thumb_request))
+			goto error;
 
 		/* Build and send the image request. */
 		char image_request[256] = {0};
 		snprintf(image_request, sizeof(image_request), IMAGE_REQUEST,
 				p_match->board, p_match->filename, p_match->file_ext);
-		send(image_request_fd, image_request, strlen(image_request), 0);
+		rc = send(image_request_fd, image_request, strlen(image_request), 0);
+		if (rc != strlen(image_request))
+			goto error;
 
-		/* char *raw_thumb_resp = */receive_http(thumb_request_fd);
-		/* char *raw_image_resp = */receive_http(image_request_fd);
+		char *raw_thumb_resp = receive_http(thumb_request_fd);
+		char *raw_image_resp = receive_http(image_request_fd);
 
 		//const char *image = parse_image_from_http(raw_image_resp);
 		//const char *thumb_image = parse_image_from_http(raw_thumb_resp);
@@ -277,6 +316,11 @@ int download_images() {
 	return 0;
 
 error:
+	if (thumb_request_fd)
+		close(thumb_request_fd);
+
+	if (image_request_fd)
+		close(image_request_fd);
 	return -1;
 }
 

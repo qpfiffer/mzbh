@@ -13,8 +13,7 @@ ol_stack *parse_catalog_json(const char *all_json) {
 		printf("Well, the root isn't a JSONArray.\n");
 
 	ol_stack *matches = NULL;
-	matches = malloc(sizeof(ol_stack));
-	memset(matches, 0, sizeof(ol_stack));
+	matches = calloc(1, sizeof(ol_stack));
 
 	JSON_Array *all_objects = json_value_get_array(catalog);
 
