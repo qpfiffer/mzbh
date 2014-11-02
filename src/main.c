@@ -24,9 +24,12 @@ void term(int signum) {
 
 void background_work(int debug) {
 	printf("BGWorker chuggin'\n");
-	if (download_images() != 0) {
-		printf("Something went wrong when attempting to download images.\n");
-		return;
+	while (1) {
+		sleep(600);
+		if (download_images() != 0) {
+			printf("Something went wrong when attempting to download images.\n");
+			return;
+		}
 	}
 	printf("BGWorker exiting.\n");
 }
