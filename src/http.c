@@ -148,36 +148,35 @@ error:
 }
 
 static char *receive_http(const int request_fd) {
-	size_t buf_size = sizeof(char) * 256;
-	char *raw_buf = malloc(buf_size);
+	const size_t buf_siz = 512;
+	char header[buf_siz] = {0};
 
-	fd_set chan_fds;
-	FD_ZERO(&chan_fds);
-	FD_SET(request_fd, &chan_fds);
-	const int maxfd = request_fd;
+	char *result = NULL;
+	int bytes_read = 0;
 
-	/* Wait for data to be read. */
-	struct timeval tv = {
-		.tv_sec = 1,
-		.tv_usec = 0
-	};
-	select(maxfd + 1, &chan_fds, NULL, NULL, &tv);
+	long result_size = -1;
 
+	/* Fuck this is a weird way to do this but whatever. */
 	while (1) {
+		bytes_read += recv(request_fd, header, buf_siz, 0);
 
-		int count;
-		/* How many bytes should we read: */
-		ioctl(request_fd, FIONREAD, &count);
-		if (count <= 0)
+		char *offset_for_clength = strstr(header, "Content-Length: ");
+		if (offset_for_clength != NULL) {
+			char siz_buf[128] = {0};
+			int i = 0;
+
+			const char *to_read = offset_for_clength + strlen("Content-Length: ");
+			while (to_read[i] != ';' && i < sizeof(siz_buf)) {
+				siz_buf[i] = to_read[i];
+				i++;
+			}
+			result_size = strtol(siz_buf, NULL, 10);
 			break;
-		int old_offset = buf_size;
-		buf_size += count;
-		raw_buf = realloc(raw_buf, buf_size);
-		/* printf("IOCTL: %i.\n", count); */
-
-		num_bytes_read = recv(request_fd, raw_buf + old_offset, count, 0);
+		}
 	}
-	return NULL;
+	printf("Result size is %lu.\n", result_size);
+
+	return result;
 }
 
 int download_images() {
@@ -260,11 +259,11 @@ int download_images() {
 				p_match->board, p_match->filename, p_match->file_ext);
 		send(image_request_fd, image_request, strlen(image_request), 0);
 
-		char *raw_thumb_resp = receive_http(thumb_request_fd);
-		char *raw_image_resp = receive_http(image_request_fd);
+		/* char *raw_thumb_resp = */receive_http(thumb_request_fd);
+		/* char *raw_image_resp = */receive_http(image_request_fd);
 
-		const char *image = parse_image_from_http(raw_image_resp);
-		const char *thumb_image = parse_image_from_http(raw_thumb_resp);
+		//const char *image = parse_image_from_http(raw_image_resp);
+		//const char *thumb_image = parse_image_from_http(raw_thumb_resp);
 
 		/* TODO: Write responses to disk. */
 
