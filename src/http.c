@@ -167,8 +167,9 @@ int download_images() {
 
 	/* Now actually download the images. */
 	while (images_to_download->next != NULL) {
-		thread_match *t_match = (thread_match *)spop(&images_to_download);
-		free(t_match);
+		post_match *p_match = (post_match *)spop(&images_to_download);
+		printf("Downloading %s%s...\n", p_match->filename, p_match->file_ext);
+		free(p_match);
 	}
 	free(images_to_download);
 
