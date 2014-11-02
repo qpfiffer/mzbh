@@ -132,6 +132,11 @@ int new_API_request() {
 	char *all_json = receive_chunked_http(request_fd);
 	ol_stack *matches = parse_catalog_json(all_json);
 
+	/* This is where we'll queue up images to be downloaded. */
+	ol_stack *images_to_download = malloc(sizeof(ol_stack));
+	images_to_download->next = NULL;
+	images_to_download->data = NULL;
+
 	while (matches->next != NULL) {
 		/* Pop our thread_match off the stack */
 		thread_match *match = (thread_match*) spop(&matches);
@@ -149,12 +154,23 @@ int new_API_request() {
 		rc = send(request_fd, templated_req, strlen(templated_req), 0);
 
 		char *thread_json = receive_chunked_http(request_fd);
-		parse_thread_json(thread_json, match);
+		ol_stack *thread_matches = parse_thread_json(thread_json, match);
+		while (thread_matches->next != NULL) {
+			spush(&images_to_download, spop(&thread_matches));
+		}
+		free(thread_matches);
 		free(thread_json);
 
 		free(match);
 	}
 	free(matches);
+
+	/* Now actually download the images. */
+	while (images_to_download->next != NULL) {
+		thread_match *t_match = (thread_match *)spop(&images_to_download);
+		free(t_match);
+	}
+	free(images_to_download);
 
 	/* So at this point we just read shit into an ever expanding buffer. */
 	printf("BGWorker exiting.\n");
