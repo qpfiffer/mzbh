@@ -55,7 +55,6 @@ static char *receive_chunked_http(const int request_fd) {
 
 	while (1) {
 		times_read++;
-		int num_bytes_read = 0;
 
 		/* Wait for data to be read. */
 		struct timeval tv = {
@@ -74,7 +73,7 @@ static char *receive_chunked_http(const int request_fd) {
 		raw_buf = realloc(raw_buf, buf_size);
 		/* printf("IOCTL: %i.\n", count); */
 
-		num_bytes_read = recv(request_fd, raw_buf + old_offset, count, 0);
+		recv(request_fd, raw_buf + old_offset, count, 0);
 	}
 	/* printf("Full message is %s\n.", raw_buf); */
 
@@ -160,7 +159,6 @@ static char *receive_http(const int request_fd, size_t *out) {
 
 	while (1) {
 		times_read++;
-		int num_bytes_read = 0;
 
 		/* Wait for data to be read. */
 		struct timeval tv = {
@@ -179,7 +177,7 @@ static char *receive_http(const int request_fd, size_t *out) {
 		raw_buf = realloc(raw_buf, buf_size);
 		/* printf("IOCTL: %i.\n", count); */
 
-		num_bytes_read = recv(request_fd, raw_buf + old_offset, count, 0);
+		recv(request_fd, raw_buf + old_offset, count, 0);
 	}
 	/* printf("Full message is %s\n.", raw_buf); */
 
@@ -245,7 +243,9 @@ int download_images() {
 		/* (The 30 is because I don't want to find the length of the
 		 * integer thread number) */
 		const size_t thread_req_size = sizeof(THREAD_REQUEST) + 30;
-		char templated_req[thread_req_size] = {0};
+		char templated_req[thread_req_size];
+		memset(templated_req, '\0', thread_req_size);
+
 		snprintf(templated_req, thread_req_size, THREAD_REQUEST,
 				match->board, match->thread_num);
 

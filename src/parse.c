@@ -17,12 +17,14 @@ ol_stack *parse_catalog_json(const char *all_json) {
 
 	JSON_Array *all_objects = json_value_get_array(catalog);
 
-	for (int i = 0; i < json_array_get_count(all_objects); i++) {
+	int i;
+	for (i = 0; i < json_array_get_count(all_objects); i++) {
 		JSON_Object *obj = json_array_get_object(all_objects, i);
 		printf("Page: %f\n", json_object_get_number(obj, "page"));
 
 		JSON_Array *threads = json_object_get_array(obj, "threads");
-		for (int j = 0; j < json_array_get_count(threads); j++) {
+		int j;
+		for (j = 0; j < json_array_get_count(threads); j++) {
 			JSON_Object *thread = json_array_get_object(threads, j);
 			const int thread_num = json_object_get_number(thread, "no");
 			const char *file_ext = json_object_get_string(thread, "ext");
@@ -57,7 +59,8 @@ ol_stack *parse_thread_json(const char *all_json, const thread_match *match) {
 	memset(matches, 0, sizeof(ol_stack));
 
 	JSON_Array *posts = json_object_get_array(root, "posts");
-	for (int i = 0; i < json_array_get_count(posts); i++) {
+	int i;
+	for (i = 0; i < json_array_get_count(posts); i++) {
 		JSON_Object *post = json_array_get_object(posts, i);
 		const char *file_ext = json_object_get_string(post, "ext");
 		const long tim = (long)json_object_get_number(post, "tim");

@@ -1,6 +1,6 @@
 CFLAGS=-Werror -Wall -Wshadow -O2 -g3
 INCLUDES=-I./include/
-CC=clang
+CC=gcc
 NAME=waifu.xyz
 
 
