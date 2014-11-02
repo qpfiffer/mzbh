@@ -149,7 +149,7 @@ int new_API_request() {
 		rc = send(request_fd, templated_req, strlen(templated_req), 0);
 
 		char *thread_json = receive_chunked_http(request_fd);
-		parse_thread_json(thread_json);
+		parse_thread_json(thread_json, match);
 		free(thread_json);
 
 		free(match);
@@ -168,4 +168,8 @@ error:
 	printf("ERROR.\n");
 	close(request_fd);
 	return -1;
+}
+
+char *receive_http(const int request_fd) {
+	return NULL;
 }

@@ -49,26 +49,46 @@ ol_stack *parse_catalog_json(const char *all_json) {
 	return matches;
 }
 
-int parse_thread_json(const char *all_json) {
+ol_stack *parse_thread_json(const char *all_json, const thread_match *match) {
 	JSON_Value *thread_raw = json_parse_string(all_json);
 	JSON_Object *root = json_value_get_object(thread_raw);
+
+	ol_stack *matches = NULL;
+	matches = malloc(sizeof(ol_stack));
+	memset(matches, 0, sizeof(ol_stack));
 
 	JSON_Array *posts = json_object_get_array(root, "posts");
 	for (int i = 0; i < json_array_get_count(posts); i++) {
 		JSON_Object *post = json_array_get_object(posts, i);
 		const char *file_ext = json_object_get_string(post, "ext");
-		const double tim = json_object_get_number(post, "tim");
+		const long tim = (long)json_object_get_number(post, "tim");
 
 		if (file_ext == NULL)
 			continue;
 
 		if (strstr(file_ext, "webm")) {
-			printf("Score: %lu%s.\n", (long)tim, file_ext);
-			/* Images: http(s)://i.4cdn.org/<board>/<tim>.ext
+			printf("Score: %lu%s.\n", tim, file_ext);
+			/* Images: http(s)://i.4cdn.org/<board>/<tim>.<file_ext>
 			 * Thumbnails: http(s)://t.4cdn.org/<board>/<tim>s.jpg
 			 */
+
+			char filename[32] = {0};
+			snprintf(filename, sizeof(filename), "%lu", tim);
+
+			post_match _match = {
+				.board = match->board,
+				.filename = {0},
+				.file_ext = {0}
+			};
+
+			post_match *t_match = malloc(sizeof(post_match));
+			memcpy(t_match, &_match, sizeof(_match));
+			strncpy(t_match->filename, filename, sizeof(t_match->filename));
+			strncpy(t_match->file_ext, file_ext, sizeof(t_match->file_ext));
+
+			spush(&matches, t_match);
 		}
 	}
 
-	return 0;
+	return matches;
 }
