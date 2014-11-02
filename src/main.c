@@ -14,7 +14,7 @@ int main_sock_fd = 0;
 
 void background_work(int debug) {
 	printf("BGWorker chuggin'\n");
-	if (new_API_request() != 0)
+	if (download_images() != 0)
 		return;
 }
 

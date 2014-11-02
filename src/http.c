@@ -102,7 +102,7 @@ char *receive_chunked_http(const int request_fd) {
 	return json_buf;
 }
 
-int new_API_request() {
+int download_images() {
 	struct addrinfo hints = {0};
 	struct addrinfo *res = NULL;
 	int request_fd;

@@ -5,4 +5,4 @@
 
 char *receive_chunked_http(const int request_fd);
 char *receive_http(const int request_fd);
-int new_API_request();
+int download_images();
