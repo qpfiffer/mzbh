@@ -63,7 +63,7 @@ int parse_thread_json(const char *all_json) {
 			continue;
 
 		if (strstr(file_ext, "webm")) {
-			printf("Score: %f.%s.\n", tim, file_ext);
+			printf("Score: %lu%s.\n", (long)tim, file_ext);
 			/* Images: http(s)://i.4cdn.org/<board>/<tim>.ext
 			 * Thumbnails: http(s)://t.4cdn.org/<board>/<tim>s.jpg
 			 */
