@@ -1,4 +1,4 @@
-CFLAGS=-pthread -Wall -Werror -Wshadow -g3
+CFLAGS=-Werror -Wall -Wshadow -O2 -g3
 INCLUDES=-I./include/
 CC=clang
 NAME=waifu.xyz

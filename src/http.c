@@ -32,7 +32,7 @@ const char THREAD_REQUEST[] =
 	"Accept: application/json\r\n\r\n";
 
 const char IMAGE_REQUEST[] =
-	"GET /%c/%s%s HTTP/1.1\r\n"
+	"GET /%c/%s%.*s HTTP/1.1\r\n"
 	"User-Agent: Mozilla/5.0 (Windows NT 5.1; rv:31.0) Gecko/20100101 Firefox/31.0\r\n"
 	"Host: i.4cdn.org\r\n"
 	"Accept: */*\r\n\r\n";
@@ -53,7 +53,6 @@ static char *receive_chunked_http(const int request_fd) {
 	FD_SET(request_fd, &chan_fds);
 	const int maxfd = request_fd;
 
-	printf("Receiving message...\n");
 	while (1) {
 		times_read++;
 		int num_bytes_read = 0;
@@ -149,7 +148,7 @@ error:
 	return -1;
 }
 
-static char *receive_http(const int request_fd) {
+static char *receive_http(const int request_fd, size_t *out) {
 	char *raw_buf = malloc(0);
 	size_t buf_size = 0;
 	int times_read = 0;
@@ -159,7 +158,6 @@ static char *receive_http(const int request_fd) {
 	FD_SET(request_fd, &chan_fds);
 	const int maxfd = request_fd;
 
-	printf("Receiving message...\n");
 	while (1) {
 		times_read++;
 		int num_bytes_read = 0;
@@ -205,7 +203,8 @@ static char *receive_http(const int request_fd) {
 	printf("Result size is %lu.\n", result_size);
 
 	char *to_return = malloc(result_size);
-	strncpy(to_return, raw_buf, result_size);
+	strncpy(to_return, cursor_pos, result_size);
+	*out = result_size;
 	free(raw_buf);
 
 	return cursor_pos;
@@ -293,16 +292,32 @@ int download_images() {
 		/* Build and send the image request. */
 		char image_request[256] = {0};
 		snprintf(image_request, sizeof(image_request), IMAGE_REQUEST,
-				p_match->board, p_match->filename, p_match->file_ext);
+				p_match->board, p_match->filename, (int)sizeof(p_match->file_ext), p_match->file_ext);
 		rc = send(image_request_fd, image_request, strlen(image_request), 0);
 		if (rc != strlen(image_request))
 			goto error;
 
-		char *raw_thumb_resp = receive_http(thumb_request_fd);
-		char *raw_image_resp = receive_http(image_request_fd);
+		size_t thumb_size, image_size;
+		char *raw_thumb_resp = receive_http(thumb_request_fd, &thumb_size);
+		char *raw_image_resp = receive_http(image_request_fd, &image_size);
 
-		//const char *image = parse_image_from_http(raw_image_resp);
-		//const char *thumb_image = parse_image_from_http(raw_thumb_resp);
+		/* Write thumbnail to disk. */
+		FILE *thumb_file;
+		char thumb_filename[128] = {0};
+		snprintf(thumb_filename, 128, "%s/%c_thumb_%s.jpg",
+				WEBMS_DIR, p_match->board, p_match->filename);
+		thumb_file = fopen(thumb_filename, "wb");
+		fwrite(raw_thumb_resp, 1, thumb_size, thumb_file);
+		fclose(thumb_file);
+
+		FILE *image_file;
+		char image_filename[128] = {0};
+		snprintf(image_filename, 128, "%s/%c_%s%.*s",
+				WEBMS_DIR, p_match->board, p_match->filename,
+				(int)sizeof(p_match->file_ext), p_match->file_ext);
+		image_file = fopen(image_filename, "wb");
+		fwrite(raw_image_resp, 1, image_size, image_file);
+		fclose(image_file);
 
 		/* TODO: Write responses to disk. */
 

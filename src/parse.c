@@ -92,9 +92,3 @@ ol_stack *parse_thread_json(const char *all_json, const thread_match *match) {
 	return matches;
 }
 
-const char *parse_image_from_http(const char *raw_http_resp) {
-	char *end_of_header = strstr(raw_http_resp, "\r\n\r\n");
-	if (end_of_header == NULL)
-		return NULL;
-	return end_of_header + sizeof("\r\n\r\n");
-}

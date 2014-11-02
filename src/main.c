@@ -18,7 +18,8 @@ pid_t bg_worker = 0;
 
 void term(int signum) {
 	kill(bg_worker, signum);
-	exit(0);
+	close(main_sock_fd);
+	exit(1);
 }
 
 void background_work(int debug) {
@@ -41,8 +42,9 @@ int start_bg_worker(int debug) {
 }
 
 int http_serve() {
+	int rc = -1;
 	main_sock_fd = socket(PF_INET, SOCK_STREAM, 0);
-	if (main_sock_fd < 0)
+	if (main_sock_fd <= 0)
 		goto error;
 
 	int opt = 1;
@@ -53,7 +55,7 @@ int http_serve() {
 	hints.sin_port			 = htons(8080);
 	hints.sin_addr.s_addr	 = htonl(INADDR_LOOPBACK);
 
-	int rc = bind(main_sock_fd, (struct sockaddr *)&hints, sizeof(hints));
+	rc = bind(main_sock_fd, (struct sockaddr *)&hints, sizeof(hints));
 	if (rc < 0)
 		goto error;
 
@@ -70,8 +72,9 @@ int http_serve() {
 	return 0;
 
 error:
+	perror("Socket error");
 	close(main_sock_fd);
-	return -1;
+	return rc;
 }
 
 int main(int argc, char *argv[]) {
@@ -80,9 +83,11 @@ int main(int argc, char *argv[]) {
 	signal(SIGKILL, term);
 	if (start_bg_worker(DEBUG) != 0)
 		return -1;
-	if (http_serve() != 0) {
+	int rc = 0;
+	if ((rc = http_serve()) != 0) {
 		term(SIGTERM);
-		return -1;
+		printf("COULD NOT SERVE HTTP\n");
+		return rc;
 	}
 	return 0;
 }
