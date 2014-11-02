@@ -6,13 +6,18 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 
 #include "http.h"
 #include "parse.h"
 
+const char WEBMS_DIR[] = "./webms";
+
 const char FOURCHAN_API_HOST[] = "a.4cdn.org";
+const char FOURCHAN_THUMBNAIL_HOST[] = "t.4cdn.org";
+const char FOURCHAN_IMAGE_HOST[] = "i.4cdn.org";
 
 const char B_API_REQUEST[] =
 	"GET /b/catalog.json HTTP/1.1\r\n"
@@ -26,7 +31,17 @@ const char THREAD_REQUEST[] =
 	"Host: a.4cdn.org\r\n"
 	"Accept: application/json\r\n\r\n";
 
-char *receive_chunked_http(const int request_fd) {
+const char IMAGE_REQUEST[] =
+	"GET /%c/%s%s HTTP/1.1\r\n"
+	"User-Agent: Mozilla/5.0 (Windows NT 5.1; rv:31.0) Gecko/20100101 Firefox/31.0\r\n"
+	"Host: i.4cdn.org\r\n";
+
+const char THUMB_REQUEST[] =
+	"GET /%c/%ss.jpg HTTP/1.1\r\n"
+	"User-Agent: Mozilla/5.0 (Windows NT 5.1; rv:31.0) Gecko/20100101 Firefox/31.0\r\n"
+	"Host: t.4cdn.org\r\n";
+
+static char *receive_chunked_http(const int request_fd) {
 	char *raw_buf = malloc(0);
 	size_t buf_size = 0;
 	int times_read = 0;
@@ -102,7 +117,7 @@ char *receive_chunked_http(const int request_fd) {
 	return json_buf;
 }
 
-int download_images() {
+static int connect_to_host(const char *host) {
 	struct addrinfo hints = {0};
 	struct addrinfo *res = NULL;
 	int request_fd;
@@ -110,7 +125,7 @@ int download_images() {
 	hints.ai_family = AF_INET;
 	hints.ai_socktype = SOCK_STREAM;
 
-	getaddrinfo(FOURCHAN_API_HOST, "80", &hints, &res);
+	getaddrinfo(host, "80", &hints, &res);
 
 	request_fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
 	if (request_fd < 0)
@@ -123,8 +138,59 @@ int download_images() {
 	if (rc == -1)
 		goto error;
 
+	freeaddrinfo(res);
+	return request_fd;
+
+error:
+	printf("ERROR.\n");
+	close(request_fd);
+	return -1;
+}
+
+static char *receive_http(const int request_fd) {
+	size_t buf_size = sizeof(char) * 256;
+	char *raw_buf = malloc(buf_size);
+
+	fd_set chan_fds;
+	FD_ZERO(&chan_fds);
+	FD_SET(request_fd, &chan_fds);
+	const int maxfd = request_fd;
+
+	/* Wait for data to be read. */
+	struct timeval tv = {
+		.tv_sec = 1,
+		.tv_usec = 0
+	};
+	select(maxfd + 1, &chan_fds, NULL, NULL, &tv);
+
+	while (1) {
+
+		int count;
+		/* How many bytes should we read: */
+		ioctl(request_fd, FIONREAD, &count);
+		if (count <= 0)
+			break;
+		int old_offset = buf_size;
+		buf_size += count;
+		raw_buf = realloc(raw_buf, buf_size);
+		/* printf("IOCTL: %i.\n", count); */
+
+		num_bytes_read = recv(request_fd, raw_buf + old_offset, count, 0);
+	}
+	return NULL;
+}
+
+int download_images() {
+	struct stat st = {0};
+	if (stat(WEBMS_DIR, &st) == -1)
+		mkdir(WEBMS_DIR, 0700);
+
+	int request_fd = connect_to_host(FOURCHAN_API_HOST);
+	if (request_fd < 0)
+		goto error;
+
 	printf("Connected to 4chan.\n");
-	rc = send(request_fd, B_API_REQUEST, strlen(B_API_REQUEST), 0);
+	int rc = send(request_fd, B_API_REQUEST, strlen(B_API_REQUEST), 0);
 	if (strlen(B_API_REQUEST) != rc)
 		goto error;
 
@@ -165,28 +231,53 @@ int download_images() {
 	}
 	free(matches);
 
+	/* We don't need the API socket anymore. */
+	close(request_fd);
+	free(all_json);
+
+	int thumb_request_fd = connect_to_host(FOURCHAN_THUMBNAIL_HOST);
+	if (thumb_request_fd < 0)
+		goto error;
+
+	int image_request_fd = connect_to_host(FOURCHAN_IMAGE_HOST);
+	if (image_request_fd < 0)
+		goto error;
+
 	/* Now actually download the images. */
 	while (images_to_download->next != NULL) {
 		post_match *p_match = (post_match *)spop(&images_to_download);
-		printf("Downloading %s%s...\n", p_match->filename, p_match->file_ext);
+		printf("Downloading %s%.*s...\n", p_match->filename, 5, p_match->file_ext);
+
+		/* Build and send the thumbnail request. */
+		char thumb_request[256] = {0};
+		snprintf(thumb_request, sizeof(thumb_request), THUMB_REQUEST,
+				p_match->board, p_match->filename);
+		send(thumb_request_fd, thumb_request, strlen(thumb_request), 0);
+
+		/* Build and send the image request. */
+		char image_request[256] = {0};
+		snprintf(image_request, sizeof(image_request), IMAGE_REQUEST,
+				p_match->board, p_match->filename, p_match->file_ext);
+		send(image_request_fd, image_request, strlen(image_request), 0);
+
+		char *raw_thumb_resp = receive_http(thumb_request_fd);
+		char *raw_image_resp = receive_http(image_request_fd);
+
+		const char *image = parse_image_from_http(raw_image_resp);
+		const char *thumb_image = parse_image_from_http(raw_thumb_resp);
+
+		/* TODO: Write responses to disk. */
+
+		/* Don't need the post match anymore: */
 		free(p_match);
 	}
 	free(images_to_download);
+	close(thumb_request_fd);
+	close(image_request_fd);
 
-	/* So at this point we just read shit into an ever expanding buffer. */
-	printf("BGWorker exiting.\n");
-
-	free(all_json);
-	close(request_fd);
-	freeaddrinfo(res);
 	return 0;
 
 error:
-	printf("ERROR.\n");
-	close(request_fd);
 	return -1;
 }
 
-char *receive_http(const int request_fd) {
-	return NULL;
-}

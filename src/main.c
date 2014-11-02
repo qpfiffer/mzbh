@@ -3,6 +3,7 @@
 #include <netdb.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -14,8 +15,11 @@ int main_sock_fd = 0;
 
 void background_work(int debug) {
 	printf("BGWorker chuggin'\n");
-	if (download_images() != 0)
+	if (download_images() != 0) {
+		printf("Something went wrong when attempting to download images.\n");
 		return;
+	}
+	printf("BGWorker exiting.\n");
 }
 
 int start_bg_worker(int debug) {

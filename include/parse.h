@@ -17,3 +17,5 @@ typedef struct post_match {
 /* FUCK THE MUTEABLE STATE */
 ol_stack *parse_catalog_json(const char *all_json);
 ol_stack *parse_thread_json(const char *all_json, const thread_match *match);
+/* Returns a pointer to the first character of the image: */
+const char *parse_image_from_http(const char *raw_http_resp);
