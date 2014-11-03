@@ -370,7 +370,10 @@ int download_images() {
 		fwrite(raw_image_resp, 1, image_size, image_file);
 		fclose(image_file);
 
-		/* TODO: Write responses to disk. */
+		if (thumb_size <= 0 || image_size <= 0) {
+			/* 4chan cut us off. This happens sometimes. Just sleep for a bit. */
+			sleep(300);
+		}
 
 		/* Don't need the post match anymore: */
 		free(p_match);
