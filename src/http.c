@@ -359,6 +359,14 @@ int download_images() {
 		char *raw_thumb_resp = receive_http(thumb_request_fd, &thumb_size);
 		char *raw_image_resp = receive_http(image_request_fd, &image_size);
 
+		if (thumb_size <= 0 || image_size <= 0) {
+			/* 4chan cut us off. This happens sometimes. Just sleep for a bit. */
+			sleep(300);
+			/* Now we try again: */
+			raw_thumb_resp = receive_http(thumb_request_fd, &thumb_size);
+			raw_image_resp = receive_http(image_request_fd, &image_size);
+		}
+
 		/* Write thumbnail to disk. */
 		FILE *thumb_file;
 		thumb_file = fopen(thumb_filename, "wb");
@@ -369,11 +377,6 @@ int download_images() {
 		image_file = fopen(image_filename, "wb");
 		fwrite(raw_image_resp, 1, image_size, image_file);
 		fclose(image_file);
-
-		if (thumb_size <= 0 || image_size <= 0) {
-			/* 4chan cut us off. This happens sometimes. Just sleep for a bit. */
-			sleep(300);
-		}
 
 		/* Don't need the post match anymore: */
 		free(p_match);
