@@ -13,6 +13,7 @@
 #include "http.h"
 #include "parse.h"
 
+const int SELECT_TIMEOUT = 5;
 const char BOARDS[] = {'a', 'b', 'e', 'h', 'v'};
 const char WEBMS_DIR[] = "./webms";
 
@@ -59,7 +60,7 @@ static char *receive_chunked_http(const int request_fd) {
 
 		/* Wait for data to be read. */
 		struct timeval tv = {
-			.tv_sec = 1,
+			.tv_sec = SELECT_TIMEOUT,
 			.tv_usec = 0
 		};
 		select(maxfd + 1, &chan_fds, NULL, NULL, &tv);
@@ -163,7 +164,7 @@ static char *receive_http(const int request_fd, size_t *out) {
 
 		/* Wait for data to be read. */
 		struct timeval tv = {
-			.tv_sec = 1,
+			.tv_sec = SELECT_TIMEOUT,
 			.tv_usec = 0
 		};
 		select(maxfd + 1, &chan_fds, NULL, NULL, &tv);
