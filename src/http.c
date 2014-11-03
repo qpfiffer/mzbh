@@ -218,10 +218,11 @@ static void ensure_directory_for_board(const char board) {
 	/* ./webms/b */
 	snprintf(to_create, buf_siz, "%s/%c", WEBMS_DIR, board);
 
-	printf("Creating %s\n", to_create);
 	struct stat st = {0};
-	if (stat(to_create, &st) == -1)
+	if (stat(to_create, &st) == -1) {
+		printf("Creating %s\n", to_create);
 		mkdir(to_create, 0700);
+	}
 }
 
 static ol_stack *build_thread_index() {
