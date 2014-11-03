@@ -327,7 +327,7 @@ int download_images() {
 
 		/* We already have this file, don't need to download it again. */
 		struct stat ifname = {0};
-		if (stat(image_filename, &ifname) != -1) {
+		if (stat(image_filename, &ifname) != -1 && ifname.st_size > 0) {
 			printf("Skipping %s.\n", image_filename);
 			free(p_match);
 			continue;
