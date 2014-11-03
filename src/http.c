@@ -208,6 +208,21 @@ static char *receive_http(const int request_fd, size_t *out) {
 	return cursor_pos;
 }
 
+static void ensure_directory_for_board(const char board) {
+	/* Long enough for WEBMS_DIR, a /, the board and a NULL terminator */
+	const size_t buf_siz = strlen(WEBMS_DIR) + sizeof(char) * 3;
+	char to_create[buf_siz];
+	memset(to_create, '\0', buf_siz);
+
+	/* ./webms/b */
+	snprintf(to_create, buf_siz, "%s/%c", WEBMS_DIR, board);
+
+	printf("Creating %s\n", to_create);
+	struct stat st = {0};
+	if (stat(to_create, &st) == -1)
+		mkdir(to_create, 0700);
+}
+
 int download_images() {
 	int thumb_request_fd = 0;
 	int image_request_fd = 0;
@@ -237,6 +252,8 @@ int download_images() {
 	while (matches->next != NULL) {
 		/* Pop our thread_match off the stack */
 		thread_match *match = (thread_match*) spop(&matches);
+		ensure_directory_for_board(match->board);
+
 		printf("Requesting %i...\n", match->thread_num);
 
 		/* Template out a request to the 4chan API for it */
@@ -279,12 +296,30 @@ int download_images() {
 	/* Now actually download the images. */
 	while (images_to_download->next != NULL) {
 		post_match *p_match = (post_match *)spop(&images_to_download);
+
+		char image_filename[128] = {0};
+		snprintf(image_filename, 128, "%s/%c/%s%.*s",
+				WEBMS_DIR, p_match->board, p_match->filename,
+				(int)sizeof(p_match->file_ext), p_match->file_ext);
+
+		/* We already have this file, don't need to download it again. */
+		struct stat ifname = {0};
+		if (stat(image_filename, &ifname) != -1) {
+			printf("Skipping %s.\n", image_filename);
+			free(p_match);
+			continue;
+		}
+
+		char thumb_filename[128] = {0};
+		snprintf(thumb_filename, 128, "%s/%c/thumb_%s.jpg",
+				WEBMS_DIR, p_match->board, p_match->filename);
+
 		printf("Downloading %s%.*s...\n", p_match->filename, 5, p_match->file_ext);
 
 		/* Build and send the thumbnail request. */
 		char thumb_request[256] = {0};
 		snprintf(thumb_request, sizeof(thumb_request), THUMB_REQUEST,
-				p_match->board, p_match->filename);
+				p_match->board, p_match->tim);
 		rc = send(thumb_request_fd, thumb_request, strlen(thumb_request), 0);
 		if (rc != strlen(thumb_request))
 			goto error;
@@ -292,7 +327,7 @@ int download_images() {
 		/* Build and send the image request. */
 		char image_request[256] = {0};
 		snprintf(image_request, sizeof(image_request), IMAGE_REQUEST,
-				p_match->board, p_match->filename, (int)sizeof(p_match->file_ext), p_match->file_ext);
+				p_match->board, p_match->tim, (int)sizeof(p_match->file_ext), p_match->file_ext);
 		rc = send(image_request_fd, image_request, strlen(image_request), 0);
 		if (rc != strlen(image_request))
 			goto error;
@@ -303,18 +338,11 @@ int download_images() {
 
 		/* Write thumbnail to disk. */
 		FILE *thumb_file;
-		char thumb_filename[128] = {0};
-		snprintf(thumb_filename, 128, "%s/%c_thumb_%s.jpg",
-				WEBMS_DIR, p_match->board, p_match->filename);
 		thumb_file = fopen(thumb_filename, "wb");
 		fwrite(raw_thumb_resp, 1, thumb_size, thumb_file);
 		fclose(thumb_file);
 
 		FILE *image_file;
-		char image_filename[128] = {0};
-		snprintf(image_filename, 128, "%s/%c_%s%.*s",
-				WEBMS_DIR, p_match->board, p_match->filename,
-				(int)sizeof(p_match->file_ext), p_match->file_ext);
 		image_file = fopen(image_filename, "wb");
 		fwrite(raw_image_resp, 1, image_size, image_file);
 		fclose(image_file);

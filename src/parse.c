@@ -20,7 +20,7 @@ ol_stack *parse_catalog_json(const char *all_json) {
 	int i;
 	for (i = 0; i < json_array_get_count(all_objects); i++) {
 		JSON_Object *obj = json_array_get_object(all_objects, i);
-		printf("Page: %f\n", json_object_get_number(obj, "page"));
+		printf("Page: %lu\n", (long)json_object_get_number(obj, "page"));
 
 		JSON_Array *threads = json_object_get_array(obj, "threads");
 		int j;
@@ -63,28 +63,31 @@ ol_stack *parse_thread_json(const char *all_json, const thread_match *match) {
 	for (i = 0; i < json_array_get_count(posts); i++) {
 		JSON_Object *post = json_array_get_object(posts, i);
 		const char *file_ext = json_object_get_string(post, "ext");
-		const long tim = (long)json_object_get_number(post, "tim");
+		const char *filename = json_object_get_string(post, "filename");
+		const long _tim = (long)json_object_get_number(post, "tim");
 
 		if (file_ext == NULL)
 			continue;
 
 		if (strstr(file_ext, "webm")) {
-			printf("Score: %lu%s.\n", tim, file_ext);
+			printf("Score: %s%s.\n", filename, file_ext);
 			/* Images: http(s)://i.4cdn.org/<board>/<tim>.<file_ext>
 			 * Thumbnails: http(s)://t.4cdn.org/<board>/<tim>s.jpg
 			 */
 
-			char filename[32] = {0};
-			snprintf(filename, sizeof(filename), "%lu", tim);
+			char tim[32] = {0};
+			snprintf(tim, sizeof(tim), "%lu", _tim);
 
 			post_match _match = {
 				.board = match->board,
 				.filename = {0},
-				.file_ext = {0}
+				.file_ext = {0},
+				.tim	  = {0}
 			};
 
 			post_match *t_match = malloc(sizeof(post_match));
 			memcpy(t_match, &_match, sizeof(_match));
+			strncpy(t_match->tim, tim, sizeof(t_match->tim));
 			strncpy(t_match->filename, filename, sizeof(t_match->filename));
 			strncpy(t_match->file_ext, file_ext, sizeof(t_match->file_ext));
 
