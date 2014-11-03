@@ -78,6 +78,9 @@ static char *receive_chunked_http(const int request_fd) {
 		recv(request_fd, raw_buf + old_offset, count, 0);
 	}
 	/* printf("Full message is %s\n.", raw_buf); */
+	/* Check for a 200: */
+	if (strstr(raw_buf, "200") == NULL)
+		return NULL;
 
 	/* 4Chan throws us data as chunk-encoded HTTP. Rad. */
 	char *header_end = strstr(raw_buf, "\r\n\r\n");
@@ -182,6 +185,9 @@ static char *receive_http(const int request_fd, size_t *out) {
 		recv(request_fd, raw_buf + old_offset, count, 0);
 	}
 	/* printf("Full message is %s\n.", raw_buf); */
+	/* Check for a 200: */
+	if (strstr(raw_buf, "200") == NULL)
+		return NULL;
 
 	/* 4Chan throws us data as chunk-encoded HTTP. Rad. */
 	char *header_end = strstr(raw_buf, "\r\n\r\n");
@@ -252,6 +258,9 @@ static ol_stack *build_thread_index() {
 
 		printf("Sent request to 4chan.\n");
 		char *all_json = receive_chunked_http(request_fd);
+		if (all_json == NULL)
+			goto error;
+
 		ol_stack *matches = parse_catalog_json(all_json, current_board);
 
 		while (matches->next != NULL) {
@@ -358,6 +367,9 @@ int download_images() {
 		size_t thumb_size, image_size;
 		char *raw_thumb_resp = receive_http(thumb_request_fd, &thumb_size);
 		char *raw_image_resp = receive_http(image_request_fd, &image_size);
+
+		if (raw_thumb_resp == NULL || raw_image_resp == NULL)
+			goto error;
 
 		if (thumb_size <= 0 || image_size <= 0) {
 			/* 4chan cut us off. This happens sometimes. Just sleep for a bit. */
