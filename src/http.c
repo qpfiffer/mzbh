@@ -13,14 +13,15 @@
 #include "http.h"
 #include "parse.h"
 
+const char BOARDS[] = {'a', 'b', 'e', 'h', 'v'};
 const char WEBMS_DIR[] = "./webms";
 
 const char FOURCHAN_API_HOST[] = "a.4cdn.org";
 const char FOURCHAN_THUMBNAIL_HOST[] = "t.4cdn.org";
 const char FOURCHAN_IMAGE_HOST[] = "i.4cdn.org";
 
-const char B_API_REQUEST[] =
-	"GET /b/catalog.json HTTP/1.1\r\n"
+const char CATALOG_REQUEST[] =
+	"GET /%c/catalog.json HTTP/1.1\r\n"
 	"User-Agent: Mozilla/5.0 (Windows NT 5.1; rv:31.0) Gecko/20100101 Firefox/31.0\r\n"
 	"Host: a.4cdn.org\r\n"
 	"Accept: application/json\r\n\r\n";
@@ -223,6 +224,78 @@ static void ensure_directory_for_board(const char board) {
 		mkdir(to_create, 0700);
 }
 
+static ol_stack *build_thread_index() {
+	int request_fd = connect_to_host(FOURCHAN_API_HOST);
+	if (request_fd < 0)
+		goto error;
+	printf("Connected to 4chan.\n");
+
+	/* This is where we'll queue up images to be downloaded. */
+	ol_stack *images_to_download = malloc(sizeof(ol_stack));
+	images_to_download->next = NULL;
+	images_to_download->data = NULL;
+
+	int i;
+	for (i = 0; i < sizeof(BOARDS); i++) {
+		const char current_board = BOARDS[i];
+
+		const size_t api_request_siz = strlen(CATALOG_REQUEST);
+		char new_api_request[api_request_siz];
+		memset(new_api_request, '\0', api_request_siz);
+
+		snprintf(new_api_request, api_request_siz, CATALOG_REQUEST, current_board);
+		int rc = send(request_fd, new_api_request, strlen(new_api_request), 0);
+		if (strlen(new_api_request) != rc)
+			goto error;
+
+		printf("Sent request to 4chan.\n");
+		char *all_json = receive_chunked_http(request_fd);
+		ol_stack *matches = parse_catalog_json(all_json, current_board);
+
+		while (matches->next != NULL) {
+			/* Pop our thread_match off the stack */
+			thread_match *match = (thread_match*) spop(&matches);
+			ensure_directory_for_board(match->board);
+
+			printf("Requesting %i...\n", match->thread_num);
+
+			/* Template out a request to the 4chan API for it */
+			/* (The 30 is because I don't want to find the length of the
+			 * integer thread number) */
+			const size_t thread_req_size = sizeof(THREAD_REQUEST) + 30;
+			char templated_req[thread_req_size];
+			memset(templated_req, '\0', thread_req_size);
+
+			snprintf(templated_req, thread_req_size, THREAD_REQUEST,
+					match->board, match->thread_num);
+
+			/* Send that shit over the wire */
+			rc = send(request_fd, templated_req, strlen(templated_req), 0);
+
+			char *thread_json = receive_chunked_http(request_fd);
+			ol_stack *thread_matches = parse_thread_json(thread_json, match);
+			while (thread_matches->next != NULL) {
+				spush(&images_to_download, spop(&thread_matches));
+			}
+			free(thread_matches);
+			free(thread_json);
+
+			free(match);
+		}
+		free(matches);
+
+		free(all_json);
+	}
+	/* We don't need the API socket anymore. */
+	close(request_fd);
+
+	return images_to_download;
+
+error:
+	close(request_fd);
+	return NULL;
+}
+
 int download_images() {
 	int thumb_request_fd = 0;
 	int image_request_fd = 0;
@@ -231,59 +304,7 @@ int download_images() {
 	if (stat(WEBMS_DIR, &st) == -1)
 		mkdir(WEBMS_DIR, 0700);
 
-	int request_fd = connect_to_host(FOURCHAN_API_HOST);
-	if (request_fd < 0)
-		goto error;
-
-	printf("Connected to 4chan.\n");
-	int rc = send(request_fd, B_API_REQUEST, strlen(B_API_REQUEST), 0);
-	if (strlen(B_API_REQUEST) != rc)
-		goto error;
-
-	printf("Sent request to 4chan.\n");
-	char *all_json = receive_chunked_http(request_fd);
-	ol_stack *matches = parse_catalog_json(all_json);
-
-	/* This is where we'll queue up images to be downloaded. */
-	ol_stack *images_to_download = malloc(sizeof(ol_stack));
-	images_to_download->next = NULL;
-	images_to_download->data = NULL;
-
-	while (matches->next != NULL) {
-		/* Pop our thread_match off the stack */
-		thread_match *match = (thread_match*) spop(&matches);
-		ensure_directory_for_board(match->board);
-
-		printf("Requesting %i...\n", match->thread_num);
-
-		/* Template out a request to the 4chan API for it */
-		/* (The 30 is because I don't want to find the length of the
-		 * integer thread number) */
-		const size_t thread_req_size = sizeof(THREAD_REQUEST) + 30;
-		char templated_req[thread_req_size];
-		memset(templated_req, '\0', thread_req_size);
-
-		snprintf(templated_req, thread_req_size, THREAD_REQUEST,
-				match->board, match->thread_num);
-
-		/* Send that shit over the wire */
-		rc = send(request_fd, templated_req, strlen(templated_req), 0);
-
-		char *thread_json = receive_chunked_http(request_fd);
-		ol_stack *thread_matches = parse_thread_json(thread_json, match);
-		while (thread_matches->next != NULL) {
-			spush(&images_to_download, spop(&thread_matches));
-		}
-		free(thread_matches);
-		free(thread_json);
-
-		free(match);
-	}
-	free(matches);
-
-	/* We don't need the API socket anymore. */
-	close(request_fd);
-	free(all_json);
+	ol_stack *images_to_download = build_thread_index();
 
 	thumb_request_fd = connect_to_host(FOURCHAN_THUMBNAIL_HOST);
 	if (thumb_request_fd < 0)
@@ -320,7 +341,7 @@ int download_images() {
 		char thumb_request[256] = {0};
 		snprintf(thumb_request, sizeof(thumb_request), THUMB_REQUEST,
 				p_match->board, p_match->tim);
-		rc = send(thumb_request_fd, thumb_request, strlen(thumb_request), 0);
+		int rc = send(thumb_request_fd, thumb_request, strlen(thumb_request), 0);
 		if (rc != strlen(thumb_request))
 			goto error;
 

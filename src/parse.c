@@ -6,7 +6,7 @@
 #include "parse.h"
 #include "parson.h"
 
-ol_stack *parse_catalog_json(const char *all_json) {
+ol_stack *parse_catalog_json(const char *all_json, const char board) {
 	JSON_Value *catalog = json_parse_string(all_json);
 
 	if (json_value_get_type(catalog) != JSONArray)
@@ -34,7 +34,7 @@ ol_stack *parse_catalog_json(const char *all_json) {
 				printf("%i probably has a webm. Ext: %s\n%s\n", thread_num, file_ext, post);
 
 				thread_match _match = {
-					.board = 'b',
+					.board = board,
 					.thread_num = thread_num
 				};
 

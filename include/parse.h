@@ -15,5 +15,5 @@ typedef struct post_match {
 } post_match;
 
 /* FUCK THE MUTEABLE STATE */
-ol_stack *parse_catalog_json(const char *all_json);
+ol_stack *parse_catalog_json(const char *all_json, const char board);
 ol_stack *parse_thread_json(const char *all_json, const thread_match *match);
