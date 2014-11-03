@@ -14,7 +14,7 @@
 #include "parse.h"
 
 const int SELECT_TIMEOUT = 5;
-const char *BOARDS[] = {"a", "b", "gif", "e", "h", "v"};
+const char *BOARDS[] = {"a", "b", "gif", "e", "h", "v", "wsg"};
 const char WEBMS_DIR[] = "./webms";
 
 const char FOURCHAN_API_HOST[] = "a.4cdn.org";
@@ -238,7 +238,7 @@ static ol_stack *build_thread_index() {
 	images_to_download->data = NULL;
 
 	int i;
-	for (i = 0; i < sizeof(BOARDS); i++) {
+	for (i = 0; i < (sizeof(BOARDS)/sizeof(BOARDS[0])); i++) {
 		const char *current_board = BOARDS[i];
 
 		const size_t api_request_siz = strlen(CATALOG_REQUEST) + strnlen(current_board, BOARD_STR_LEN);
@@ -361,6 +361,7 @@ int download_images() {
 
 		if (thumb_size <= 0 || image_size <= 0) {
 			/* 4chan cut us off. This happens sometimes. Just sleep for a bit. */
+			printf("CUTOFF REACHED. Sleeping.\n");
 			sleep(300);
 			/* Now we try again: */
 			raw_thumb_resp = receive_http(thumb_request_fd, &thumb_size);
