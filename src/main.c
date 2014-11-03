@@ -22,7 +22,6 @@ void background_work(int debug) {
 	while (1) {
 		if (download_images() != 0) {
 			printf("Something went wrong when attempting to download images.\n");
-			return;
 		}
 		sleep(600);
 	}
