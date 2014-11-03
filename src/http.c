@@ -14,7 +14,7 @@
 #include "parse.h"
 
 const int SELECT_TIMEOUT = 5;
-const char BOARDS[] = {'a', 'b', 'e', 'h', 'v'};
+const char *BOARDS[] = {"a", "b", "gif", "e", "h", "v"};
 const char WEBMS_DIR[] = "./webms";
 
 const char FOURCHAN_API_HOST[] = "a.4cdn.org";
@@ -22,25 +22,25 @@ const char FOURCHAN_THUMBNAIL_HOST[] = "t.4cdn.org";
 const char FOURCHAN_IMAGE_HOST[] = "i.4cdn.org";
 
 const char CATALOG_REQUEST[] =
-	"GET /%c/catalog.json HTTP/1.1\r\n"
+	"GET /%s/catalog.json HTTP/1.1\r\n"
 	"User-Agent: Mozilla/5.0 (Windows NT 5.1; rv:31.0) Gecko/20100101 Firefox/31.0\r\n"
 	"Host: a.4cdn.org\r\n"
 	"Accept: application/json\r\n\r\n";
 
 const char THREAD_REQUEST[] =
-	"GET /%c/thread/%i.json HTTP/1.1\r\n"
+	"GET /%s/thread/%i.json HTTP/1.1\r\n"
 	"User-Agent: Mozilla/5.0 (Windows NT 5.1; rv:31.0) Gecko/20100101 Firefox/31.0\r\n"
 	"Host: a.4cdn.org\r\n"
 	"Accept: application/json\r\n\r\n";
 
 const char IMAGE_REQUEST[] =
-	"GET /%c/%s%.*s HTTP/1.1\r\n"
+	"GET /%s/%s%.*s HTTP/1.1\r\n"
 	"User-Agent: Mozilla/5.0 (Windows NT 5.1; rv:31.0) Gecko/20100101 Firefox/31.0\r\n"
 	"Host: i.4cdn.org\r\n"
 	"Accept: */*\r\n\r\n";
 
 const char THUMB_REQUEST[] =
-	"GET /%c/%ss.jpg HTTP/1.1\r\n"
+	"GET /%s/%ss.jpg HTTP/1.1\r\n"
 	"User-Agent: Mozilla/5.0 (Windows NT 5.1; rv:31.0) Gecko/20100101 Firefox/31.0\r\n"
 	"Host: t.4cdn.org\r\n"
 	"Accept: */*\r\n\r\n";
@@ -210,14 +210,14 @@ static char *receive_http(const int request_fd, size_t *out) {
 	return cursor_pos;
 }
 
-static void ensure_directory_for_board(const char board) {
+static void ensure_directory_for_board(const char *board) {
 	/* Long enough for WEBMS_DIR, a /, the board and a NULL terminator */
-	const size_t buf_siz = strlen(WEBMS_DIR) + sizeof(char) * 3;
+	const size_t buf_siz = strlen(WEBMS_DIR) + sizeof(char) * 2 + strnlen(board, BOARD_STR_LEN);
 	char to_create[buf_siz];
 	memset(to_create, '\0', buf_siz);
 
 	/* ./webms/b */
-	snprintf(to_create, buf_siz, "%s/%c", WEBMS_DIR, board);
+	snprintf(to_create, buf_siz, "%s/%s", WEBMS_DIR, board);
 
 	struct stat st = {0};
 	if (stat(to_create, &st) == -1) {
@@ -239,9 +239,9 @@ static ol_stack *build_thread_index() {
 
 	int i;
 	for (i = 0; i < sizeof(BOARDS); i++) {
-		const char current_board = BOARDS[i];
+		const char *current_board = BOARDS[i];
 
-		const size_t api_request_siz = strlen(CATALOG_REQUEST);
+		const size_t api_request_siz = strlen(CATALOG_REQUEST) + strnlen(current_board, BOARD_STR_LEN);
 		char new_api_request[api_request_siz];
 		memset(new_api_request, '\0', api_request_siz);
 
@@ -264,7 +264,7 @@ static ol_stack *build_thread_index() {
 			/* Template out a request to the 4chan API for it */
 			/* (The 30 is because I don't want to find the length of the
 			 * integer thread number) */
-			const size_t thread_req_size = sizeof(THREAD_REQUEST) + 30;
+			const size_t thread_req_size = sizeof(THREAD_REQUEST) + strnlen(match->board, BOARD_STR_LEN) + 30;
 			char templated_req[thread_req_size];
 			memset(templated_req, '\0', thread_req_size);
 
@@ -321,7 +321,7 @@ int download_images() {
 		post_match *p_match = (post_match *)spop(&images_to_download);
 
 		char image_filename[128] = {0};
-		snprintf(image_filename, 128, "%s/%c/%s%.*s",
+		snprintf(image_filename, 128, "%s/%s/%s%.*s",
 				WEBMS_DIR, p_match->board, p_match->filename,
 				(int)sizeof(p_match->file_ext), p_match->file_ext);
 
@@ -334,7 +334,7 @@ int download_images() {
 		}
 
 		char thumb_filename[128] = {0};
-		snprintf(thumb_filename, 128, "%s/%c/thumb_%s.jpg",
+		snprintf(thumb_filename, 128, "%s/%s/thumb_%s.jpg",
 				WEBMS_DIR, p_match->board, p_match->filename);
 
 		printf("Downloading %s%.*s...\n", p_match->filename, 5, p_match->file_ext);

@@ -1,4 +1,4 @@
-CFLAGS=-Werror -Wall -Wshadow -O2 -g3
+CFLAGS=-Werror -Wall -O2 -g3
 INCLUDES=-I./include/
 CC=gcc
 NAME=waifu.xyz

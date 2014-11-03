@@ -7,7 +7,7 @@
 #include "parse.h"
 #include "parson.h"
 
-ol_stack *parse_catalog_json(const char *all_json, const char board) {
+ol_stack *parse_catalog_json(const char *all_json, const char board[BOARD_STR_LEN]) {
 	JSON_Value *catalog = json_parse_string(all_json);
 
 	if (json_value_get_type(catalog) != JSONArray)
@@ -37,12 +37,12 @@ ol_stack *parse_catalog_json(const char *all_json, const char board) {
 				printf("%i probably has a webm. Ext: %s\n%s\n", thread_num, file_ext, post);
 
 				thread_match _match = {
-					.board = board,
 					.thread_num = thread_num
 				};
 
 				thread_match *match = malloc(sizeof(thread_match));
 				memcpy(match, &_match, sizeof(_match));
+				strncpy(match->board, board, BOARD_STR_LEN);
 
 				spush(&matches, match);
 			}
@@ -81,18 +81,11 @@ ol_stack *parse_thread_json(const char *all_json, const thread_match *match) {
 			char tim[32] = {0};
 			snprintf(tim, sizeof(tim), "%lu", _tim);
 
-			post_match _match = {
-				.board = match->board,
-				.filename = {0},
-				.file_ext = {0},
-				.tim	  = {0}
-			};
-
 			post_match *t_match = malloc(sizeof(post_match));
-			memcpy(t_match, &_match, sizeof(_match));
 			strncpy(t_match->tim, tim, sizeof(t_match->tim));
 			strncpy(t_match->filename, filename, sizeof(t_match->filename));
 			strncpy(t_match->file_ext, file_ext, sizeof(t_match->file_ext));
+			strncpy(t_match->board, match->board, sizeof(t_match->board));
 
 			spush(&matches, t_match);
 		}
