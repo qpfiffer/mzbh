@@ -32,7 +32,8 @@ ol_stack *parse_catalog_json(const char *all_json, const char board) {
 			const char *post = json_object_get_string(thread, "com");
 
 			if ((file_ext != NULL && strstr(file_ext, "webm")) ||
-				(post != NULL && strcasestr(post, "webm"))) {
+				(post != NULL && strcasestr(post, "webm")) ||
+				(post != NULL && strcasestr(post, "gif"))) {
 				printf("%i probably has a webm. Ext: %s\n%s\n", thread_num, file_ext, post);
 
 				thread_match _match = {
