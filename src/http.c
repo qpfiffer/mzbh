@@ -381,11 +381,13 @@ int download_images() {
 		}
 
 		/* Write thumbnail to disk. */
+		printf("Writing thumbnail to disk.\n");
 		FILE *thumb_file;
 		thumb_file = fopen(thumb_filename, "wb");
 		fwrite(raw_thumb_resp, 1, thumb_size, thumb_file);
 		fclose(thumb_file);
 
+		printf("Writing image to disk.\n");
 		FILE *image_file;
 		image_file = fopen(image_filename, "wb");
 		fwrite(raw_image_resp, 1, image_size, image_file);
