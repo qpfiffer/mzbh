@@ -322,6 +322,10 @@ int download_images() {
 	}
 
 	ol_stack *images_to_download = build_thread_index();
+	if (!images_to_download) {
+		log_msg(LOG_WARN, "No images to download.");
+		goto error;
+	}
 
 	thumb_request_fd = connect_to_host(FOURCHAN_THUMBNAIL_HOST);
 	if (thumb_request_fd < 0) {
