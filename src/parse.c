@@ -6,12 +6,13 @@
 
 #include "parse.h"
 #include "parson.h"
+#include "logging.h"
 
 ol_stack *parse_catalog_json(const char *all_json, const char board[BOARD_STR_LEN]) {
 	JSON_Value *catalog = json_parse_string(all_json);
 
 	if (json_value_get_type(catalog) != JSONArray)
-		printf("Well, the root isn't a JSONArray.\n");
+		log_msg(LOG_WARN, "Well, the root isn't a JSONArray.");
 
 	ol_stack *matches = NULL;
 	matches = calloc(1, sizeof(ol_stack));
@@ -19,9 +20,10 @@ ol_stack *parse_catalog_json(const char *all_json, const char board[BOARD_STR_LE
 	JSON_Array *all_objects = json_value_get_array(catalog);
 
 	int i;
-	for (i = 0; i < json_array_get_count(all_objects); i++) {
+	const int page_count = json_array_get_count(all_objects);
+	for (i = 0; i < page_count; i++) {
 		JSON_Object *obj = json_array_get_object(all_objects, i);
-		printf("Page: %lu\n", (long)json_object_get_number(obj, "page"));
+		log_msg(LOG_INFO, "Checking Page: %lu/%i\n", (long)json_object_get_number(obj, "page"), page_count);
 
 		JSON_Array *threads = json_object_get_array(obj, "threads");
 		int j;
@@ -34,7 +36,7 @@ ol_stack *parse_catalog_json(const char *all_json, const char board[BOARD_STR_LE
 			if ((file_ext != NULL && strstr(file_ext, "webm")) ||
 				(post != NULL && strcasestr(post, "webm")) ||
 				(post != NULL && strcasestr(post, "gif"))) {
-				printf("%i probably has a webm. Ext: %s\n%s\n", thread_num, file_ext, post);
+				log_msg(LOG_INFO, "Thread %i may have some webm. Ext: %s\n", thread_num, file_ext);
 
 				thread_match _match = {
 					.thread_num = thread_num
@@ -73,10 +75,7 @@ ol_stack *parse_thread_json(const char *all_json, const thread_match *match) {
 			continue;
 
 		if (strstr(file_ext, "webm")) {
-			printf("Score: %s%s.\n", filename, file_ext);
-			/* Images: http(s)://i.4cdn.org/<board>/<tim>.<file_ext>
-			 * Thumbnails: http(s)://t.4cdn.org/<board>/<tim>s.jpg
-			 */
+			log_msg(LOG_INFO, "Hit: %s%s.", filename, file_ext);
 
 			char tim[32] = {0};
 			snprintf(tim, sizeof(tim), "%lu", _tim);

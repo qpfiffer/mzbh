@@ -12,6 +12,7 @@
 
 #include "http.h"
 #include "parse.h"
+#include "logging.h"
 
 const int SELECT_TIMEOUT = 5;
 const char *BOARDS[] = {"a", "b", "gif", "e", "h", "v", "wsg"};
@@ -133,21 +134,24 @@ static int connect_to_host(const char *host) {
 	getaddrinfo(host, "80", &hints, &res);
 
 	request_fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-	if (request_fd < 0)
+	if (request_fd < 0) {
+		log_msg(LOG_ERR, "Could not create socket.");
 		goto error;
+	}
 
 	int opt = 1;
 	setsockopt(request_fd, SOL_SOCKET, SO_REUSEADDR, (void*) &opt, sizeof(opt));
 
 	int rc = connect(request_fd, res->ai_addr, res->ai_addrlen);
-	if (rc == -1)
+	if (rc == -1) {
+		log_msg(LOG_ERR, "Could not connect to host %s.", host);
 		goto error;
+	}
 
 	freeaddrinfo(res);
 	return request_fd;
 
 error:
-	printf("ERROR.\n");
 	close(request_fd);
 	return -1;
 }
@@ -236,7 +240,7 @@ static ol_stack *build_thread_index() {
 	int request_fd = connect_to_host(FOURCHAN_API_HOST);
 	if (request_fd < 0)
 		goto error;
-	printf("Connected to 4chan.\n");
+	log_msg(LOG_INFO, "Connected to %s.", FOURCHAN_API_HOST);
 
 	/* This is where we'll queue up images to be downloaded. */
 	ol_stack *images_to_download = malloc(sizeof(ol_stack));
@@ -256,7 +260,7 @@ static ol_stack *build_thread_index() {
 		if (strlen(new_api_request) != rc)
 			goto error;
 
-		printf("Sent request to 4chan.\n");
+		log_msg(LOG_INFO, "Sent request to %s.", FOURCHAN_API_HOST);
 		char *all_json = receive_chunked_http(request_fd);
 		if (all_json == NULL)
 			goto error;
@@ -268,7 +272,7 @@ static ol_stack *build_thread_index() {
 			thread_match *match = (thread_match*) spop(&matches);
 			ensure_directory_for_board(match->board);
 
-			printf("Requesting %i...\n", match->thread_num);
+			log_msg(LOG_INFO, "Requesting thread %i...", match->thread_num);
 
 			/* Template out a request to the 4chan API for it */
 			/* (The 30 is because I don't want to find the length of the
@@ -312,18 +316,24 @@ int download_images() {
 	int image_request_fd = 0;
 
 	struct stat st = {0};
-	if (stat(WEBMS_DIR, &st) == -1)
+	if (stat(WEBMS_DIR, &st) == -1) {
+		log_msg(LOG_WARN, "Creating webms directory %s.", WEBMS_DIR);
 		mkdir(WEBMS_DIR, 0755);
+	}
 
 	ol_stack *images_to_download = build_thread_index();
 
 	thumb_request_fd = connect_to_host(FOURCHAN_THUMBNAIL_HOST);
-	if (thumb_request_fd < 0)
+	if (thumb_request_fd < 0) {
+		log_msg(LOG_ERR, "Could not connect to thumbnail host.");
 		goto error;
+	}
 
 	image_request_fd = connect_to_host(FOURCHAN_IMAGE_HOST);
-	if (image_request_fd < 0)
+	if (image_request_fd < 0) {
+		log_msg(LOG_ERR, "Could not connect to image host.");
 		goto error;
+	}
 
 	/* Now actually download the images. */
 	while (images_to_download->next != NULL) {
@@ -337,7 +347,7 @@ int download_images() {
 		/* We already have this file, don't need to download it again. */
 		struct stat ifname = {0};
 		if (stat(image_filename, &ifname) != -1 && ifname.st_size > 0) {
-			printf("Skipping %s.\n", image_filename);
+			log_msg(LOG_INFO, "Skipping %s.", image_filename);
 			free(p_match);
 			continue;
 		}
@@ -346,51 +356,62 @@ int download_images() {
 		snprintf(thumb_filename, 128, "%s/%s/thumb_%s.jpg",
 				WEBMS_DIR, p_match->board, p_match->filename);
 
-		printf("Downloading %s%.*s...\n", p_match->filename, 5, p_match->file_ext);
+		log_msg(LOG_INFO, "Downloading %s%.*s...", p_match->filename, 5, p_match->file_ext);
 
 		/* Build and send the thumbnail request. */
 		char thumb_request[256] = {0};
 		snprintf(thumb_request, sizeof(thumb_request), THUMB_REQUEST,
 				p_match->board, p_match->tim);
 		int rc = send(thumb_request_fd, thumb_request, strlen(thumb_request), 0);
-		if (rc != strlen(thumb_request))
+		if (rc != strlen(thumb_request)) {
+			log_msg(LOG_ERR, "Could not send all bytes to host while requesting thumbnail.");
 			goto error;
+		}
 
 		/* Build and send the image request. */
 		char image_request[256] = {0};
 		snprintf(image_request, sizeof(image_request), IMAGE_REQUEST,
 				p_match->board, p_match->tim, (int)sizeof(p_match->file_ext), p_match->file_ext);
 		rc = send(image_request_fd, image_request, strlen(image_request), 0);
-		if (rc != strlen(image_request))
+		if (rc != strlen(image_request)) {
+			log_msg(LOG_ERR, "Could not send all bytes to host while requesting image.");
 			goto error;
+		}
 
 		size_t thumb_size, image_size;
 		char *raw_thumb_resp = receive_http(thumb_request_fd, &thumb_size);
 		char *raw_image_resp = receive_http(image_request_fd, &image_size);
 
-		if (raw_thumb_resp == NULL || raw_image_resp == NULL)
-			goto error;
-
 		if (thumb_size <= 0 || image_size <= 0) {
 			/* 4chan cut us off. This happens sometimes. Just sleep for a bit. */
-			printf("CUTOFF REACHED. Sleeping.\n");
+			log_msg(LOG_WARN, "Hit API cutoff or whatever. Sleeping.");
 			sleep(300);
 			/* Now we try again: */
 			raw_thumb_resp = receive_http(thumb_request_fd, &thumb_size);
 			raw_image_resp = receive_http(image_request_fd, &image_size);
 		}
 
+		if (raw_thumb_resp == NULL) {
+			log_msg(LOG_ERR, "No thumbnail received.");
+			goto error;
+		}
+
+		if (raw_image_resp == NULL) {
+			log_msg(LOG_ERR, "No image received.");
+			goto error;
+		}
+
 		/* Write thumbnail to disk. */
-		printf("Writing thumbnail to disk.\n");
 		FILE *thumb_file;
 		thumb_file = fopen(thumb_filename, "wb");
-		fwrite(raw_thumb_resp, 1, thumb_size, thumb_file);
+		const size_t rt_written = fwrite(raw_thumb_resp, 1, thumb_size, thumb_file);
+		log_msg(LOG_INFO, "Wrote %i bytes of thumbnail to disk.", rt_written);
 		fclose(thumb_file);
 
-		printf("Writing image to disk.\n");
 		FILE *image_file;
 		image_file = fopen(image_filename, "wb");
-		fwrite(raw_image_resp, 1, image_size, image_file);
+		const size_t iwritten = fwrite(raw_image_resp, 1, image_size, image_file);
+		log_msg(LOG_INFO, "Wrote %i bytes of image to disk.", iwritten);
 		fclose(image_file);
 
 		/* Don't need the post match anymore: */

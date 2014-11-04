@@ -6,6 +6,7 @@
 
 #include "http.h"
 #include "server.h"
+#include "logging.h"
 
 #define DEBUG 0
 int main_sock_fd = 0;
@@ -18,14 +19,14 @@ void term(int signum) {
 }
 
 void background_work(int debug) {
-	printf("BGWorker chuggin'\n");
+	log_msg(LOG_INFO, "BGWorker started.");
 	while (1) {
 		if (download_images() != 0) {
-			printf("Something went wrong when attempting to download images.\n");
+			log_msg(LOG_WARN, "Something went wrong while downloading images.");
 		}
 		sleep(600);
 	}
-	printf("BGWorker exiting.\n");
+	log_msg(LOG_INFO, "BGWorker exiting.");
 }
 
 int start_bg_worker(int debug) {
@@ -48,7 +49,7 @@ int main(int argc, char *argv[]) {
 	int rc = 0;
 	if ((rc = http_serve(main_sock_fd)) != 0) {
 		term(SIGTERM);
-		printf("COULD NOT SERVE HTTP\n");
+		log_msg(LOG_ERR, "Could not start HTTP service.");
 		return rc;
 	}
 	return 0;
