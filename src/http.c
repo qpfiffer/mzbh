@@ -228,7 +228,7 @@ static void ensure_directory_for_board(const char *board) {
 	struct stat st = {0};
 	if (stat(to_create, &st) == -1) {
 		printf("Creating %s\n", to_create);
-		mkdir(to_create, 0700);
+		mkdir(to_create, 0755);
 	}
 }
 
@@ -313,7 +313,7 @@ int download_images() {
 
 	struct stat st = {0};
 	if (stat(WEBMS_DIR, &st) == -1)
-		mkdir(WEBMS_DIR, 0700);
+		mkdir(WEBMS_DIR, 0755);
 
 	ol_stack *images_to_download = build_thread_index();
 
