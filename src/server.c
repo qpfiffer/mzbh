@@ -44,6 +44,38 @@ const char generic_response[] =
 	"Server: waifu.xyz/bitch\r\n\r\n"
 	"hello";
 
+typedef struct http_request {
+	char verb[16];
+	char resource[128];
+} http_request;
+
+static int parse_request(const char to_read[MAX_READ_LEN], http_request *out) {
+	/* Find the verb */
+	const char *verb_end = strnstr(to_read, " ", MAX_READ_LEN);
+	if (verb_end == NULL)
+		goto error;
+
+	const size_t verb_size = verb_end - to_read >= sizeof(out->verb) ? sizeof(out->verb) : verb_end - to_read;
+	strncpy(out->verb, to_read, verb_size);
+
+	if (strncmp(out->verb, "GET", verb_size) != 0) {
+		printf("Don't know verb %s.\n", out->verb);
+		goto error;
+	}
+
+	const char *res_offset = verb_end + sizeof(char);
+	const char *resource_end = strnstr(res_offset, " ", sizeof(out->resource));
+	if (resource_end == NULL)
+		goto error;
+
+	const size_t resource_size = resource_end - res_offset >= sizeof(out->resource) ? sizeof(out->resource) : resource_end - res_offset;
+	strncpy(out->resource, res_offset, resource_size);
+	return 0;
+
+error:
+	return -1;
+}
+
 static int respond(const int accept_fd) {
 	char to_read[MAX_READ_LEN] = {0};
 
@@ -51,30 +83,15 @@ static int respond(const int accept_fd) {
 	if (rc <= 0)
 		goto error;
 
-	/* Find the verb */
-	const char *verb_end = strnstr(to_read, " ", MAX_READ_LEN);
-	if (verb_end == NULL)
+	http_request request = {
+		.verb = {0},
+		.resource = {0}
+	};
+	rc = parse_request(to_read, &request);
+	if (rc != 0)
 		goto error;
 
-	char verb[16] = {0};
-	const size_t verb_size = verb_end - to_read >= sizeof(verb) ? sizeof(verb) : verb_end - to_read;
-	strncpy(verb, to_read, verb_size);
-
-	if (strncmp(verb, "GET", verb_size) != 0) {
-		printf("Don't know verb %s.\n", verb);
-		goto error;
-	}
-
-	char resource[128] = {0};
-	const char *res_offset = verb_end + sizeof(char);
-	const char *resource_end = strnstr(res_offset, " ", sizeof(resource));
-	if (resource_end == NULL)
-		goto error;
-
-	const size_t resource_size = resource_end - res_offset >= sizeof(resource) ? sizeof(resource) : resource_end - res_offset;
-	strncpy(resource, res_offset, resource_size);
-
-	printf("Verb is %s. Resource is %s.\n", verb, resource);
+	printf("Verb is %s. Resource is %s.\n", request.verb, request.resource);
 
 	size_t resp_size = strlen(generic_response);
 	rc = send(accept_fd, generic_response, resp_size, 0);
