@@ -210,7 +210,7 @@ static char *receive_http(const int request_fd, size_t *out) {
 		}
 		result_size = strtol(siz_buf, NULL, 10);
 	}
-	log_msg(LOG_INFO, "Received %lu bytes.\n", result_size);
+	log_msg(LOG_INFO, "Received %lu bytes.", result_size);
 
 	char *to_return = malloc(result_size);
 	strncpy(to_return, cursor_pos, result_size);
@@ -231,7 +231,7 @@ static void ensure_directory_for_board(const char *board) {
 
 	struct stat st = {0};
 	if (stat(to_create, &st) == -1) {
-		log_msg(LOG_WARN, "Creating directory %s\n", to_create);
+		log_msg(LOG_WARN, "Creating directory %s.", to_create);
 		mkdir(to_create, 0755);
 	}
 }

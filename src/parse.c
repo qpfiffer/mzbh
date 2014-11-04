@@ -23,7 +23,7 @@ ol_stack *parse_catalog_json(const char *all_json, const char board[BOARD_STR_LE
 	const int page_count = json_array_get_count(all_objects);
 	for (i = 0; i < page_count; i++) {
 		JSON_Object *obj = json_array_get_object(all_objects, i);
-		log_msg(LOG_INFO, "Checking Page: %lu/%i\n", (long)json_object_get_number(obj, "page"), page_count);
+		log_msg(LOG_INFO, "Checking Page: %lu/%i", (long)json_object_get_number(obj, "page"), page_count);
 
 		JSON_Array *threads = json_object_get_array(obj, "threads");
 		int j;
@@ -36,7 +36,7 @@ ol_stack *parse_catalog_json(const char *all_json, const char board[BOARD_STR_LE
 			if ((file_ext != NULL && strstr(file_ext, "webm")) ||
 				(post != NULL && strcasestr(post, "webm")) ||
 				(post != NULL && strcasestr(post, "gif"))) {
-				log_msg(LOG_INFO, "Thread %i may have some webm. Ext: %s\n", thread_num, file_ext);
+				log_msg(LOG_INFO, "Thread %i may have some webm. Ext: %s", thread_num, file_ext);
 
 				thread_match _match = {
 					.thread_num = thread_num
