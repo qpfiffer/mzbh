@@ -210,7 +210,7 @@ static char *receive_http(const int request_fd, size_t *out) {
 		}
 		result_size = strtol(siz_buf, NULL, 10);
 	}
-	printf("Result size is %lu.\n", result_size);
+	log_msg(LOG_INFO, "Received %lu bytes.\n", result_size);
 
 	char *to_return = malloc(result_size);
 	strncpy(to_return, cursor_pos, result_size);
