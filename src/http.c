@@ -116,7 +116,7 @@ static char *receive_chunked_http(const int request_fd) {
 		if ((cursor_pos - raw_buf) > buf_size || chunk_size <= 0)
 			break;
 	}
-	printf("The total json size is %zu.\n", json_total);
+	/* printf("The total json size is %zu.\n", json_total); */
 	/* printf("JSON:\n%s", json_buf); */
 	free(raw_buf);
 
@@ -231,7 +231,7 @@ static void ensure_directory_for_board(const char *board) {
 
 	struct stat st = {0};
 	if (stat(to_create, &st) == -1) {
-		printf("Creating %s\n", to_create);
+		log_msg(LOG_WARN, "Creating directory %s\n", to_create);
 		mkdir(to_create, 0755);
 	}
 }
