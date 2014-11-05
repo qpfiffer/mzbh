@@ -12,7 +12,33 @@
 #include "logging.h"
 
 #define MAX_READ_LEN 1024
+#define VERB_SIZE 16
 
+const char generic_response[] =
+	"HTTP/1.1 200 OK\r\n"
+	"Content-Type: text/html; charset=UTF-8\r\n"
+	"Content-Length: 5\r\n"
+	"Connection: close\r\n"
+	"Server: waifu.xyz/bitch\r\n\r\n"
+	"hello";
+
+const char r_404[] =
+	"HTTP/1.1 404 Not Found\r\n"
+	"Content-Type: text/html; charset=UTF-8\r\n"
+	"Content-Length: 27\r\n"
+	"Connection: close\r\n"
+	"Server: waifu.xyz/bitch\r\n\r\n"
+	"<h1>\"Welcome to Die|</h1>";
+
+typedef struct http_request {
+	char verb[VERB_SIZE];
+	char resource[128];
+} http_request;
+
+typedef struct route {
+	char verb[VERB_SIZE];
+	char route_match[256];
+} route;
 
 /* Pulled from here: http://stackoverflow.com/a/25705264 */
 char *strnstr(const char *haystack, const char *needle, size_t len)
@@ -36,19 +62,6 @@ char *strnstr(const char *haystack, const char *needle, size_t len)
 	}
 	return NULL;
 }
-
-const char generic_response[] =
-	"HTTP/1.1 200 OK\r\n"
-	"Content-Type: text/html; charset=UTF-8\r\n"
-	"Content-Length: 5\r\n"
-	"Connection: close\r\n"
-	"Server: waifu.xyz/bitch\r\n\r\n"
-	"hello";
-
-typedef struct http_request {
-	char verb[16];
-	char resource[128];
-} http_request;
 
 static int parse_request(const char to_read[MAX_READ_LEN], http_request *out) {
 	/* Find the verb */
@@ -98,8 +111,8 @@ static int respond(const int accept_fd) {
 
 	log_msg(LOG_WARN, "%s - %s", request.verb, request.resource);
 
-	size_t resp_size = strlen(generic_response);
-	rc = send(accept_fd, generic_response, resp_size, 0);
+	size_t resp_size = strlen(r_404);
+	rc = send(accept_fd, r_404, resp_size, 0);
 	if (resp_size != rc) {
 		log_msg(LOG_ERR, "Could not send response.");
 		goto error;
