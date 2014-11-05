@@ -13,5 +13,5 @@ clean:
 %.o: ./src/%.c
 	$(CC) $(CFLAGS) $(INCLUDES) -c $<
 
-$(NAME): logging.o server.o stack.o parse.o http.o main.o parson.o
+$(NAME): utils.o logging.o server.o stack.o parse.o http.o main.o parson.o
 	$(CC) $(CLAGS) $(INCLUDES) -o $(NAME) $^
