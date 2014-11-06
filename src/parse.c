@@ -105,6 +105,7 @@ ol_stack *parse_thread_json(const char *all_json, const thread_match *match) {
 		}
 	}
 
+	json_value_free(thread_raw);
 	return matches;
 }
 

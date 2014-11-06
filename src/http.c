@@ -16,7 +16,9 @@
 
 const int SELECT_TIMEOUT = 5;
 const char *BOARDS[] = {"a", "b", "gif", "e", "h", "v", "wsg"};
-const char WEBMS_DIR[] = "./webms";
+
+const char WEBMS_DIR_DEFAULT[] = "./webms";
+const char *WEBMS_DIR = NULL;
 
 const char FOURCHAN_API_HOST[] = "a.4cdn.org";
 const char FOURCHAN_THUMBNAIL_HOST[] = "t.4cdn.org";
@@ -217,7 +219,7 @@ static char *receive_http(const int request_fd, size_t *out) {
 	*out = result_size;
 	free(raw_buf);
 
-	return cursor_pos;
+	return to_return;
 }
 
 static void ensure_directory_for_board(const char *board) {
@@ -314,7 +316,17 @@ error:
 int download_images() {
 	int thumb_request_fd = 0;
 	int image_request_fd = 0;
+	char *raw_thumb_resp = NULL;
+	char *raw_image_resp = NULL;
 
+	if (!WEBMS_DIR) {
+		char *env_var = getenv("WEBMS_DIR");
+		if (!env_var) {
+			WEBMS_DIR = WEBMS_DIR_DEFAULT;
+		} else {
+			WEBMS_DIR = env_var;
+		}
+	}
 	struct stat st = {0};
 	if (stat(WEBMS_DIR, &st) == -1) {
 		log_msg(LOG_WARN, "Creating webms directory %s.", WEBMS_DIR);
@@ -343,7 +355,7 @@ int download_images() {
 	while (images_to_download->next != NULL) {
 		post_match *p_match = (post_match *)spop(&images_to_download);
 
-		char image_filename[128] = {0};
+		char image_filename[512] = {0};
 		snprintf(image_filename, 128, "%s/%s/%s%.*s",
 				WEBMS_DIR, p_match->board, p_match->filename,
 				(int)sizeof(p_match->file_ext), p_match->file_ext);
@@ -356,7 +368,7 @@ int download_images() {
 			continue;
 		}
 
-		char thumb_filename[128] = {0};
+		char thumb_filename[512] = {0};
 		snprintf(thumb_filename, 128, "%s/%s/thumb_%s.jpg",
 				WEBMS_DIR, p_match->board, p_match->filename);
 
@@ -383,16 +395,14 @@ int download_images() {
 		}
 
 		size_t thumb_size, image_size;
-		char *raw_thumb_resp = receive_http(thumb_request_fd, &thumb_size);
-		char *raw_image_resp = receive_http(image_request_fd, &image_size);
+		raw_thumb_resp = receive_http(thumb_request_fd, &thumb_size);
+		raw_image_resp = receive_http(image_request_fd, &image_size);
 
 		if (thumb_size <= 0 || image_size <= 0) {
 			/* 4chan cut us off. This happens sometimes. Just sleep for a bit. */
 			log_msg(LOG_WARN, "Hit API cutoff or whatever. Sleeping.");
 			sleep(300);
-			/* Now we try again: */
-			raw_thumb_resp = receive_http(thumb_request_fd, &thumb_size);
-			raw_image_resp = receive_http(image_request_fd, &image_size);
+			goto error;
 		}
 
 		if (raw_thumb_resp == NULL) {
@@ -408,18 +418,40 @@ int download_images() {
 		/* Write thumbnail to disk. */
 		FILE *thumb_file;
 		thumb_file = fopen(thumb_filename, "wb");
+		if (!thumb_file || ferror(thumb_file)) {
+			log_msg(LOG_ERR, "Could not open thumbnail file: %s", thumb_filename);
+			perror(NULL);
+			goto error;
+		}
 		const size_t rt_written = fwrite(raw_thumb_resp, 1, thumb_size, thumb_file);
 		log_msg(LOG_INFO, "Wrote %i bytes of thumbnail to disk.", rt_written);
+		if (rt_written <= 0 || ferror(thumb_file)) {
+			log_msg(LOG_WARN, "Could not write thumbnail to disk: %s", thumb_filename);
+			perror(NULL);
+			goto error;
+		}
 		fclose(thumb_file);
 
 		FILE *image_file;
 		image_file = fopen(image_filename, "wb");
+		if (!image_file || ferror(image_file)) {
+			log_msg(LOG_ERR, "Could not open image file: %s", image_filename);
+			perror(NULL);
+			goto error;
+		}
 		const size_t iwritten = fwrite(raw_image_resp, 1, image_size, image_file);
+		if (iwritten <= 0 || ferror(image_file)) {
+			log_msg(LOG_WARN, "Could not write image to disk: %s", image_filename);
+			perror(NULL);
+			goto error;
+		}
 		log_msg(LOG_INFO, "Wrote %i bytes of image to disk.", iwritten);
 		fclose(image_file);
 
 		/* Don't need the post match anymore: */
 		free(p_match);
+		free(raw_image_resp);
+		free(raw_thumb_resp);
 	}
 	free(images_to_download);
 	close(thumb_request_fd);
@@ -433,6 +465,9 @@ error:
 
 	if (image_request_fd)
 		close(image_request_fd);
+
+	free(raw_thumb_resp);
+	free(raw_image_resp);
 	return -1;
 }
 
