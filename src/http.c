@@ -219,7 +219,7 @@ static char *receive_http(const int request_fd, size_t *out) {
 	*out = result_size;
 	free(raw_buf);
 
-	return cursor_pos;
+	return to_return;
 }
 
 static void ensure_directory_for_board(const char *board) {
@@ -316,6 +316,8 @@ error:
 int download_images() {
 	int thumb_request_fd = 0;
 	int image_request_fd = 0;
+	char *raw_thumb_resp = NULL;
+	char *raw_image_resp = NULL;
 
 	if (!WEBMS_DIR) {
 		char *env_var = getenv("WEBMS_DIR");
@@ -393,16 +395,14 @@ int download_images() {
 		}
 
 		size_t thumb_size, image_size;
-		char *raw_thumb_resp = receive_http(thumb_request_fd, &thumb_size);
-		char *raw_image_resp = receive_http(image_request_fd, &image_size);
+		raw_thumb_resp = receive_http(thumb_request_fd, &thumb_size);
+		raw_image_resp = receive_http(image_request_fd, &image_size);
 
 		if (thumb_size <= 0 || image_size <= 0) {
 			/* 4chan cut us off. This happens sometimes. Just sleep for a bit. */
 			log_msg(LOG_WARN, "Hit API cutoff or whatever. Sleeping.");
 			sleep(300);
-			/* Now we try again: */
-			raw_thumb_resp = receive_http(thumb_request_fd, &thumb_size);
-			raw_image_resp = receive_http(image_request_fd, &image_size);
+			goto error;
 		}
 
 		if (raw_thumb_resp == NULL) {
@@ -418,7 +418,7 @@ int download_images() {
 		/* Write thumbnail to disk. */
 		FILE *thumb_file;
 		thumb_file = fopen(thumb_filename, "wb");
-		if (!thumb_file) {
+		if (!thumb_file || ferror(thumb_file)) {
 			log_msg(LOG_ERR, "Could not open thumbnail file: %s", thumb_filename);
 			perror(NULL);
 			goto error;
@@ -434,7 +434,7 @@ int download_images() {
 
 		FILE *image_file;
 		image_file = fopen(image_filename, "wb");
-		if (!image_file) {
+		if (!image_file || ferror(image_file)) {
 			log_msg(LOG_ERR, "Could not open image file: %s", image_filename);
 			perror(NULL);
 			goto error;
@@ -450,6 +450,8 @@ int download_images() {
 
 		/* Don't need the post match anymore: */
 		free(p_match);
+		free(raw_image_resp);
+		free(raw_thumb_resp);
 	}
 	free(images_to_download);
 	close(thumb_request_fd);
@@ -463,6 +465,9 @@ error:
 
 	if (image_request_fd)
 		close(image_request_fd);
+
+	free(raw_thumb_resp);
+	free(raw_image_resp);
 	return -1;
 }
 
