@@ -408,16 +408,27 @@ int download_images() {
 		/* Write thumbnail to disk. */
 		FILE *thumb_file;
 		thumb_file = fopen(thumb_filename, "wb");
+		if (!thumb_file) {
+			log_msg(LOG_ERR, "Could not open thumbnail file: %s", thumb_filename);
+			perror(NULL);
+			goto error;
+		}
 		const size_t rt_written = fwrite(raw_thumb_resp, 1, thumb_size, thumb_file);
 		log_msg(LOG_INFO, "Wrote %i bytes of thumbnail to disk.", rt_written);
 		if (rt_written <= 0 || ferror(thumb_file)) {
 			log_msg(LOG_WARN, "Could not write thumbnail to disk.");
 			perror(NULL);
+			goto error;
 		}
 		fclose(thumb_file);
 
 		FILE *image_file;
 		image_file = fopen(image_filename, "wb");
+		if (!image_file) {
+			log_msg(LOG_ERR, "Could not open image file: %s", image_filename);
+			perror(NULL);
+			goto error;
+		}
 		const size_t iwritten = fwrite(raw_image_resp, 1, image_size, image_file);
 		if (iwritten <= 0 || ferror(image_file)) {
 			log_msg(LOG_WARN, "Could not write image to disk.");
