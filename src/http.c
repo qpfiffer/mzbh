@@ -456,6 +456,7 @@ int download_images() {
 	free(images_to_download);
 	close(thumb_request_fd);
 	close(image_request_fd);
+	log_msg(LOG_INFO, "Downloaded all images.");
 
 	return 0;
 
