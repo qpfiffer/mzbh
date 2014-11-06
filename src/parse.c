@@ -40,8 +40,8 @@ ol_stack *parse_catalog_json(const char *all_json, const char board[BOARD_STR_LE
 			for (k = 0; k < json_array_get_count(thread_replies); k++) {
 				JSON_Object *thread_reply = json_array_get_object(thread_replies, k);
 				const char *file_ext_reply = json_object_get_string(thread_reply, "ext");
-				log_msg(LOG_INFO, "Found webm in reply. Adding to threads to look through.");
 				if (file_ext_reply != NULL && strstr(file_ext_reply, "webm")) {
+					log_msg(LOG_INFO, "Found webm in reply. Adding to threads to look through.");
 					found_webm_in_reply = 1;
 					break;
 				}
