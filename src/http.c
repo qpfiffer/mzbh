@@ -16,7 +16,9 @@
 
 const int SELECT_TIMEOUT = 5;
 const char *BOARDS[] = {"a", "b", "gif", "e", "h", "v", "wsg"};
-const char WEBMS_DIR[] = "./webms";
+
+const char WEBMS_DIR_DEFAULT[] = "./webms";
+const char *WEBMS_DIR = NULL;
 
 const char FOURCHAN_API_HOST[] = "a.4cdn.org";
 const char FOURCHAN_THUMBNAIL_HOST[] = "t.4cdn.org";
@@ -315,6 +317,14 @@ int download_images() {
 	int thumb_request_fd = 0;
 	int image_request_fd = 0;
 
+	if (!WEBMS_DIR) {
+		char *env_var = getenv("WEBMS_DIR");
+		if (!env_var) {
+			WEBMS_DIR = WEBMS_DIR_DEFAULT;
+		} else {
+			WEBMS_DIR = env_var;
+		}
+	}
 	struct stat st = {0};
 	if (stat(WEBMS_DIR, &st) == -1) {
 		log_msg(LOG_WARN, "Creating webms directory %s.", WEBMS_DIR);
