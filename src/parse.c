@@ -29,11 +29,26 @@ ol_stack *parse_catalog_json(const char *all_json, const char board[BOARD_STR_LE
 		int j;
 		for (j = 0; j < json_array_get_count(threads); j++) {
 			JSON_Object *thread = json_array_get_object(threads, j);
+			JSON_Array *thread_replies = json_object_get_array(thread, "last_replies");
 			const int thread_num = json_object_get_number(thread, "no");
 			const char *file_ext = json_object_get_string(thread, "ext");
 			const char *post = json_object_get_string(thread, "com");
 
-			if ((file_ext != NULL && strstr(file_ext, "webm")) ||
+
+			int found_webm_in_reply = 0;
+			int k;
+			for (k = 0; k < json_array_get_count(thread_replies); k++) {
+				JSON_Object *thread_reply = json_array_get_object(thread_replies, k);
+				const char *file_ext_reply = json_object_get_string(thread_reply, "ext");
+				log_msg(LOG_INFO, "Found webm in reply. Adding to threads to look through.");
+				if (file_ext_reply != NULL && strstr(file_ext_reply, "webm")) {
+					found_webm_in_reply = 1;
+					break;
+				}
+			}
+
+			if (found_webm_in_reply ||
+				(file_ext != NULL && strstr(file_ext, "webm")) ||
 				(post != NULL && strcasestr(post, "webm")) ||
 				(post != NULL && strcasestr(post, "gif"))) {
 				log_msg(LOG_INFO, "Thread %i may have some webm. Ext: %s", thread_num, file_ext);
