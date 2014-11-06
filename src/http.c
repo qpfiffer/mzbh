@@ -343,7 +343,7 @@ int download_images() {
 	while (images_to_download->next != NULL) {
 		post_match *p_match = (post_match *)spop(&images_to_download);
 
-		char image_filename[128] = {0};
+		char image_filename[512] = {0};
 		snprintf(image_filename, 128, "%s/%s/%s%.*s",
 				WEBMS_DIR, p_match->board, p_match->filename,
 				(int)sizeof(p_match->file_ext), p_match->file_ext);
@@ -356,7 +356,7 @@ int download_images() {
 			continue;
 		}
 
-		char thumb_filename[128] = {0};
+		char thumb_filename[512] = {0};
 		snprintf(thumb_filename, 128, "%s/%s/thumb_%s.jpg",
 				WEBMS_DIR, p_match->board, p_match->filename);
 
@@ -416,7 +416,7 @@ int download_images() {
 		const size_t rt_written = fwrite(raw_thumb_resp, 1, thumb_size, thumb_file);
 		log_msg(LOG_INFO, "Wrote %i bytes of thumbnail to disk.", rt_written);
 		if (rt_written <= 0 || ferror(thumb_file)) {
-			log_msg(LOG_WARN, "Could not write thumbnail to disk.");
+			log_msg(LOG_WARN, "Could not write thumbnail to disk: %s", thumb_filename);
 			perror(NULL);
 			goto error;
 		}
@@ -431,8 +431,9 @@ int download_images() {
 		}
 		const size_t iwritten = fwrite(raw_image_resp, 1, image_size, image_file);
 		if (iwritten <= 0 || ferror(image_file)) {
-			log_msg(LOG_WARN, "Could not write image to disk.");
+			log_msg(LOG_WARN, "Could not write image to disk: %s", image_filename);
 			perror(NULL);
+			goto error;
 		}
 		log_msg(LOG_INFO, "Wrote %i bytes of image to disk.", iwritten);
 		fclose(image_file);
