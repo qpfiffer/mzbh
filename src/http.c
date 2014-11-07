@@ -123,7 +123,7 @@ static char *receive_chunked_http(const int request_fd) {
 			if (json_buf != NULL) {
 				json_buf = realloc(json_buf, json_total);
 			} else {
-				json_buf = calloc(1, json_buf);
+				json_buf = calloc(1, json_total);
 			}
 		}
 		/* Copy it from after the <chunk_size>\r\n to the end of the chunk. */
@@ -347,6 +347,7 @@ int download_images() {
 	int image_request_fd = 0;
 	char *raw_thumb_resp = NULL;
 	char *raw_image_resp = NULL;
+	post_match *p_match = NULL;
 
 	if (!WEBMS_DIR) {
 		char *env_var = getenv("WEBMS_DIR");
@@ -383,7 +384,7 @@ int download_images() {
 
 	/* Now actually download the images. */
 	while (images_to_download->next != NULL) {
-		post_match *p_match = (post_match *)spop(&images_to_download);
+		p_match = (post_match *)spop(&images_to_download);
 
 		char image_filename[512] = {0};
 		snprintf(image_filename, 128, "%s/%s/%s%.*s",
@@ -480,6 +481,7 @@ int download_images() {
 
 		/* Don't need the post match anymore: */
 		free(p_match);
+		p_match = NULL;
 		free(raw_image_resp);
 		free(raw_thumb_resp);
 	}
@@ -496,6 +498,14 @@ error:
 
 	if (image_request_fd)
 		close(image_request_fd);
+
+	if (p_match)
+		free(p_match);
+	while (images_to_download->next != NULL) {
+		post_match *_match = (post_match *)spop(&images_to_download);
+		free(_match);
+	}
+	free(images_to_download);
 
 	free(raw_thumb_resp);
 	free(raw_image_resp);
