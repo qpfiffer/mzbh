@@ -47,18 +47,14 @@ ol_stack *parse_catalog_json(const char *all_json, const char board[BOARD_STR_LE
 				}
 			}
 
-			if (found_webm_in_reply ||
+			if (found_webm_in_reply == 1||
 				(file_ext != NULL && strstr(file_ext, "webm")) ||
 				(post != NULL && strcasestr(post, "webm")) ||
 				(post != NULL && strcasestr(post, "gif"))) {
 				log_msg(LOG_INFO, "Thread %i may have some webm. Ext: %s", thread_num, file_ext);
 
-				thread_match _match = {
-					.thread_num = thread_num
-				};
-
 				thread_match *match = malloc(sizeof(thread_match));
-				memcpy(match, &_match, sizeof(_match));
+				match->thread_num = thread_num;
 				strncpy(match->board, board, BOARD_STR_LEN);
 
 				spush(&matches, match);

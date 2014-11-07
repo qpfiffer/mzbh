@@ -6,7 +6,7 @@
 
 typedef struct thread_match {
 	char board[BOARD_STR_LEN];
-	const int thread_num;
+	int thread_num;
 } thread_match;
 
 typedef struct post_match {

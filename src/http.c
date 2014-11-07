@@ -333,7 +333,8 @@ int download_images() {
 		mkdir(WEBMS_DIR, 0755);
 	}
 
-	ol_stack *images_to_download = build_thread_index();
+	ol_stack *images_to_download = NULL;
+	images_to_download = build_thread_index();
 	if (!images_to_download) {
 		log_msg(LOG_WARN, "No images to download.");
 		goto error;
