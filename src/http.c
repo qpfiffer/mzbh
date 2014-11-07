@@ -82,8 +82,11 @@ static char *receive_chunked_http(const int request_fd) {
 	}
 	/* printf("Full message is %s\n.", raw_buf); */
 	/* Check for a 200: */
-	if (strstr(raw_buf, "200") == NULL)
+	if (strstr(raw_buf, "200") == NULL) {
+		log_msg(LOG_ERR, "Could not find 200 return code in response.");
+		printf("Raw buffer: \n%s", raw_buf);
 		return NULL;
+	}
 
 	/* 4Chan throws us data as chunk-encoded HTTP. Rad. */
 	char *header_end = strstr(raw_buf, "\r\n\r\n");
