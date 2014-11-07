@@ -80,7 +80,6 @@ static char *receive_chunked_http(const int request_fd) {
 		} else {
 			raw_buf = calloc(1, buf_size);
 		}
-		/* printf("IOCTL: %i.\n", count); */
 
 		int recvd = recv(request_fd, raw_buf + old_offset, count, 0);
 		if (recvd != count) {
@@ -89,7 +88,7 @@ static char *receive_chunked_http(const int request_fd) {
 	}
 	/* printf("Full message is %s\n.", raw_buf); */
 	/* Check for a 200: */
-	if (strstr(raw_buf, "200") == NULL) {
+	if (raw_buf == NULL || strstr(raw_buf, "200") == NULL) {
 		log_msg(LOG_ERR, "Could not find 200 return code in response.");
 		printf("Raw buffer: \n%s", raw_buf);
 		return NULL;
@@ -277,8 +276,8 @@ static ol_stack *build_thread_index() {
 		log_msg(LOG_INFO, "Sent request to %s.", FOURCHAN_API_HOST);
 		char *all_json = receive_chunked_http(request_fd);
 		if (all_json == NULL) {
-			log_msg(LOG_ERR, "Could not receive chunked HTTP from host for /%s/.", current_board);
-			goto error;
+			log_msg(LOG_WARN, "Could not receive chunked HTTP from host for /%s/.", current_board);
+			continue;
 		}
 
 		ol_stack *matches = parse_catalog_json(all_json, current_board);
@@ -304,6 +303,10 @@ static ol_stack *build_thread_index() {
 			rc = send(request_fd, templated_req, strlen(templated_req), 0);
 
 			char *thread_json = receive_chunked_http(request_fd);
+			if (thread_matches == NULL) {
+				log_msg(LOG_WARN, "Could not receive chunked HTTP for thread. continuing.");
+				continue;
+			}
 			ol_stack *thread_matches = parse_thread_json(thread_json, match);
 			while (thread_matches->next != NULL) {
 				spush(&images_to_download, spop(&thread_matches));
