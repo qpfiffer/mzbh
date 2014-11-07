@@ -303,7 +303,7 @@ static ol_stack *build_thread_index() {
 			rc = send(request_fd, templated_req, strlen(templated_req), 0);
 
 			char *thread_json = receive_chunked_http(request_fd);
-			if (thread_matches == NULL) {
+			if (thread_json == NULL) {
 				log_msg(LOG_WARN, "Could not receive chunked HTTP for thread. continuing.");
 				continue;
 			}
