@@ -222,17 +222,20 @@ static char *receive_http(const int request_fd, size_t *out) {
 
 	size_t result_size = 0;
 	char *offset_for_clength = strstr(raw_buf, "Content-Length: ");
-	if (offset_for_clength != NULL) {
-		char siz_buf[128] = {0};
-		int i = 0;
-
-		const char *to_read = offset_for_clength + strlen("Content-Length: ");
-		while (to_read[i] != ';' && i < sizeof(siz_buf)) {
-			siz_buf[i] = to_read[i];
-			i++;
-		}
-		result_size = strtol(siz_buf, NULL, 10);
+	if (offset_for_clength == NULL) {
+		log_msg(LOG_ERR, "Could not find content-length.");
+		return NULL;
 	}
+
+	char siz_buf[128] = {0};
+	int i = 0;
+
+	const char *to_read = offset_for_clength + strlen("Content-Length: ");
+	while (to_read[i] != ';' && i < sizeof(siz_buf)) {
+		siz_buf[i] = to_read[i];
+		i++;
+	}
+	result_size = strtol(siz_buf, NULL, 10);
 	log_msg(LOG_INFO, "Received %lu bytes.", result_size);
 
 	char *to_return = malloc(result_size);
@@ -313,6 +316,10 @@ static ol_stack *build_thread_index() {
 
 			/* Send that shit over the wire */
 			rc = send(request_fd, templated_req, strlen(templated_req), 0);
+			if (rc != strlen(templated_req)) {
+				log_msg(LOG_ERR, "Could not send all of request.");
+				continue;
+			}
 
 			char *thread_json = receive_chunked_http(request_fd);
 			if (thread_json == NULL) {
@@ -338,6 +345,13 @@ static ol_stack *build_thread_index() {
 	return images_to_download;
 
 error:
+	if (images_to_download != NULL) {
+		while (images_to_download->next != NULL) {
+			post_match *_match = (post_match *)spop(&images_to_download);
+			free(_match);
+		}
+		free(images_to_download);
+	}
 	close(request_fd);
 	return NULL;
 }
@@ -425,7 +439,7 @@ int download_images() {
 			goto error;
 		}
 
-		size_t thumb_size, image_size;
+		size_t thumb_size = 0, image_size = 0;
 		raw_thumb_resp = receive_http(thumb_request_fd, &thumb_size);
 		raw_image_resp = receive_http(image_request_fd, &image_size);
 
@@ -483,7 +497,9 @@ int download_images() {
 		free(p_match);
 		p_match = NULL;
 		free(raw_image_resp);
+		raw_image_resp = NULL;
 		free(raw_thumb_resp);
+		raw_thumb_resp = NULL;
 	}
 	free(images_to_download);
 	close(thumb_request_fd);
@@ -501,14 +517,19 @@ error:
 
 	if (p_match)
 		free(p_match);
-	while (images_to_download->next != NULL) {
-		post_match *_match = (post_match *)spop(&images_to_download);
-		free(_match);
-	}
-	free(images_to_download);
 
-	free(raw_thumb_resp);
-	free(raw_image_resp);
+	if (images_to_download != NULL) {
+		while (images_to_download->next != NULL) {
+			post_match *_match = (post_match *)spop(&images_to_download);
+			free(_match);
+		}
+		free(images_to_download);
+	}
+
+	if (raw_thumb_resp)
+		free(raw_thumb_resp);
+	if (raw_image_resp)
+		free(raw_image_resp);
 	return -1;
 }
 
