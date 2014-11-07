@@ -49,7 +49,7 @@ const char THUMB_REQUEST[] =
 	"Accept: */*\r\n\r\n";
 
 static char *receive_chunked_http(const int request_fd) {
-	char *raw_buf = malloc(0);
+	char *raw_buf = NULL;
 	size_t buf_size = 0;
 	int times_read = 0;
 
@@ -75,10 +75,17 @@ static char *receive_chunked_http(const int request_fd) {
 			break;
 		int old_offset = buf_size;
 		buf_size += count;
-		raw_buf = realloc(raw_buf, buf_size);
+		if (raw_buf != NULL) {
+			raw_buf = realloc(raw_buf, buf_size);
+		} else {
+			raw_buf = calloc(1, buf_size);
+		}
 		/* printf("IOCTL: %i.\n", count); */
 
-		recv(request_fd, raw_buf + old_offset, count, 0);
+		int recvd = recv(request_fd, raw_buf + old_offset, count, 0);
+		if (recvd != count) {
+			log_msg(LOG_WARN, "Could not receive entire message.");
+		}
 	}
 	/* printf("Full message is %s\n.", raw_buf); */
 	/* Check for a 200: */
