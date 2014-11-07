@@ -240,8 +240,10 @@ static void ensure_directory_for_board(const char *board) {
 
 static ol_stack *build_thread_index() {
 	int request_fd = connect_to_host(FOURCHAN_API_HOST);
-	if (request_fd < 0)
+	if (request_fd < 0) {
+		log_msg(LOG_ERR, "Could not connect to %s.", FOURCHAN_API_HOST);
 		goto error;
+	}
 	log_msg(LOG_INFO, "Connected to %s.", FOURCHAN_API_HOST);
 
 	/* This is where we'll queue up images to be downloaded. */
@@ -264,8 +266,10 @@ static ol_stack *build_thread_index() {
 
 		log_msg(LOG_INFO, "Sent request to %s.", FOURCHAN_API_HOST);
 		char *all_json = receive_chunked_http(request_fd);
-		if (all_json == NULL)
+		if (all_json == NULL) {
+			log_msg(LOG_ERR, "Could not receive chunked HTTP from host for /%s/.", current_board);
 			goto error;
+		}
 
 		ol_stack *matches = parse_catalog_json(all_json, current_board);
 
