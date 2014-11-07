@@ -99,7 +99,7 @@ static char *receive_chunked_http(const int request_fd) {
 	char *cursor_pos = header_end  + (sizeof(char) * 4);
 
 	size_t json_total = 0;
-	char *json_buf = malloc(0);
+	char *json_buf = NULL;
 
 	while (1) {
 		/* This is where the data begins. */
@@ -119,8 +119,13 @@ static char *receive_chunked_http(const int request_fd) {
 		/* Copy the json into a pure buffer: */
 		int old_offset = json_total;
 		json_total += chunk_size;
-		if (json_total >= old_offset)
-			json_buf = realloc(json_buf, json_total);
+		if (json_total >= old_offset) {
+			if (json_buf != NULL) {
+				json_buf = realloc(json_buf, json_total);
+			} else {
+				json_buf = calloc(1, json_buf);
+			}
+		}
 		/* Copy it from after the <chunk_size>\r\n to the end of the chunk. */
 		memcpy(json_buf + old_offset, chunk_size_end + 2, chunk_size);
 		/* Stop reading if we am play gods: */
