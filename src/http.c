@@ -76,7 +76,12 @@ static char *receive_chunked_http(const int request_fd) {
 		int old_offset = buf_size;
 		buf_size += count;
 		if (raw_buf != NULL) {
-			raw_buf = realloc(raw_buf, buf_size);
+			char *new_buf = realloc(raw_buf, buf_size);
+			if (new_buf != NULL) {
+				raw_buf = new_buf;
+			} else {
+				goto error;
+			}
 		} else {
 			raw_buf = calloc(1, buf_size);
 		}
@@ -91,7 +96,7 @@ static char *receive_chunked_http(const int request_fd) {
 	if (raw_buf == NULL || strstr(raw_buf, "200") == NULL) {
 		log_msg(LOG_ERR, "Could not find 200 return code in response.");
 		printf("Raw buffer: \n%s", raw_buf);
-		return NULL;
+		goto error;
 	}
 
 	/* 4Chan throws us data as chunk-encoded HTTP. Rad. */
@@ -121,7 +126,12 @@ static char *receive_chunked_http(const int request_fd) {
 		json_total += chunk_size;
 		if (json_total >= old_offset) {
 			if (json_buf != NULL) {
-				json_buf = realloc(json_buf, json_total);
+				char *new_buf = realloc(json_buf, json_total);
+				if (new_buf != NULL) {
+					json_buf = new_buf;
+				} else {
+					goto error;
+				}
 			} else {
 				json_buf = calloc(1, json_total);
 			}
@@ -137,6 +147,11 @@ static char *receive_chunked_http(const int request_fd) {
 	free(raw_buf);
 
 	return json_buf;
+
+error:
+	if (raw_buf != NULL)
+		free(raw_buf);
+	return NULL;
 }
 
 static int connect_to_host(const char *host) {
@@ -200,7 +215,12 @@ static char *receive_http(const int request_fd, size_t *out) {
 		int old_offset = buf_size;
 		buf_size += count;
 		if (raw_buf != NULL) {
-			raw_buf = realloc(raw_buf, buf_size);
+			char *new_buf = realloc(raw_buf, buf_size);
+			if (new_buf != NULL) {
+				raw_buf = new_buf;
+			} else {
+				goto error;
+			}
 		} else {
 			raw_buf = calloc(1, buf_size);
 		}
@@ -213,7 +233,7 @@ static char *receive_http(const int request_fd, size_t *out) {
 	if (raw_buf == NULL || strstr(raw_buf, "200") == NULL) {
 		log_msg(LOG_ERR, "Could not find 200 return code in response.");
 		printf("Raw buffer: \n%s", raw_buf);
-		return NULL;
+		goto error;
 	}
 
 	/* 4Chan throws us data as chunk-encoded HTTP. Rad. */
@@ -224,7 +244,7 @@ static char *receive_http(const int request_fd, size_t *out) {
 	char *offset_for_clength = strstr(raw_buf, "Content-Length: ");
 	if (offset_for_clength == NULL) {
 		log_msg(LOG_ERR, "Could not find content-length.");
-		return NULL;
+		goto error;
 	}
 
 	char siz_buf[128] = {0};
@@ -244,6 +264,11 @@ static char *receive_http(const int request_fd, size_t *out) {
 	free(raw_buf);
 
 	return to_return;
+
+error:
+	if (raw_buf != NULL)
+		free(raw_buf);
+	return NULL;
 }
 
 static void ensure_directory_for_board(const char *board) {
@@ -361,6 +386,8 @@ int download_images() {
 	int image_request_fd = 0;
 	char *raw_thumb_resp = NULL;
 	char *raw_image_resp = NULL;
+	FILE *thumb_file = NULL;
+	FILE *image_file = NULL;
 	post_match *p_match = NULL;
 
 	if (!WEBMS_DIR) {
@@ -461,7 +488,6 @@ int download_images() {
 		}
 
 		/* Write thumbnail to disk. */
-		FILE *thumb_file;
 		thumb_file = fopen(thumb_filename, "wb");
 		if (!thumb_file || ferror(thumb_file)) {
 			log_msg(LOG_ERR, "Could not open thumbnail file: %s", thumb_filename);
@@ -476,8 +502,8 @@ int download_images() {
 			goto error;
 		}
 		fclose(thumb_file);
+		thumb_file = 0;
 
-		FILE *image_file;
 		image_file = fopen(image_filename, "wb");
 		if (!image_file || ferror(image_file)) {
 			log_msg(LOG_ERR, "Could not open image file: %s", image_filename);
@@ -492,6 +518,7 @@ int download_images() {
 		}
 		log_msg(LOG_INFO, "Wrote %i bytes of image to disk.", iwritten);
 		fclose(image_file);
+		image_file = 0;
 
 		/* Don't need the post match anymore: */
 		free(p_match);
@@ -530,6 +557,8 @@ error:
 		free(raw_thumb_resp);
 	if (raw_image_resp)
 		free(raw_image_resp);
+	fclose(thumb_file);
+	fclose(image_file);
 	return -1;
 }
 
