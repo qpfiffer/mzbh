@@ -51,7 +51,7 @@ static int parse_request(const char to_read[MAX_READ_LEN], http_request *out) {
 	if (verb_end == NULL)
 		goto error;
 
-	const size_t verb_size = verb_end - to_read >= sizeof(out->verb) ? sizeof(out->verb) : verb_end - to_read;
+	const size_t verb_size = verb_end - to_read >= sizeof(out->verb) ? sizeof(out->verb) - 1: verb_end - to_read;
 	strncpy(out->verb, to_read, verb_size);
 
 	if (strncmp(out->verb, "GET", verb_size) != 0) {

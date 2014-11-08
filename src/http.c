@@ -183,6 +183,7 @@ static int connect_to_host(const char *host) {
 	return request_fd;
 
 error:
+	freeaddrinfo(res);
 	close(request_fd);
 	return -1;
 }

@@ -55,7 +55,7 @@ ol_stack *parse_catalog_json(const char *all_json, const char board[BOARD_STR_LE
 
 				thread_match *match = malloc(sizeof(thread_match));
 				match->thread_num = thread_num;
-				strncpy(match->board, board, BOARD_STR_LEN);
+				strncpy(match->board, board, BOARD_STR_LEN - 1);
 
 				spush(&matches, match);
 			}
