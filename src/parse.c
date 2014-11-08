@@ -23,7 +23,7 @@ ol_stack *parse_catalog_json(const char *all_json, const char board[BOARD_STR_LE
 	const int page_count = json_array_get_count(all_objects);
 	for (i = 0; i < page_count; i++) {
 		JSON_Object *obj = json_array_get_object(all_objects, i);
-		log_msg(LOG_INFO, "Checking Page: %lu/%i", (long)json_object_get_number(obj, "page"), page_count);
+		log_msg(LOG_INFO, "/%s/ - Checking Page: %lu/%i", board, (long)json_object_get_number(obj, "page"), page_count);
 
 		JSON_Array *threads = json_object_get_array(obj, "threads");
 		int j;
@@ -41,7 +41,7 @@ ol_stack *parse_catalog_json(const char *all_json, const char board[BOARD_STR_LE
 				JSON_Object *thread_reply = json_array_get_object(thread_replies, k);
 				const char *file_ext_reply = json_object_get_string(thread_reply, "ext");
 				if (file_ext_reply != NULL && strstr(file_ext_reply, "webm")) {
-					log_msg(LOG_INFO, "Found webm in reply. Adding to threads to look through.");
+					log_msg(LOG_INFO, "/%s/ - Found webm in reply. Adding to threads to look through.", board);
 					found_webm_in_reply = 1;
 					break;
 				}
@@ -51,7 +51,7 @@ ol_stack *parse_catalog_json(const char *all_json, const char board[BOARD_STR_LE
 				(file_ext != NULL && strstr(file_ext, "webm")) ||
 				(post != NULL && strcasestr(post, "webm")) ||
 				(post != NULL && strcasestr(post, "gif"))) {
-				log_msg(LOG_INFO, "Thread %i may have some webm. Ext: %s", thread_num, file_ext);
+				log_msg(LOG_INFO, "/%s/ - Thread %i may have some webm. Ext: %s", board, thread_num, file_ext);
 
 				thread_match *match = malloc(sizeof(thread_match));
 				match->thread_num = thread_num;
@@ -86,7 +86,7 @@ ol_stack *parse_thread_json(const char *all_json, const thread_match *match) {
 			continue;
 
 		if (strstr(file_ext, "webm")) {
-			log_msg(LOG_INFO, "Hit: %s%s.", filename, file_ext);
+			log_msg(LOG_INFO, "/%s/ Hit: %s%s.", match->board, filename, file_ext);
 
 			char tim[32] = {0};
 			snprintf(tim, sizeof(tim), "%lu", _tim);

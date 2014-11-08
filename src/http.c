@@ -318,7 +318,7 @@ static ol_stack *build_thread_index() {
 		log_msg(LOG_INFO, "Sent request to %s.", FOURCHAN_API_HOST);
 		char *all_json = receive_chunked_http(request_fd);
 		if (all_json == NULL) {
-			log_msg(LOG_WARN, "Could not receive chunked HTTP from host for /%s/.", current_board);
+			log_msg(LOG_WARN, "Could not receive chunked HTTP from board for /%s/.", current_board);
 			continue;
 		}
 
@@ -329,7 +329,7 @@ static ol_stack *build_thread_index() {
 			thread_match *match = (thread_match*) spop(&matches);
 			ensure_directory_for_board(match->board);
 
-			log_msg(LOG_INFO, "Requesting thread %i...", match->thread_num);
+			log_msg(LOG_INFO, "/%s/ - Requesting thread %i...", current_board, match->thread_num);
 
 			/* Template out a request to the 4chan API for it */
 			/* (The 30 is because I don't want to find the length of the
@@ -353,6 +353,7 @@ static ol_stack *build_thread_index() {
 				log_msg(LOG_WARN, "Could not receive chunked HTTP for thread. continuing.");
 				continue;
 			}
+
 			ol_stack *thread_matches = parse_thread_json(thread_json, match);
 			while (thread_matches->next != NULL) {
 				spush(&images_to_download, spop(&thread_matches));
