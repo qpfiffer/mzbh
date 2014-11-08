@@ -12,6 +12,7 @@
 
 #include "http.h"
 #include "parse.h"
+#include "utils.h"
 #include "logging.h"
 
 const int SELECT_TIMEOUT = 5;
@@ -242,7 +243,7 @@ static char *receive_http(const int request_fd, size_t *out) {
 	char *cursor_pos = header_end  + (sizeof(char) * 4);
 
 	size_t result_size = 0;
-	char *offset_for_clength = strstr(raw_buf, "Content-Length: ");
+	char *offset_for_clength = strnstr(raw_buf, "Content-Length: ", buf_size);
 	if (offset_for_clength == NULL) {
 		log_msg(LOG_ERR, "Could not find content-length.");
 		goto error;
@@ -558,8 +559,10 @@ error:
 		free(raw_thumb_resp);
 	if (raw_image_resp)
 		free(raw_image_resp);
-	fclose(thumb_file);
-	fclose(image_file);
+	if (thumb_file != NULL)
+		fclose(thumb_file);
+	if (image_file != NULL)
+		fclose(image_file);
 	return -1;
 }
 
