@@ -253,7 +253,7 @@ static char *receive_http(const int request_fd, size_t *out) {
 	int i = 0;
 
 	const char *to_read = offset_for_clength + strlen("Content-Length: ");
-	while (to_read[i] != ';' && i < sizeof(siz_buf)) {
+	while (to_read[i] != '\r' && to_read[i + 1] != '\n' && i < sizeof(siz_buf)) {
 		siz_buf[i] = to_read[i];
 		i++;
 	}
@@ -261,7 +261,7 @@ static char *receive_http(const int request_fd, size_t *out) {
 	log_msg(LOG_INFO, "Received %lu bytes.", result_size);
 
 	char *to_return = malloc(result_size);
-	strncpy(to_return, cursor_pos, result_size);
+	memcpy(to_return, cursor_pos, result_size);
 	*out = result_size;
 	free(raw_buf);
 

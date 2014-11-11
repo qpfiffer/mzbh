@@ -25,8 +25,8 @@ const char generic_response[] =
 
 const char r_404[] =
 	"HTTP/1.1 404 Not Found\r\n"
-	"Content-Type: text/html; charset=UTF-8\r\n"
-	"Content-Length: 27\r\n"
+	"Content-Type: text/html\r\n"
+	"Content-Length: 25r\n"
 	"Connection: close\r\n"
 	"Server: waifu.xyz/bitch\r\n\r\n"
 	"<h1>\"Welcome to Die|</h1>";
