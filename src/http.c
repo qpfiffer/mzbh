@@ -351,6 +351,10 @@ static ol_stack *build_thread_index() {
 			char *thread_json = receive_chunked_http(request_fd);
 			if (thread_json == NULL) {
 				log_msg(LOG_WARN, "Could not receive chunked HTTP for thread. continuing.");
+				/* Reopen and manipulate the socket. */
+				close(request_fd);
+				request_fd = connect_to_host(FOURCHAN_API_HOST);
+				free(match);
 				continue;
 			}
 
