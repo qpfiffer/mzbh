@@ -476,8 +476,15 @@ int download_images() {
 		if (thumb_size <= 0 || image_size <= 0) {
 			/* 4chan cut us off. This happens sometimes. Just sleep for a bit. */
 			log_msg(LOG_WARN, "Hit API cutoff or whatever. Sleeping.");
-			sleep(300);
-			goto error;
+			sleep(30);
+
+			close(thumb_request_fd);
+			close(image_request_fd);
+
+			thumb_request_fd = connect_to_host(FOURCHAN_THUMBNAIL_HOST);
+			image_request_fd = connect_to_host(FOURCHAN_IMAGE_HOST);
+			free(p_match);
+			continue;
 		}
 
 		if (raw_thumb_resp == NULL) {
