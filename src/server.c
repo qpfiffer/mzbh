@@ -18,10 +18,10 @@
 const char generic_response[] =
 	"HTTP/1.1 200 OK\r\n"
 	"Content-Type: text/html; charset=UTF-8\r\n"
-	"Content-Length: 5\r\n"
+	"Content-Length: %zu\r\n"
 	"Connection: close\r\n"
 	"Server: waifu.xyz/bitch\r\n\r\n"
-	"hello";
+	"%s";
 
 const char r_404[] =
 	"HTTP/1.1 404 Not Found\r\n"
@@ -39,10 +39,20 @@ typedef struct http_request {
 typedef struct route {
 	char verb[VERB_SIZE];
 	char route_match[256];
+	int (*handler)(const http_request *request, char **out, size_t *outsize);
 } route;
 
+static int hello_handler(const http_request *request, char **out, size_t *outsize) {
+	const size_t len = strlen("hello");
+	(*out) = malloc(len + 1);
+	strncpy((*out), "hello", len);
+	(*out)[len] = '\0';
+	(*outsize) = len;
+	return 0;
+}
+
 const route all_routes[] = {
-	{"GET", "^/$"},
+	{"GET", "^/$", &hello_handler},
 };
 
 static int parse_request(const char to_read[MAX_READ_LEN], http_request *out) {
@@ -74,6 +84,8 @@ error:
 
 static int respond(const int accept_fd) {
 	char to_read[MAX_READ_LEN] = {0};
+	char *actual_response = NULL;
+	char *data = NULL;
 
 	int rc = recv(accept_fd, to_read, MAX_READ_LEN, 0);
 	if (rc <= 0) {
@@ -93,16 +105,39 @@ static int respond(const int accept_fd) {
 
 	log_msg(LOG_WARN, "%s - %s", request.verb, request.resource);
 
-	size_t resp_size = strlen(r_404);
-	rc = send(accept_fd, r_404, resp_size, 0);
-	if (resp_size != rc) {
+	/* Basic handler: */
+	data = NULL;
+	size_t dsize = 0;
+	rc = all_routes[0].handler(&request, &data, &dsize);
+	if (rc != 0) {
+		log_msg(LOG_WARN, "Could not process request.");
+		/* Just send the 404, fuck it. */
+		size_t resp_size = strlen(r_404);
+		rc = send(accept_fd, r_404, resp_size, 0);
+		if (resp_size != rc) {
+			log_msg(LOG_ERR, "Could not send failure response.");
+			goto error;
+		}
+	}
+
+	size_t actual_response_siz = dsize + strlen(generic_response) + INT_LEN(dsize);
+	actual_response = malloc(actual_response_siz);
+	memset(actual_response, '\0', actual_response_siz);
+	snprintf(actual_response, actual_response_siz, generic_response, dsize, data);
+
+	rc = send(accept_fd, actual_response, actual_response_siz, 0);
+	if (dsize != rc) {
 		log_msg(LOG_ERR, "Could not send response.");
 		goto error;
 	}
+	free(data);
+	free(actual_response);
 
 	return 0;
 
 error:
+	free(data);
+	free(actual_response);
 	return -1;
 }
 
