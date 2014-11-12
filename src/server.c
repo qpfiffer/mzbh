@@ -1,6 +1,8 @@
 // vim: noet ts=4 sw=4
 #include <arpa/inet.h>
+#include <assert.h>
 #include <netdb.h>
+#include <regex.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -15,7 +17,7 @@
 #define MAX_READ_LEN 1024
 #define VERB_SIZE 16
 
-const char generic_response[] =
+const char r_200[] =
 	"HTTP/1.1 200 OK\r\n"
 	"Content-Type: text/html; charset=UTF-8\r\n"
 	"Content-Length: %zu\r\n"
@@ -26,10 +28,15 @@ const char generic_response[] =
 const char r_404[] =
 	"HTTP/1.1 404 Not Found\r\n"
 	"Content-Type: text/html\r\n"
-	"Content-Length: 25r\n"
+	"Content-Length: %zu\r\n"
 	"Connection: close\r\n"
 	"Server: waifu.xyz/bitch\r\n\r\n"
-	"<h1>\"Welcome to Die|</h1>";
+	"%s";
+
+typedef struct {
+	const int code;
+	const char *message;
+} code_to_message;
 
 typedef struct http_request {
 	char verb[VERB_SIZE];
@@ -40,7 +47,13 @@ typedef struct route {
 	char verb[VERB_SIZE];
 	char route_match[256];
 	int (*handler)(const http_request *request, char **out, size_t *outsize);
+	void (*cleanup)(char **to_clean);
 } route;
+
+/* Various handlers for our routes: */
+static int static_handler(const http_request *request, char **out, size_t *outsize) {
+	return 200;
+}
 
 static int hello_handler(const http_request *request, char **out, size_t *outsize) {
 	const size_t len = strlen("hello");
@@ -48,11 +61,50 @@ static int hello_handler(const http_request *request, char **out, size_t *outsiz
 	strncpy((*out), "hello", len);
 	(*out)[len] = '\0';
 	(*outsize) = len;
-	return 0;
+	return 200;
 }
 
+static int r_404_handler(const http_request *request, char **out, size_t *outsize) {
+	/*
+	const char str[] = "<h1>\"Welcome to Die|</h1>";
+	const int len = strlen(str);
+	(*out) = malloc(len + 1);
+	strncpy(*out, str, len);
+	(*out)[strlen(str)] = '\0';
+	(*outsize) = len;
+	*/
+	(*out) = "<h1>\"Welcome to Die|</h1>";
+	(*outsize) = strlen("<h1>\"Welcome to Die|</h1>");
+	return 404;
+}
+
+/* Cleanup functions used after handlers have made a bunch of bullshit: */
+static void heap_cleanup(char **out) {
+	free(*out);
+}
+
+static void stack_cleanup(char **out) {
+	/* Do nothing. */
+}
+
+/* Used to handle 404s: */
+const route r_404_route = {
+	.verb = "GET",
+	.route_match = "^.*$",
+	.handler = (&r_404_handler),
+	.cleanup = (&stack_cleanup)
+};
+
+/* This is used to map between the return codes of responses to their headers: */
+const code_to_message response_headers[] = {
+	{200, r_200},
+	{404, r_404}
+};
+
+/* All other routes: */
 const route all_routes[] = {
-	{"GET", "^/$", &hello_handler},
+	{"GET", "^/static/$", &static_handler, &stack_cleanup},
+	{"GET", "^/$", &hello_handler, &heap_cleanup},
 };
 
 static int parse_request(const char to_read[MAX_READ_LEN], http_request *out) {
@@ -86,6 +138,7 @@ static int respond(const int accept_fd) {
 	char to_read[MAX_READ_LEN] = {0};
 	char *actual_response = NULL;
 	char *data = NULL;
+	const route *matching_route = NULL;
 
 	int rc = recv(accept_fd, to_read, MAX_READ_LEN, 0);
 	if (rc <= 0) {
@@ -105,38 +158,55 @@ static int respond(const int accept_fd) {
 
 	log_msg(LOG_WARN, "%s - %s", request.verb, request.resource);
 
-	/* Basic handler: */
-	data = NULL;
-	size_t dsize = 0;
-	rc = all_routes[0].handler(&request, &data, &dsize);
-	if (rc != 0) {
-		log_msg(LOG_WARN, "Could not process request.");
-		/* Just send the 404, fuck it. */
-		size_t resp_size = strlen(r_404);
-		rc = send(accept_fd, r_404, resp_size, 0);
-		if (resp_size != rc) {
-			log_msg(LOG_ERR, "Could not send failure response.");
-			goto error;
-		}
+	/* Find our matching route: */
+	int i;
+	for (i = 0; i < (sizeof(all_routes)/sizeof(all_routes[0])); i++) {
+		/* TODO: Actually use regex to match the things here. */
 	}
 
-	size_t actual_response_siz = dsize + strlen(generic_response) + INT_LEN(dsize);
-	actual_response = malloc(actual_response_siz);
-	memset(actual_response, '\0', actual_response_siz);
-	snprintf(actual_response, actual_response_siz, generic_response, dsize, data);
+	/* If we didn't find one just use the 404 route: */
+	if (matching_route == NULL)
+		matching_route = &r_404_route;
 
-	rc = send(accept_fd, actual_response, actual_response_siz, 0);
-	if (dsize != rc) {
+	/* Run the handler through with the data we have: */
+	data = NULL;
+	size_t dsize = 0;
+	const int response_code = matching_route->handler(&request, &data, &dsize);
+
+	/* Figure out what header we need to use: */
+	const code_to_message *matched_response = NULL;
+	for (i = 0; i < (sizeof(response_headers)/sizeof(response_headers[0])); i++) {
+		code_to_message current_response = response_headers[i];
+		if (current_response.code == response_code) {
+			matched_response = &response_headers[i];
+			break;
+		}
+	}
+	/* Blow up if we don't have that code. We should have them all at
+	 * compile time. */
+	assert(matched_response != NULL);
+
+	/* Embed the handler's text into the header: */
+	const size_t integer_length = INT_LEN(dsize);
+	size_t actual_response_siz = dsize + strlen(matched_response->message) + integer_length;
+	actual_response = malloc(actual_response_siz + 1);
+	memset(actual_response, '\0', actual_response_siz + 1);
+	snprintf(actual_response, actual_response_siz, matched_response->message, dsize, data);
+
+	/* Send that shit over the wire: */
+	rc = send(accept_fd, actual_response, actual_response_siz - strlen("%zu") - strlen("%s"), 0);
+	if (rc <= 0) {
 		log_msg(LOG_ERR, "Could not send response.");
 		goto error;
 	}
-	free(data);
+	matching_route->cleanup(&data);
 	free(actual_response);
 
 	return 0;
 
 error:
-	free(data);
+	if (matching_route != NULL)
+		matching_route->cleanup(&data);
 	free(actual_response);
 	return -1;
 }
