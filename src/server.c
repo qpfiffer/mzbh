@@ -85,8 +85,10 @@ static int static_handler(const http_request *request, http_response *response) 
 	if (response->out == MAP_FAILED) {
 		response->out = "<html><body><p>Could not open file.</p></body></html>";
 		response->outsize= strlen("<html><body><p>could not open file.</p></body></html>");
+		close(fd);
 		return 404;
 	}
+	close(fd);
 	return 200;
 }
 
