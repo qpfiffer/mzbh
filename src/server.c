@@ -16,6 +16,7 @@
 
 #include "logging.h"
 #include "server.h"
+#include "greshunkel.h"
 
 #define MAX_READ_LEN 1024
 #define VERB_SIZE 16
@@ -114,7 +115,15 @@ static int static_handler(const http_request *request, http_response *response) 
 }
 
 static int index_handler(const http_request *request, http_response *response) {
-	return mmap_file("./templates/index.html", response);
+	int rc = mmap_file("./templates/index.html", response);
+	if (rc != 200)
+		return rc;
+	// 1. Render the mmap()'d file with greshunkel
+	// 2. munmap
+	// 3. free extra_data
+	// 4. set the proper outsize/size variables in the response
+	// 5. Use the heap cleanup later.
+	return 200;
 }
 
 static int favicon_handler(const http_request *request, http_response *response) {
