@@ -162,6 +162,19 @@ static int respond(const int accept_fd) {
 	int i;
 	for (i = 0; i < (sizeof(all_routes)/sizeof(all_routes[0])); i++) {
 		/* TODO: Actually use regex to match the things here. */
+		const route *cur_route = &all_routes[i];
+		if (strcmp(cur_route->verb, request.verb) != 0)
+			continue;
+
+		regex_t regex;
+		int reti = regcomp(&regex, cur_route->route_match, 0);
+		assert(reti == 0);
+
+		reti = regexec(&regex, request.resource, 0, NULL, 0);
+		if (reti == 0) {
+			matching_route = &all_routes[i];
+			break;
+		}
 	}
 
 	/* If we didn't find one just use the 404 route: */
