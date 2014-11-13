@@ -1,4 +1,12 @@
 /* vim: set ts=4 sw=4 noet : */
-html {
+body {
 	font-family: 'Open Sans', Helvetica, Arial, sans-serif;
+}
+#title {
+	filter: url("blur.svg#gaussian_blur");
+	-webkit-filter: blur(1px);
+	-o-filter: blur(2px);
+}
+#landing {
+	padding-bottom: 2em;
 }
