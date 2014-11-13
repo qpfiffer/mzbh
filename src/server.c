@@ -119,10 +119,22 @@ static int index_handler(const http_request *request, http_response *response) {
 	if (rc != 200)
 		return rc;
 	// 1. Render the mmap()'d file with greshunkel
-	// 2. munmap
-	// 3. free extra_data
-	// 4. set the proper outsize/size variables in the response
-	// 5. Use the heap cleanup later.
+	const char *mmapd_region = (char *)response->out;
+	const size_t original_size = response->outsize;
+
+	/* Render that shit */
+	size_t new_size = 0;
+	greshunkel_ctext *ctext = gshkl_init_context();
+	char *rendered = gshkl_render(ctext, mmapd_region, original_size, &new_size);
+	gshkl_free_context(ctext);
+
+	/* Make sure the response is kept up to date: */
+	response->outsize = new_size;
+	response->out = (unsigned char *)rendered;
+
+	/* Clean up the stuff we're no longer using. */
+	munmap(response->out, original_size);
+	free(response->extra_data);
 	return 200;
 }
 
@@ -138,9 +150,9 @@ static int r_404_handler(const http_request *request, http_response *response) {
 }
 
 /* Cleanup functions used after handlers have made a bunch of bullshit: */
-//static void heap_cleanup(http_response *response) {
-//	free(*out);
-//}
+static void heap_cleanup(http_response *response) {
+	free(response->out);
+}
 
 static void mmap_cleanup(http_response *response) {
 	const struct stat *st = (struct stat *)response->extra_data;
@@ -170,7 +182,7 @@ const code_to_message response_headers[] = {
 const route all_routes[] = {
 	{"GET", "^/favicon.ico$", &favicon_handler, &mmap_cleanup},
 	{"GET", "^/static/[a-zA-Z0-9/_-]*\\.[a-zA-Z]*$", &static_handler, &mmap_cleanup},
-	{"GET", "^/$", &index_handler, &mmap_cleanup},
+	{"GET", "^/$", &index_handler, &heap_cleanup},
 };
 
 static int parse_request(const char to_read[MAX_READ_LEN], http_request *out) {

@@ -57,6 +57,33 @@ int gshkl_free_context(greshunkel_ctext *ctext) {
 	return 0;
 }
 
-const char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render) {
+char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const size_t original_size, size_t *outsize) {
+	assert(to_render != NULL);
+	assert(ctext != NULL);
+
+	/* We start up a new buffer and copy the old one into it: */
+	char *rendered = calloc(1, original_size);
+	if (rendered == NULL)
+		goto error;
+	memcpy(rendered, to_render, original_size);
+	*outsize = original_size;
+
+	/* Variable rendering pass: */
+
+	regex_t regex;
+	int reti = regcomp(&regex, variable_regex, 0);
+	assert(reti == 0);
+
+	regmatch_t match[1];
+	int matches = 0;
+	while (regexec(&regex, to_render, 1, match, 0) == 0) {
+		/* We matched. */
+		matches++;
+	}
+	return rendered;
+
+error:
+	free(rendered);
+	*outsize = 0;
 	return NULL;
 }

@@ -41,4 +41,4 @@ int gshkl_add_string(greshunkel_ctext *ctext, const char name[WISDOM_OF_WORDS], 
 int gshkl_add_num(greshunkel_ctext *ctext, const char name[WISDOM_OF_WORDS], const int value);
 
 /* Render a string buffer: */
-const char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render);
+char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const size_t original_size, size_t *outsize);
