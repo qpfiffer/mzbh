@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <unistd.h>
 
 #include "logging.h"
@@ -29,7 +30,7 @@ const char r_200[] =
 
 const char r_404[] =
 	"HTTP/1.1 404 Not Found\r\n"
-	"Content-Type: text/html\r\n"
+	"Content-Type: %s\r\n"
 	"Content-Length: %zu\r\n"
 	"Connection: close\r\n"
 	"Server: waifu.xyz/bitch\r\n\r\n"
@@ -92,7 +93,26 @@ static int mmap_file(const char *file_path, http_response *response) {
 static int static_handler(const http_request *request, http_response *response) {
 	/* Remove the leading slash: */
 	const char *file_path = request->resource + sizeof(char);
-	strncpy(response->mimetype, "application/octet-stream", sizeof(response->mimetype));
+
+	/* Figure out the mimetype for this resource: */
+	char ending[4] = {0};
+	int i, j = sizeof(ending);
+	const size_t res_len = strlen(request->resource);
+	for (i = res_len; i > (res_len - sizeof(ending)); i--) {
+		ending[--j] = request->resource[i];
+	}
+	log_msg(LOG_WARN, "Resource ending: %s", ending);
+
+	/* This is how we do mimetypes. lol. */
+	if (strncasecmp(ending, "css", sizeof(ending)) == 0) {
+		strncpy(response->mimetype, "text/css", sizeof(response->mimetype));
+	} else if (strncasecmp(ending, "jpg", sizeof(ending)) == 0) {
+		strncpy(response->mimetype, "image/jpeg", sizeof(response->mimetype));
+	} else if (strncasecmp(ending, "webm", sizeof(ending)) == 0) {
+		strncpy(response->mimetype, "video/webm", sizeof(response->mimetype));
+	} else {
+		strncpy(response->mimetype, "application/octet-stream", sizeof(response->mimetype));
+	}
 	return mmap_file(file_path, response);
 }
 
@@ -190,8 +210,6 @@ static int respond(const int accept_fd) {
 		goto error;
 	}
 
-	log_msg(LOG_WARN, "%s - %s", request.verb, request.resource);
-
 	/* Find our matching route: */
 	int i;
 	for (i = 0; i < (sizeof(all_routes)/sizeof(all_routes[0])); i++) {
@@ -210,6 +228,7 @@ static int respond(const int accept_fd) {
 		}
 
 		reti = regexec(&regex, request.resource, 0, NULL, 0);
+		regfree(&regex);
 		if (reti == 0) {
 			matching_route = &all_routes[i];
 			break;
@@ -224,6 +243,9 @@ static int respond(const int accept_fd) {
 	const int response_code = matching_route->handler(&request, &response);
 	assert(response.outsize > 0);
 	assert(response.out != NULL);
+
+	log_msg(LOG_FUN, "\"%s %s\" %i %i", request.verb, request.resource,
+			response_code, response.outsize);
 
 	/* Figure out what header we need to use: */
 	const code_to_message *matched_response = NULL;

@@ -13,9 +13,10 @@ void log_msg(log_level level, const char *fmsg, ...) {
 	va_list ap;
 	FILE *fd;
 
-	char *inf = "[%c[%dm-%c[%dm]"; /* Blue [-] */
-	char *wrn = "[%c[%dm!%c[%dm]"; /* Yellow [!] */
-	char *err = "[%c[%dmx%c[%dm]"; /* Red [x] */
+	const char inf[] = "[%c[%dm-%c[%dm]"; /* Blue [-] */
+	const char wrn[] = "[%c[%dm!%c[%dm]"; /* Yellow [!] */
+	const char err[] = "[%c[%dmx%c[%dm]"; /* Red [x] */
+	const char fun[] = "[%c[%dm~%c[%dm]";
 	char sym_buf[15] = {0};
 
 
@@ -40,6 +41,9 @@ void log_msg(log_level level, const char *fmsg, ...) {
 			break;
 		case LOG_ERR:
 			snprintf(sym_buf, strlen(err), err, 0x1B, 31, 0x1B, 0);
+			break;
+		case LOG_FUN:
+			snprintf(sym_buf, strlen(fun), fun, 0x1B, 36, 0x1B, 0);
 			break;
 	}
 
