@@ -59,11 +59,8 @@ typedef struct route {
 	void (*cleanup)(http_response *response);
 } route;
 
-/* Various handlers for our routes: */
-static int static_handler(const http_request *request, http_response *response) {
+static int mmap_file(const char *file_path, http_response *response) {
 	response->extra_data = calloc(1, sizeof(struct stat));
-	/* Remove the leading slash: */
-	const char *file_path = request->resource + sizeof(char);
 
 	if (stat(file_path, response->extra_data) == -1) {
 		response->out = "<html><body><p>No such file.</p></body></html>";
@@ -80,7 +77,6 @@ static int static_handler(const http_request *request, http_response *response) 
 	const struct stat st = *(struct stat *)response->extra_data;
 	response->out = mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
 	response->outsize = st.st_size;
-	strncpy(response->mimetype, "application/octet-stream", sizeof(response->mimetype));
 
 	if (response->out == MAP_FAILED) {
 		response->out = "<html><body><p>Could not open file.</p></body></html>";
@@ -92,8 +88,16 @@ static int static_handler(const http_request *request, http_response *response) 
 	return 200;
 }
 
+/* Various handlers for our routes: */
+static int static_handler(const http_request *request, http_response *response) {
+	/* Remove the leading slash: */
+	const char *file_path = request->resource + sizeof(char);
+	strncpy(response->mimetype, "application/octet-stream", sizeof(response->mimetype));
+	return mmap_file(file_path, response);
+}
+
 static int index_handler(const http_request *request, http_response *response) {
-	return 200;
+	return mmap_file("./templates/index.html", response);
 }
 
 static int r_404_handler(const http_request *request, http_response *response) {
