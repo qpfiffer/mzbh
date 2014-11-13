@@ -1,9 +1,11 @@
 // vim: noet ts=4 sw=4
 #include <arpa/inet.h>
 #include <assert.h>
+#include <fcntl.h>
 #include <netdb.h>
 #include <regex.h>
 #include <sys/ioctl.h>
+#include <sys/mman.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <stdio.h>
@@ -19,7 +21,7 @@
 
 const char r_200[] =
 	"HTTP/1.1 200 OK\r\n"
-	"Content-Type: text/html; charset=UTF-8\r\n"
+	"Content-Type: %s; charset=UTF-8\r\n"
 	"Content-Length: %zu\r\n"
 	"Connection: close\r\n"
 	"Server: waifu.xyz/bitch\r\n\r\n"
@@ -46,6 +48,7 @@ typedef struct {
 typedef struct {
 	char *out;
 	size_t outsize;
+	char mimetype[32];
 	void *extra_data;
 } http_response;
 
@@ -58,14 +61,32 @@ typedef struct route {
 
 /* Various handlers for our routes: */
 static int static_handler(const http_request *request, http_response *response) {
-	struct stat st = {0};
-	if (stat(request->resource + sizeof(char), &st) == -1) {
+	response->extra_data = calloc(1, sizeof(struct stat));
+	/* Remove the leading slash: */
+	const char *file_path = request->resource + sizeof(char);
+
+	if (stat(file_path, response->extra_data) == -1) {
 		response->out = "<html><body><p>No such file.</p></body></html>";
 		response->outsize= strlen("<html><body><p>No such file.</p></body></html>");
 		return 404;
 	}
-	response->out = "xxx";
-	response->outsize = strlen("xxx");
+	int fd = open(file_path, O_RDONLY);
+	if (fd == -1) {
+		response->out = "<html><body><p>Could not open file.</p></body></html>";
+		response->outsize= strlen("<html><body><p>could not open file.</p></body></html>");
+		return 404;
+	}
+
+	const struct stat st = *(struct stat *)response->extra_data;
+	response->out = mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+	response->outsize = st.st_size;
+	strncpy(response->mimetype, "application/octet-stream", sizeof(response->mimetype));
+
+	if (response->out == MAP_FAILED) {
+		response->out = "<html><body><p>Could not open file.</p></body></html>";
+		response->outsize= strlen("<html><body><p>could not open file.</p></body></html>");
+		return 404;
+	}
 	return 200;
 }
 
@@ -85,6 +106,9 @@ static int r_404_handler(const http_request *request, http_response *response) {
 //}
 
 static void mmap_cleanup(http_response *response) {
+	const struct stat *st = (struct stat *)response->extra_data;
+	munmap(response->out, st->st_size);
+	free(response->extra_data);
 }
 
 static void stack_cleanup(http_response *response) {
@@ -107,7 +131,7 @@ const code_to_message response_headers[] = {
 
 /* All other routes: */
 const route all_routes[] = {
-	{"GET", "^/static/[a-zA-Z0-9_-]*\\.[a-zA-Z]*$", &static_handler, &stack_cleanup},
+	{"GET", "^/static/[a-zA-Z0-9/_-]*\\.[a-zA-Z]*$", &static_handler, &stack_cleanup},
 	{"GET", "^/$", &index_handler, &mmap_cleanup},
 };
 
@@ -141,7 +165,7 @@ error:
 static int respond(const int accept_fd) {
 	char to_read[MAX_READ_LEN] = {0};
 	char *actual_response = NULL;
-	http_response response = {0};
+	http_response response = {.mimetype = "text/html", 0};
 	const route *matching_route = NULL;
 
 	int rc = recv(accept_fd, to_read, MAX_READ_LEN, 0);
@@ -172,7 +196,12 @@ static int respond(const int accept_fd) {
 
 		regex_t regex;
 		int reti = regcomp(&regex, cur_route->route_match, 0);
-		assert(reti == 0);
+		if (reti != 0) {
+			char errbuf[128];
+			regerror(reti, &regex, errbuf, sizeof(errbuf));
+			log_msg(LOG_ERR, "%s", errbuf);
+			assert(reti == 0);
+		}
 
 		reti = regexec(&regex, request.resource, 0, NULL, 0);
 		if (reti == 0) {
@@ -203,13 +232,14 @@ static int respond(const int accept_fd) {
 
 	/* Embed the handler's text into the header: */
 	const size_t integer_length = INT_LEN(response.outsize);
-	size_t actual_response_siz = response.outsize + strlen(matched_response->message) + integer_length;
+	size_t actual_response_siz = response.outsize + strlen(response.mimetype) + strlen(matched_response->message) + integer_length;
 	actual_response = malloc(actual_response_siz + 1);
 	memset(actual_response, '\0', actual_response_siz + 1);
-	snprintf(actual_response, actual_response_siz, matched_response->message, response.outsize, response.out);
+	snprintf(actual_response, actual_response_siz, matched_response->message, response.mimetype, response.outsize, response.out);
 
 	/* Send that shit over the wire: */
-	rc = send(accept_fd, actual_response, actual_response_siz - strlen("%zu") - strlen("%s"), 0);
+	const size_t bytes_siz = actual_response_siz - strlen("%s") - strlen("%zu") - strlen("%s");
+	rc = send(accept_fd, actual_response, bytes_siz, 0);
 	if (rc <= 0) {
 		log_msg(LOG_ERR, "Could not send response.");
 		goto error;
