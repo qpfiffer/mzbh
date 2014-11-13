@@ -52,35 +52,33 @@ typedef struct route {
 
 /* Various handlers for our routes: */
 static int static_handler(const http_request *request, char **out, size_t *outsize) {
+	struct stat st = {0};
+	if (stat(request->resource + sizeof(char), &st) == -1) {
+		(*out) = "<html><body><p>No such file.</p></body></html>";
+		(*outsize) = strlen("<html><body><p>No such file.</p></body></html>");
+		return 404;
+	}
+	(*out) = "xxx";
+	(*outsize) = strlen("xxx");
 	return 200;
 }
 
-static int hello_handler(const http_request *request, char **out, size_t *outsize) {
-	const size_t len = strlen("hello");
-	(*out) = malloc(len + 1);
-	strncpy((*out), "hello", len);
-	(*out)[len] = '\0';
-	(*outsize) = len;
+static int index_handler(const http_request *request, char **out, size_t *outsize) {
 	return 200;
 }
 
 static int r_404_handler(const http_request *request, char **out, size_t *outsize) {
-	/*
-	const char str[] = "<h1>\"Welcome to Die|</h1>";
-	const int len = strlen(str);
-	(*out) = malloc(len + 1);
-	strncpy(*out, str, len);
-	(*out)[strlen(str)] = '\0';
-	(*outsize) = len;
-	*/
 	(*out) = "<h1>\"Welcome to Die|</h1>";
 	(*outsize) = strlen("<h1>\"Welcome to Die|</h1>");
 	return 404;
 }
 
 /* Cleanup functions used after handlers have made a bunch of bullshit: */
-static void heap_cleanup(char **out) {
-	free(*out);
+//static void heap_cleanup(char **out) {
+//	free(*out);
+//}
+
+static void mmap_cleanup(char **out) {
 }
 
 static void stack_cleanup(char **out) {
@@ -103,8 +101,8 @@ const code_to_message response_headers[] = {
 
 /* All other routes: */
 const route all_routes[] = {
-	{"GET", "^/static/$", &static_handler, &stack_cleanup},
-	{"GET", "^/$", &hello_handler, &heap_cleanup},
+	{"GET", "^/static/[a-zA-Z0-9_-]*\\.[a-zA-Z]*$", &static_handler, &stack_cleanup},
+	{"GET", "^/$", &index_handler, &mmap_cleanup},
 };
 
 static int parse_request(const char to_read[MAX_READ_LEN], http_request *out) {

@@ -1,5 +1,6 @@
 // vim: noet ts=4 sw=4
 #include <string.h>
+#include <sys/stat.h>
 #include "utils.h"
 
 /* Pulled from here: http://stackoverflow.com/a/25705264 */
