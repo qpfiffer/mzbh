@@ -222,6 +222,8 @@ static int respond(const int accept_fd) {
 
 	/* Run the handler through with the data we have: */
 	const int response_code = matching_route->handler(&request, &response);
+	assert(response.outsize > 0);
+	assert(response.out != NULL);
 
 	/* Figure out what header we need to use: */
 	const code_to_message *matched_response = NULL;
