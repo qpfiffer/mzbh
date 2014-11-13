@@ -1,7 +1,9 @@
 // vim: noet ts=4 sw=4
 #pragma once
+#include "stack.h"
 
 #define WISDOM_OF_WORDS 32
+#define MAX_GSHKL_STR_SIZE 32
 
 /* AND HE DECREED: */
 /* STRINGS SHALL NEVER BE MORE THAN 32 OCTETS! */
@@ -9,9 +11,9 @@
 /* NUMBERS SHALL NEVER BE GREATER THAN THE VALUE OF A SINGLE INTEGER! */
 /* VARIABLE NAMES SHALL NEVER BE MORE THAN 32 CHARACTERS! */
 typedef union greshunkel_var {
-	const int num;
-	const char str[32];
-	const union greshunkel_var *arr[8];
+	int num;
+	char str[MAX_GSHKL_STR_SIZE];
+	union greshunkel_var *arr[8];
 } greshunkel_var;
 
 typedef enum {
@@ -21,15 +23,22 @@ typedef enum {
 } greshunkel_type;
 
 typedef struct {
-	const char name[WISDOM_OF_WORDS];
+	char name[WISDOM_OF_WORDS];
 	const greshunkel_type type;
-	const greshunkel_var *value;
+	greshunkel_var value;
 } greshunkel_tuple;
 
 typedef struct {
-	greshunkel_tuple *values;
+	ol_stack *values;
 } greshunkel_ctext;
 
-int gshkl_init_context(greshunkel_ctext *ctext);
-int gshkl_add_variable(const char name[WISDOM_OF_WORDS], const greshunkel_tuple *new_var);
+/* Build and destroy contexts: */
+greshunkel_ctext *gshkl_init_context();
 int gshkl_free_context(greshunkel_ctext *ctext);
+
+/* Add things to the contexts: */
+int gshkl_add_string(greshunkel_ctext *ctext, const char name[WISDOM_OF_WORDS], const char *value);
+int gshkl_add_num(greshunkel_ctext *ctext, const char name[WISDOM_OF_WORDS], const int value);
+
+/* Render a string buffer: */
+const char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render);
