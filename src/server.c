@@ -22,19 +22,17 @@
 
 const char r_200[] =
 	"HTTP/1.1 200 OK\r\n"
-	"Content-Type: %s; charset=UTF-8\r\n"
+	"Content-Type: %s\r\n"
 	"Content-Length: %zu\r\n"
 	"Connection: close\r\n"
-	"Server: waifu.xyz/bitch\r\n\r\n"
-	"%s";
+	"Server: waifu.xyz/bitch\r\n\r\n";
 
 const char r_404[] =
 	"HTTP/1.1 404 Not Found\r\n"
 	"Content-Type: %s\r\n"
 	"Content-Length: %zu\r\n"
 	"Connection: close\r\n"
-	"Server: waifu.xyz/bitch\r\n\r\n"
-	"%s";
+	"Server: waifu.xyz/bitch\r\n\r\n";
 
 typedef struct {
 	const int code;
@@ -47,7 +45,7 @@ typedef struct {
 } http_request;
 
 typedef struct {
-	char *out;
+	unsigned char *out;
 	size_t outsize;
 	char mimetype[32];
 	void *extra_data;
@@ -64,13 +62,13 @@ static int mmap_file(const char *file_path, http_response *response) {
 	response->extra_data = calloc(1, sizeof(struct stat));
 
 	if (stat(file_path, response->extra_data) == -1) {
-		response->out = "<html><body><p>No such file.</p></body></html>";
+		response->out = (unsigned char *)"<html><body><p>No such file.</p></body></html>";
 		response->outsize= strlen("<html><body><p>No such file.</p></body></html>");
 		return 404;
 	}
 	int fd = open(file_path, O_RDONLY);
-	if (fd == -1) {
-		response->out = "<html><body><p>Could not open file.</p></body></html>";
+	if (fd <= 0) {
+		response->out = (unsigned char *)"<html><body><p>Could not open file.</p></body></html>";
 		response->outsize= strlen("<html><body><p>could not open file.</p></body></html>");
 		return 404;
 	}
@@ -80,7 +78,7 @@ static int mmap_file(const char *file_path, http_response *response) {
 	response->outsize = st.st_size;
 
 	if (response->out == MAP_FAILED) {
-		response->out = "<html><body><p>Could not open file.</p></body></html>";
+		response->out = (unsigned char *)"<html><body><p>Could not open file.</p></body></html>";
 		response->outsize= strlen("<html><body><p>could not open file.</p></body></html>");
 		close(fd);
 		return 404;
@@ -101,7 +99,6 @@ static int static_handler(const http_request *request, http_response *response) 
 	for (i = res_len; i > (res_len - sizeof(ending)); i--) {
 		ending[--j] = request->resource[i];
 	}
-	log_msg(LOG_WARN, "Resource ending: %s", ending);
 
 	/* This is how we do mimetypes. lol. */
 	if (strncasecmp(ending, "css", sizeof(ending)) == 0) {
@@ -120,8 +117,13 @@ static int index_handler(const http_request *request, http_response *response) {
 	return mmap_file("./templates/index.html", response);
 }
 
+static int favicon_handler(const http_request *request, http_response *response) {
+	strncpy(response->mimetype, "image/x-icon", sizeof(response->mimetype));
+	return mmap_file("./static/favicon.ico", response);
+}
+
 static int r_404_handler(const http_request *request, http_response *response) {
-	response->out = "<h1>\"Welcome to Die|</h1>";
+	response->out = (unsigned char *)"<h1>\"Welcome to Die|</h1>";
 	response->outsize = strlen("<h1>\"Welcome to Die|</h1>");
 	return 404;
 }
@@ -157,7 +159,8 @@ const code_to_message response_headers[] = {
 
 /* All other routes: */
 const route all_routes[] = {
-	{"GET", "^/static/[a-zA-Z0-9/_-]*\\.[a-zA-Z]*$", &static_handler, &stack_cleanup},
+	{"GET", "^/favicon.ico$", &favicon_handler, &mmap_cleanup},
+	{"GET", "^/static/[a-zA-Z0-9/_-]*\\.[a-zA-Z]*$", &static_handler, &mmap_cleanup},
 	{"GET", "^/$", &index_handler, &mmap_cleanup},
 };
 
@@ -262,13 +265,17 @@ static int respond(const int accept_fd) {
 
 	/* Embed the handler's text into the header: */
 	const size_t integer_length = INT_LEN(response.outsize);
-	size_t actual_response_siz = response.outsize + strlen(response.mimetype) + strlen(matched_response->message) + integer_length;
+	const size_t header_size = strlen(response.mimetype) + strlen(matched_response->message) + integer_length - strlen("%s") - strlen("%zu");
+	const size_t actual_response_siz = response.outsize + header_size;
 	actual_response = malloc(actual_response_siz + 1);
 	memset(actual_response, '\0', actual_response_siz + 1);
-	snprintf(actual_response, actual_response_siz, matched_response->message, response.mimetype, response.outsize, response.out);
+	/* snprintf the header because it's just a string: */
+	snprintf(actual_response, actual_response_siz, matched_response->message, response.mimetype, response.outsize);
+	/* memcpy the rest because it could be anything: */
+	memcpy(actual_response + header_size, response.out, response.outsize);
 
 	/* Send that shit over the wire: */
-	const size_t bytes_siz = actual_response_siz - strlen("%s") - strlen("%zu") - strlen("%s");
+	const size_t bytes_siz = actual_response_siz;
 	rc = send(accept_fd, actual_response, bytes_siz, 0);
 	if (rc <= 0) {
 		log_msg(LOG_ERR, "Could not send response.");
@@ -327,6 +334,7 @@ int http_serve(int main_sock_fd) {
 			if (child == 0) {
 				respond(new_fd);
 				close(new_fd);
+				exit(0);
 			}
 		}
 	}
