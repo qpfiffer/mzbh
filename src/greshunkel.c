@@ -6,7 +6,7 @@
 
 #include "greshunkel.h"
 
-static const char variable_regex[] = "xXx (?P<variable>[a-zA-Z_0-9\\$]+) xXx";
+static const char variable_regex[] = "xXx [a-zA-Z_0-9]+ xXx";
 static const char loop_regex[] = "xXx LOOP (?P<variable>[a-zA-S_]+) (?P<iter_list>[a-zA-S_\\$]+) xXx(?P<subloop>.*)xXx BBL xXx";
 
 greshunkel_ctext *gshkl_init_context() {
