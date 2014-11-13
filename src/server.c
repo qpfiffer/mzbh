@@ -38,50 +38,56 @@ typedef struct {
 	const char *message;
 } code_to_message;
 
-typedef struct http_request {
+typedef struct {
 	char verb[VERB_SIZE];
 	char resource[128];
 } http_request;
 
+typedef struct {
+	char *out;
+	size_t outsize;
+	void *extra_data;
+} http_response;
+
 typedef struct route {
 	char verb[VERB_SIZE];
 	char route_match[256];
-	int (*handler)(const http_request *request, char **out, size_t *outsize);
-	void (*cleanup)(char **to_clean);
+	int (*handler)(const http_request *request, http_response *response);
+	void (*cleanup)(http_response *response);
 } route;
 
 /* Various handlers for our routes: */
-static int static_handler(const http_request *request, char **out, size_t *outsize) {
+static int static_handler(const http_request *request, http_response *response) {
 	struct stat st = {0};
 	if (stat(request->resource + sizeof(char), &st) == -1) {
-		(*out) = "<html><body><p>No such file.</p></body></html>";
-		(*outsize) = strlen("<html><body><p>No such file.</p></body></html>");
+		response->out = "<html><body><p>No such file.</p></body></html>";
+		response->outsize= strlen("<html><body><p>No such file.</p></body></html>");
 		return 404;
 	}
-	(*out) = "xxx";
-	(*outsize) = strlen("xxx");
+	response->out = "xxx";
+	response->outsize = strlen("xxx");
 	return 200;
 }
 
-static int index_handler(const http_request *request, char **out, size_t *outsize) {
+static int index_handler(const http_request *request, http_response *response) {
 	return 200;
 }
 
-static int r_404_handler(const http_request *request, char **out, size_t *outsize) {
-	(*out) = "<h1>\"Welcome to Die|</h1>";
-	(*outsize) = strlen("<h1>\"Welcome to Die|</h1>");
+static int r_404_handler(const http_request *request, http_response *response) {
+	response->out = "<h1>\"Welcome to Die|</h1>";
+	response->outsize = strlen("<h1>\"Welcome to Die|</h1>");
 	return 404;
 }
 
 /* Cleanup functions used after handlers have made a bunch of bullshit: */
-//static void heap_cleanup(char **out) {
+//static void heap_cleanup(http_response *response) {
 //	free(*out);
 //}
 
-static void mmap_cleanup(char **out) {
+static void mmap_cleanup(http_response *response) {
 }
 
-static void stack_cleanup(char **out) {
+static void stack_cleanup(http_response *response) {
 	/* Do nothing. */
 }
 
@@ -135,7 +141,7 @@ error:
 static int respond(const int accept_fd) {
 	char to_read[MAX_READ_LEN] = {0};
 	char *actual_response = NULL;
-	char *data = NULL;
+	http_response response = {0};
 	const route *matching_route = NULL;
 
 	int rc = recv(accept_fd, to_read, MAX_READ_LEN, 0);
@@ -180,9 +186,7 @@ static int respond(const int accept_fd) {
 		matching_route = &r_404_route;
 
 	/* Run the handler through with the data we have: */
-	data = NULL;
-	size_t dsize = 0;
-	const int response_code = matching_route->handler(&request, &data, &dsize);
+	const int response_code = matching_route->handler(&request, &response);
 
 	/* Figure out what header we need to use: */
 	const code_to_message *matched_response = NULL;
@@ -198,11 +202,11 @@ static int respond(const int accept_fd) {
 	assert(matched_response != NULL);
 
 	/* Embed the handler's text into the header: */
-	const size_t integer_length = INT_LEN(dsize);
-	size_t actual_response_siz = dsize + strlen(matched_response->message) + integer_length;
+	const size_t integer_length = INT_LEN(response.outsize);
+	size_t actual_response_siz = response.outsize + strlen(matched_response->message) + integer_length;
 	actual_response = malloc(actual_response_siz + 1);
 	memset(actual_response, '\0', actual_response_siz + 1);
-	snprintf(actual_response, actual_response_siz, matched_response->message, dsize, data);
+	snprintf(actual_response, actual_response_siz, matched_response->message, response.outsize, response.out);
 
 	/* Send that shit over the wire: */
 	rc = send(accept_fd, actual_response, actual_response_siz - strlen("%zu") - strlen("%s"), 0);
@@ -210,14 +214,14 @@ static int respond(const int accept_fd) {
 		log_msg(LOG_ERR, "Could not send response.");
 		goto error;
 	}
-	matching_route->cleanup(&data);
+	matching_route->cleanup(&response);
 	free(actual_response);
 
 	return 0;
 
 error:
 	if (matching_route != NULL)
-		matching_route->cleanup(&data);
+		matching_route->cleanup(&response);
 	free(actual_response);
 	return -1;
 }
