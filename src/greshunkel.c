@@ -97,15 +97,16 @@ char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const s
 		line current_line = read_line(to_render + num_read);
 		/* Variable rendering pass: */
 		regex_t regex;
-		int reti = regcomp(&regex, variable_regex, 0);
+		int reti = regcomp(&regex, variable_regex, REG_EXTENDED);
 		assert(reti == 0);
 
 		int matches = 0;
-		//regmatch_t match[1];
-		//while (regexec(&regex, to_render, 1, match, 0) == 0) {
-		while (regexec(&regex, to_render, 0, NULL, 0) == 0) {
+		int offset = 0;
+		regmatch_t match[1];
+		while (regexec(&regex, current_line.data + offset, 1, match, 0) == 0) {
 			/* We matched. */
 			matches++;
+			offset = match[0].rm_eo;
 		}
 		const size_t old_num_read = num_read;
 		num_read += current_line.size;
