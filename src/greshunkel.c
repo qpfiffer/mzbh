@@ -6,6 +6,13 @@
 
 #include "greshunkel.h"
 
+struct line {
+	const size_t size;
+	char *data;
+};
+
+typedef struct line line;
+
 static const char variable_regex[] = "xXx [a-zA-Z_0-9]+ xXx";
 static const char loop_regex[] = "xXx LOOP (?P<variable>[a-zA-S_]+) (?P<iter_list>[a-zA-S_\\$]+) xXx(?P<subloop>.*)xXx BBL xXx";
 
@@ -57,28 +64,62 @@ int gshkl_free_context(greshunkel_ctext *ctext) {
 	return 0;
 }
 
+static line read_line(const char *buf) {
+	char c = '\0';
+
+	size_t num_read = 0;
+	while (1) {
+		c = buf[num_read];
+		num_read++;
+		if (c == '\0' || c == '\n' || c == '\r')
+			break;
+	}
+
+	line to_return = {
+		.size = num_read,
+		.data = malloc(num_read + 1)
+	};
+	strncpy(to_return.data, buf, num_read);
+
+	return to_return;
+}
+
 char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const size_t original_size, size_t *outsize) {
 	assert(to_render != NULL);
 	assert(ctext != NULL);
 
 	/* We start up a new buffer and copy the old one into it: */
-	char *rendered = calloc(1, original_size);
-	if (rendered == NULL)
-		goto error;
-	memcpy(rendered, to_render, original_size);
-	*outsize = original_size;
+	char *rendered = NULL;
+	*outsize = 0;
 
-	/* Variable rendering pass: */
+	size_t num_read = 0;
+	while (num_read < original_size) {
+		line current_line = read_line(to_render + num_read);
+		/* Variable rendering pass: */
+		regex_t regex;
+		int reti = regcomp(&regex, variable_regex, 0);
+		assert(reti == 0);
 
-	regex_t regex;
-	int reti = regcomp(&regex, variable_regex, 0);
-	assert(reti == 0);
+		int matches = 0;
+		//regmatch_t match[1];
+		//while (regexec(&regex, to_render, 1, match, 0) == 0) {
+		while (regexec(&regex, to_render, 0, NULL, 0) == 0) {
+			/* We matched. */
+			matches++;
+		}
+		const size_t old_num_read = num_read;
+		num_read += current_line.size;
 
-	regmatch_t match[1];
-	int matches = 0;
-	while (regexec(&regex, to_render, 1, match, 0) == 0) {
-		/* We matched. */
-		matches++;
+		if (rendered == NULL) {
+			rendered = calloc(1, num_read);
+		} else {
+			char *med_buf = realloc(rendered, num_read);
+			if (med_buf == NULL)
+				goto error;
+			rendered = med_buf;
+		}
+		strncpy(rendered + old_num_read, current_line.data, current_line.size);
+		free(current_line.data);
 	}
 	return rendered;
 

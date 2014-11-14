@@ -1,5 +1,6 @@
 // vim: noet ts=4 sw=4
 #pragma once
+#include <stdlib.h>
 #include "stack.h"
 
 #define WISDOM_OF_WORDS 32
