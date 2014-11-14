@@ -1,5 +1,8 @@
 // vim: noet ts=4 sw=4
 #include <assert.h>
+#ifdef DEBUG
+#include <stdio.h>
+#endif
 #include <stdlib.h>
 #include <string.h>
 #include <regex.h>
@@ -13,7 +16,7 @@ struct line {
 
 typedef struct line line;
 
-static const char variable_regex[] = "xXx [a-zA-Z_0-9]+ xXx";
+static const char variable_regex[] = "xXx @([a-zA-Z_0-9\\$]+) xXx";
 static const char loop_regex[] = "xXx LOOP (?P<variable>[a-zA-S_]+) (?P<iter_list>[a-zA-S_\\$]+) xXx(?P<subloop>.*)xXx BBL xXx";
 
 greshunkel_ctext *gshkl_init_context() {
@@ -77,7 +80,7 @@ static line read_line(const char *buf) {
 
 	line to_return = {
 		.size = num_read,
-		.data = malloc(num_read + 1)
+		.data = calloc(1, num_read + 1)
 	};
 	strncpy(to_return.data, buf, num_read);
 
@@ -98,15 +101,45 @@ char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const s
 		/* Variable rendering pass: */
 		regex_t regex;
 		int reti = regcomp(&regex, variable_regex, REG_EXTENDED);
-		assert(reti == 0);
+#ifdef DEBUG
+		if (reti != 0) {
+			char errbuf[128];
+			regerror(reti, &regex, errbuf, sizeof(errbuf));
+			printf("%s\n", errbuf);
+#endif
+			assert(reti == 0);
+#ifdef DEBUG
+		}
+#endif
 
 		int matches = 0;
 		int offset = 0;
-		regmatch_t match[1];
-		while (regexec(&regex, current_line.data + offset, 1, match, 0) == 0) {
+		regmatch_t match[2];
+		while (offset < current_line.size &&
+			   regexec(&regex, current_line.data + offset, 2, match, 0) == 0) {
 			/* We matched. */
+			ol_stack *current_value = ctext->values;
+			/* We linearly search through our variables because I don't have
+			 * a hash map. C is "fast enough" */
+			while (current_value->next != NULL) {
+				const greshunkel_tuple *tuple = (greshunkel_tuple *)current_value->data;
+				/* This is the actual part of the regex we care about. */
+				const regmatch_t inner_match = match[1];
+				assert(inner_match.rm_so != -1 && inner_match.rm_eo != -1);
+
+				const size_t offset_to_name = offset + inner_match.rm_so;
+				if (strncmp(tuple->name, current_line.data + offset_to_name, strlen(tuple->name)) == 0) {
+#ifdef DEBUG
+					printf("Hit a set variable!\n");
+#endif
+					break;
+				}
+				current_value = current_value->next;
+			}
 			matches++;
-			offset = match[0].rm_eo;
+			/* Set the next regex check after this one. */
+			offset += match[0].rm_eo;
+			memset(match, 0, sizeof(match));
 		}
 		const size_t old_num_read = num_read;
 		num_read += current_line.size;
