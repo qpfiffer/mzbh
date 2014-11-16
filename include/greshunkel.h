@@ -12,13 +12,12 @@
 /* NUMBERS SHALL NEVER BE GREATER THAN THE VALUE OF A SINGLE INTEGER! */
 /* VARIABLE NAMES SHALL NEVER BE MORE THAN 32 CHARACTERS! */
 typedef union greshunkel_var {
-	int num;
+	const unsigned int fuck_gcc : 1; /* This tricks GCC into doing smart things. Not used. */
 	char str[MAX_GSHKL_STR_SIZE];
 	union greshunkel_var *arr[8];
 } greshunkel_var;
 
 typedef enum {
-	GSHKL_NUM,
 	GSHKL_ARR,
 	GSHKL_STR
 } greshunkel_type;
@@ -39,7 +38,7 @@ int gshkl_free_context(greshunkel_ctext *ctext);
 
 /* Add things to the contexts: */
 int gshkl_add_string(greshunkel_ctext *ctext, const char name[WISDOM_OF_WORDS], const char *value);
-int gshkl_add_num(greshunkel_ctext *ctext, const char name[WISDOM_OF_WORDS], const int value);
+int gshkl_add_int(greshunkel_ctext *ctext, const char name[WISDOM_OF_WORDS], const int value);
 
 /* Render a string buffer: */
 char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const size_t original_size, size_t *outsize);

@@ -1,8 +1,6 @@
 // vim: noet ts=4 sw=4
 #include <assert.h>
-#ifdef DEBUG
 #include <stdio.h>
-#endif
 #include <stdlib.h>
 #include <string.h>
 #include <regex.h>
@@ -23,6 +21,11 @@ greshunkel_ctext *gshkl_init_context() {
 	greshunkel_ctext *ctext = calloc(1, sizeof(greshunkel_ctext));
 	ctext->values = calloc(1, sizeof(ol_stack));
 	return ctext;
+}
+
+static inline int _gshkl_add_var_to_context(greshunkel_ctext *ctext, const greshunkel_tuple *new_tuple) {
+	spush(&ctext->values, new_tuple);
+	return 0;
 }
 
 int gshkl_add_string(greshunkel_ctext *ctext, const char name[WISDOM_OF_WORDS], const char value[MAX_GSHKL_STR_SIZE]) {
@@ -48,12 +51,35 @@ int gshkl_add_string(greshunkel_ctext *ctext, const char name[WISDOM_OF_WORDS], 
 	memcpy(new_tuple, &_stack_tuple, sizeof(greshunkel_tuple));
 
 	/* Push that onto our values stack. */
-	spush(&ctext->values, new_tuple);
+	if (_gshkl_add_var_to_context(ctext, new_tuple) != 0) {
+		free(new_tuple);
+		return 1;
+	}
 	return 0;
 }
 
-int gshkl_add_num(greshunkel_ctext *ctext, const char name[WISDOM_OF_WORDS], const int value) {
+int gshkl_add_int(greshunkel_ctext *ctext, const char name[WISDOM_OF_WORDS], const int value) {
 	assert(ctext != NULL);
+
+	greshunkel_tuple _stack_tuple = {
+		.name = {0},
+		.type = GSHKL_STR,
+		.value = {0}
+	};
+	strncpy(_stack_tuple.name, name, WISDOM_OF_WORDS);
+
+	greshunkel_var _stack_var = {0};
+	snprintf(_stack_var.str, MAX_GSHKL_STR_SIZE, "%i", value);
+
+	memcpy(&_stack_tuple.value, &_stack_var, sizeof(greshunkel_var));
+
+	greshunkel_tuple *new_tuple = calloc(1, sizeof(greshunkel_tuple));
+	memcpy(new_tuple, &_stack_tuple, sizeof(greshunkel_tuple));
+
+	if (_gshkl_add_var_to_context(ctext, new_tuple) != 0) {
+		free(new_tuple);
+		return 1;
+	}
 	return 0;
 }
 
