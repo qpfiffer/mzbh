@@ -123,16 +123,7 @@ char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const s
 
 	regex_t regex;
 	int reti = regcomp(&regex, variable_regex, REG_EXTENDED);
-#ifdef DEBUG
-	if (reti != 0) {
-		char errbuf[128];
-		regerror(reti, &regex, errbuf, sizeof(errbuf));
-		printf("%s\n", errbuf);
-#endif
-		assert(reti == 0);
-#ifdef DEBUG
-	}
-#endif
+	assert(reti == 0);
 
 	size_t num_read = 0;
 	while (num_read < original_size) {
@@ -158,9 +149,6 @@ char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const s
 				assert(inner_match.rm_so != -1 && inner_match.rm_eo != -1);
 
 				if (strncmp(tuple->name, operating_line->data + inner_match.rm_so, strlen(tuple->name)) == 0) {
-#ifdef DEBUG
-					printf("Hit a set variable!\n");
-#endif
 					/* Do actual printing here */
 					const size_t first_piece_size = match[0].rm_so;
 					const size_t middle_piece_size = strlen(tuple->value.str);
