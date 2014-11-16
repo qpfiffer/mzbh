@@ -121,29 +121,31 @@ char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const s
 	char *rendered = NULL;
 	*outsize = 0;
 
+	regex_t regex;
+	int reti = regcomp(&regex, variable_regex, REG_EXTENDED);
+#ifdef DEBUG
+	if (reti != 0) {
+		char errbuf[128];
+		regerror(reti, &regex, errbuf, sizeof(errbuf));
+		printf("%s\n", errbuf);
+#endif
+		assert(reti == 0);
+#ifdef DEBUG
+	}
+#endif
+
 	size_t num_read = 0;
 	while (num_read < original_size) {
 		line current_line = read_line(to_render + num_read);
 		/* Variable rendering pass: */
-		regex_t regex;
-		int reti = regcomp(&regex, variable_regex, REG_EXTENDED);
-#ifdef DEBUG
-		if (reti != 0) {
-			char errbuf[128];
-			regerror(reti, &regex, errbuf, sizeof(errbuf));
-			printf("%s\n", errbuf);
-#endif
-			assert(reti == 0);
-#ifdef DEBUG
-		}
-#endif
 
-		int offset = 0;
-		int matched_at_least_once = 0;
 		line line_to_add = {0};
+		line new_line_to_add = {0};
 		regmatch_t match[2];
-		while (offset < current_line.size &&
-			   regexec(&regex, current_line.data + offset, 2, match, 0) == 0) {
+		line *operating_line = &current_line;
+
+		while (regexec(&regex, operating_line->data, 2, match, 0) == 0) {
+			int matched_at_least_once = 0;
 			/* We matched. */
 			ol_stack *current_value = ctext->values;
 
@@ -155,23 +157,24 @@ char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const s
 				const regmatch_t inner_match = match[1];
 				assert(inner_match.rm_so != -1 && inner_match.rm_eo != -1);
 
-				const size_t offset_to_name = offset + inner_match.rm_so;
-				if (strncmp(tuple->name, current_line.data + offset_to_name, strlen(tuple->name)) == 0) {
+				if (strncmp(tuple->name, operating_line->data + inner_match.rm_so, strlen(tuple->name)) == 0) {
 #ifdef DEBUG
 					printf("Hit a set variable!\n");
 #endif
 					/* Do actual printing here */
-					const size_t var_len = strlen(tuple->value.str);
-					const size_t start_of_var = match[0].rm_so - offset;
-					const size_t last_piece_size = current_line.size - (match[0].rm_eo + offset);
+					const size_t first_piece_size = match[0].rm_so;
+					const size_t middle_piece_size = strlen(tuple->value.str);
+					const size_t last_piece_size = operating_line->size - match[0].rm_eo;
 					/* Sorry, Vishnu... */
-					line_to_add.size = (match[0].rm_so + offset) + var_len + last_piece_size;
-					line_to_add.data = calloc(1, line_to_add.size);
+					new_line_to_add.size = first_piece_size + middle_piece_size + last_piece_size;
+					new_line_to_add.data = calloc(1, new_line_to_add.size);
 
-					strncpy(line_to_add.data, current_line.data + offset, start_of_var);
+					strncpy(new_line_to_add.data, operating_line->data, first_piece_size);
 					/* TODO: DO NOT ASSUME IT IS ALWAYS A STRING! */
-					strncpy(line_to_add.data + start_of_var, tuple->value.str, var_len);
-					strncpy(line_to_add.data + start_of_var + var_len, current_line.data + offset + match[0].rm_eo, current_line.size - (offset + match[0].rm_eo));
+					strncpy(new_line_to_add.data + first_piece_size, tuple->value.str, middle_piece_size);
+					strncpy(new_line_to_add.data + first_piece_size + middle_piece_size,
+							operating_line->data + match[0].rm_eo,
+							last_piece_size);
 
 					matched_at_least_once = 1;
 					break;
@@ -181,8 +184,14 @@ char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const s
 			/* Blow up if we had a variable that wasn't in the context. */
 			assert(matched_at_least_once = 1);
 
+			free(line_to_add.data);
+			line_to_add.size = new_line_to_add.size;
+			line_to_add.data = new_line_to_add.data;
+			new_line_to_add.size = 0;
+			new_line_to_add.data = NULL;
+			operating_line = &line_to_add;
+
 			/* Set the next regex check after this one. */
-			offset += match[0].rm_eo;
 			memset(match, 0, sizeof(match));
 		}
 		num_read += current_line.size;
@@ -211,6 +220,7 @@ char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const s
 			free(current_line.data);
 		}
 	}
+	regfree(&regex);
 	return rendered;
 
 error:
