@@ -18,7 +18,7 @@ int main(int argc, char *argv[]) {
 	greshunkel_ctext *ctext = gshkl_init_context();
 
 	gshkl_add_string(ctext, "TEST", "This is a test.");
-	gshkl_add_int(ctext, "TEST", 666);
+	gshkl_add_int(ctext, "FAKEINT", 666);
 
 	const char *rendered = gshkl_render(ctext, document, strlen(document), &new_size);
 	gshkl_free_context(ctext);
