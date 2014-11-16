@@ -13,7 +13,8 @@ typedef struct post_match {
 	char board[BOARD_STR_LEN];
 	char filename[32];
 	char file_ext[6];
-	char tim[32];
+	char post_number[32];
+	size_t size;
 } post_match;
 
 /* FUCK THE MUTEABLE STATE */

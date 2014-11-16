@@ -237,7 +237,6 @@ static int respond(const int accept_fd) {
 	/* Find our matching route: */
 	int i;
 	for (i = 0; i < (sizeof(all_routes)/sizeof(all_routes[0])); i++) {
-		/* TODO: Actually use regex to match the things here. */
 		const route *cur_route = &all_routes[i];
 		if (strcmp(cur_route->verb, request.verb) != 0)
 			continue;

@@ -80,6 +80,7 @@ ol_stack *parse_thread_json(const char *all_json, const thread_match *match) {
 		JSON_Object *post = json_array_get_object(posts, i);
 		const char *file_ext = json_object_get_string(post, "ext");
 		const char *filename = json_object_get_string(post, "filename");
+		const size_t siz = (unsigned int)json_object_get_number(post, "fsize");
 		const long _tim = (long)json_object_get_number(post, "tim");
 
 		if (file_ext == NULL)
@@ -88,11 +89,12 @@ ol_stack *parse_thread_json(const char *all_json, const thread_match *match) {
 		if (strstr(file_ext, "webm")) {
 			log_msg(LOG_INFO, "/%s/ Hit: %s%s.", match->board, filename, file_ext);
 
-			char tim[32] = {0};
-			snprintf(tim, sizeof(tim), "%lu", _tim);
+			char post_number[32] = {0};
+			snprintf(post_number, sizeof(post_number), "%lu", _tim);
 
-			post_match *t_match = malloc(sizeof(post_match));
-			strncpy(t_match->tim, tim, sizeof(t_match->tim));
+			post_match *t_match = calloc(1, sizeof(post_match));
+			t_match->size = siz;
+			strncpy(t_match->post_number, post_number, sizeof(t_match->post_number));
 			strncpy(t_match->filename, filename, sizeof(t_match->filename));
 			strncpy(t_match->file_ext, file_ext, sizeof(t_match->file_ext));
 			strncpy(t_match->board, match->board, sizeof(t_match->board));

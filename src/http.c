@@ -15,6 +15,8 @@
 #include "utils.h"
 #include "logging.h"
 
+#define MAX_IMAGE_FILENAME_SIZE 512
+
 const int SELECT_TIMEOUT = 5;
 const char *BOARDS[] = {"a", "b", "gif", "e", "h", "v", "wsg"};
 
@@ -48,6 +50,14 @@ const char THUMB_REQUEST[] =
 	"User-Agent: Mozilla/5.0 (Windows NT 5.1; rv:31.0) Gecko/20100101 Firefox/31.0\r\n"
 	"Host: t.4cdn.org\r\n"
 	"Accept: */*\r\n\r\n";
+
+static void
+get_image_filename(char fname[MAX_IMAGE_FILENAME_SIZE],
+				   const post_match *p_match) {
+	snprintf(fname, MAX_IMAGE_FILENAME_SIZE, "%s/%s/%s%.*s",
+			WEBMS_DIR, p_match->board, p_match->filename,
+			(int)sizeof(p_match->file_ext), p_match->file_ext);
+}
 
 static char *receive_chunked_http(const int request_fd) {
 	char *raw_buf = NULL;
@@ -360,7 +370,21 @@ static ol_stack *build_thread_index() {
 
 			ol_stack *thread_matches = parse_thread_json(thread_json, match);
 			while (thread_matches->next != NULL) {
-				spush(&images_to_download, spop(&thread_matches));
+				post_match *p_match = (post_match *)spop(&thread_matches);
+				/* TODO: Don't add it to the images to download if we already
+				 * have that image, with that size, from that board. */
+				char fname[MAX_IMAGE_FILENAME_SIZE] = {0};
+				get_image_filename(fname, p_match);
+
+				struct stat ifname = {0};
+				if (stat(fname, &ifname) != -1 &&
+					ifname.st_size == p_match->size) {
+					log_msg(LOG_INFO, "Skipping %s.", fname);
+					free(p_match);
+					continue;
+				}
+
+				spush(&images_to_download, p_match);
 			}
 			free(thread_matches);
 			free(thread_json);
@@ -434,21 +458,19 @@ int download_images() {
 	while (images_to_download->next != NULL) {
 		p_match = (post_match *)spop(&images_to_download);
 
-		char image_filename[512] = {0};
-		snprintf(image_filename, 128, "%s/%s/%s%.*s",
-				WEBMS_DIR, p_match->board, p_match->filename,
-				(int)sizeof(p_match->file_ext), p_match->file_ext);
+		char image_filename[MAX_IMAGE_FILENAME_SIZE] = {0};
+		get_image_filename(image_filename, p_match);
 
 		/* We already have this file, don't need to download it again. */
 		struct stat ifname = {0};
-		if (stat(image_filename, &ifname) != -1 && ifname.st_size > 0) {
+		if (stat(image_filename, &ifname) != -1 && ifname.st_size > p_match->size) {
 			log_msg(LOG_INFO, "Skipping %s.", image_filename);
 			free(p_match);
 			continue;
 		}
 
-		char thumb_filename[512] = {0};
-		snprintf(thumb_filename, 128, "%s/%s/thumb_%s.jpg",
+		char thumb_filename[MAX_IMAGE_FILENAME_SIZE] = {0};
+		snprintf(thumb_filename, MAX_IMAGE_FILENAME_SIZE, "%s/%s/thumb_%s.jpg",
 				WEBMS_DIR, p_match->board, p_match->filename);
 
 		log_msg(LOG_INFO, "Downloading %s%.*s...", p_match->filename, 5, p_match->file_ext);
@@ -456,7 +478,7 @@ int download_images() {
 		/* Build and send the thumbnail request. */
 		char thumb_request[256] = {0};
 		snprintf(thumb_request, sizeof(thumb_request), THUMB_REQUEST,
-				p_match->board, p_match->tim);
+				p_match->board, p_match->post_number);
 		int rc = send(thumb_request_fd, thumb_request, strlen(thumb_request), 0);
 		if (rc != strlen(thumb_request)) {
 			log_msg(LOG_ERR, "Could not send all bytes to host while requesting thumbnail.");
@@ -466,7 +488,7 @@ int download_images() {
 		/* Build and send the image request. */
 		char image_request[256] = {0};
 		snprintf(image_request, sizeof(image_request), IMAGE_REQUEST,
-				p_match->board, p_match->tim, (int)sizeof(p_match->file_ext), p_match->file_ext);
+				p_match->board, p_match->post_number, (int)sizeof(p_match->file_ext), p_match->file_ext);
 		rc = send(image_request_fd, image_request, strlen(image_request), 0);
 		if (rc != strlen(image_request)) {
 			log_msg(LOG_ERR, "Could not send all bytes to host while requesting image.");

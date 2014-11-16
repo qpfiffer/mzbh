@@ -44,8 +44,8 @@ int main(int argc, char *argv[]) {
 	signal(SIGINT, term);
 	signal(SIGKILL, term);
 	signal(SIGCHLD, SIG_IGN);
-	//if (start_bg_worker(DEBUG) != 0)
-	//	return -1;
+	if (start_bg_worker(DEBUG) != 0)
+		return -1;
 	int rc = 0;
 	if ((rc = http_serve(main_sock_fd)) != 0) {
 		term(SIGTERM);
