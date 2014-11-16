@@ -24,10 +24,11 @@ int main(int argc, char *argv[]) {
 	gshkl_add_string(ctext, "TRICKY", "TrIcKy");
 	gshkl_add_int(ctext, "ONE", 1);
 
-	const char *rendered = gshkl_render(ctext, document, strlen(document), &new_size);
+	char *rendered = gshkl_render(ctext, document, strlen(document), &new_size);
 	gshkl_free_context(ctext);
 
 	printf("%s\n", rendered);
+	free(rendered);
 
 	return 0;
 }
