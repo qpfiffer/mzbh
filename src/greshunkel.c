@@ -8,7 +8,7 @@
 #include "greshunkel.h"
 
 struct line {
-	const size_t size;
+	size_t size;
 	char *data;
 };
 
@@ -138,13 +138,15 @@ char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const s
 		}
 #endif
 
-		int matches = 0;
 		int offset = 0;
+		int matched_at_least_once = 0;
+		line line_to_add = {0};
 		regmatch_t match[2];
 		while (offset < current_line.size &&
 			   regexec(&regex, current_line.data + offset, 2, match, 0) == 0) {
 			/* We matched. */
 			ol_stack *current_value = ctext->values;
+
 			/* We linearly search through our variables because I don't have
 			 * a hash map. C is "fast enough" */
 			while (current_value->next != NULL) {
@@ -158,28 +160,56 @@ char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const s
 #ifdef DEBUG
 					printf("Hit a set variable!\n");
 #endif
+					/* Do actual printing here */
+					const size_t var_len = strlen(tuple->value.str);
+					const size_t start_of_var = match[0].rm_so - offset;
+					const size_t last_piece_size = current_line.size - (match[0].rm_eo + offset);
+					/* Sorry, Vishnu... */
+					line_to_add.size = (match[0].rm_so + offset) + var_len + last_piece_size;
+					line_to_add.data = calloc(1, line_to_add.size);
+
+					strncpy(line_to_add.data, current_line.data + offset, start_of_var);
+					/* TODO: DO NOT ASSUME IT IS ALWAYS A STRING! */
+					strncpy(line_to_add.data + start_of_var, tuple->value.str, var_len);
+					strncpy(line_to_add.data + start_of_var + var_len, current_line.data + offset + match[0].rm_eo, current_line.size - (offset + match[0].rm_eo));
+
+					matched_at_least_once = 1;
 					break;
 				}
 				current_value = current_value->next;
 			}
-			matches++;
+			/* Blow up if we had a variable that wasn't in the context. */
+			assert(matched_at_least_once = 1);
+
 			/* Set the next regex check after this one. */
 			offset += match[0].rm_eo;
 			memset(match, 0, sizeof(match));
 		}
-		const size_t old_num_read = num_read;
 		num_read += current_line.size;
 
-		if (rendered == NULL) {
-			rendered = calloc(1, num_read);
+		/* Fuck this */
+#define MAKE_BUFFER if (rendered == NULL) {\
+				rendered = calloc(1, *outsize);\
+			} else {\
+				char *med_buf = realloc(rendered, *outsize);\
+				if (med_buf == NULL)\
+					goto error;\
+				rendered = med_buf;\
+			}
+
+		const size_t old_outsize = *outsize;
+		if (line_to_add.size != 0) {
+			*outsize += line_to_add.size;
+			MAKE_BUFFER
+			strncpy(rendered + old_outsize, line_to_add.data, line_to_add.size);
+			free(current_line.data);
+			free(line_to_add.data);
 		} else {
-			char *med_buf = realloc(rendered, num_read);
-			if (med_buf == NULL)
-				goto error;
-			rendered = med_buf;
+			*outsize += current_line.size;
+			MAKE_BUFFER
+			strncpy(rendered + old_outsize, current_line.data, current_line.size);
+			free(current_line.data);
 		}
-		strncpy(rendered + old_num_read, current_line.data, current_line.size);
-		free(current_line.data);
 	}
 	return rendered;
 

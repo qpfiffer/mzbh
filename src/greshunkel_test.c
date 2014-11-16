@@ -7,8 +7,8 @@
 const char document[] =
 "<html>\n"
 "	<body>\n"
-"		<p>This is a regular string: xXx TEST xXx</p>\n"
-"		<p>This is an integer: xXx FAKEINT xXx</p>\n"
+"		<p>This is a regular string: xXx @TEST xXx</p>\n"
+"		<p>This is an integer: xXx @FAKEINT xXx</p>\n"
 "	</body>\n"
 "</html>\n";
 
