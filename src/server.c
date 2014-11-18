@@ -130,7 +130,6 @@ static int index_handler(const http_request *request, http_response *response) {
 
 	/* What the fuck, posix? */
 	struct dirent dirent_thing = {0};
-	//strncpy(dirent_thing.d_name, webm_location(), sizeof(dirent_thing.d_name));
 
 	DIR *dirstream = opendir(webm_location());
 	while (1) {
@@ -138,7 +137,8 @@ static int index_handler(const http_request *request, http_response *response) {
 		readdir_r(dirstream, &dirent_thing, &result);
 		if (!result)
 			break;
-		gshkl_add_string_to_loop(boards, result->d_name);
+		if (result->d_name[0] != '.')
+			gshkl_add_string_to_loop(boards, result->d_name);
 	}
 	closedir(dirstream);
 
