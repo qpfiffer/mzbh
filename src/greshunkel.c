@@ -225,42 +225,6 @@ static line read_line(const char *buf) {
 }
 
 static line
-_interpolate_loop(const greshunkel_ctext *ctext, const regex_t *lr, const char *buf, size_t *num_read) {
-	line to_return = {0};
-	*num_read = 0;
-
-	regmatch_t match[3];
-	/* TODO: Support loops inside of loops. That probably means a
-	 * while loop here. */
-	if (regexec(lr, buf, 3, match, 0) == 0) {
-		/* We found a fucking loop, holy shit */
-		*num_read = match[0].rm_eo;
-		ol_stack *current_value = ctext->values;
-
-		/* We linearly search through our variables because I don't have
-		 * a hash map. C is "fast enough" */
-		while (current_value->next != NULL) {
-			current_value = current_value->next;
-			/*
-			const greshunkel_tuple *tuple = (greshunkel_tuple *)current_value->data;
-			const regmatch_t inner_match = match[1];
-			assert(inner_match.rm_so != -1 && inner_match.rm_eo != -1);
-
-			assert(tuple->name != NULL);
-			int strcmp_result = strncmp(tuple->name, operating_line->data + inner_match.rm_so, strlen(tuple->name));
-			if (tuple->type == GSHKL_STR && strcmp_result == 0) {
-			}
-			*/
-		}
-		to_return.size = strlen("IT WORKS");
-		to_return.data = calloc(1, strlen("IT WORKS"));
-		strncpy(to_return.data, "IT WORKS", strlen("IT WORKS"));
-	}
-
-	return to_return;
-}
-
-static line
 _interpolate_line(const greshunkel_ctext *ctext, const line current_line, const regex_t *var_regex) {
 	line interpolated_line = {0};
 	line new_line_to_add = {0};
@@ -323,6 +287,96 @@ _interpolate_line(const greshunkel_ctext *ctext, const line current_line, const 
 	return _to_return;
 }
 
+static line
+_interpolate_loop(const greshunkel_ctext *ctext, const regex_t *lr, const regex_t *vr, const char *buf, size_t *num_read) {
+	line to_return = {0};
+	*num_read = 0;
+
+	regmatch_t match[4];
+	/* TODO: Support loops inside of loops. That probably means a
+	 * while loop here. */
+	if (regexec(lr, buf, 4, match, 0) == 0) {
+		/* We found a fucking loop, holy shit */
+		*num_read = match[0].rm_eo;
+		/* Variables we're going to need: */
+		const regmatch_t loop_variable = match[1];
+		const regmatch_t variable_name = match[2];
+		const regmatch_t loop_meat = match[3];
+		/* Make sure they were matched: */
+		assert(variable_name.rm_so != -1 && variable_name.rm_eo != -1);
+		assert(loop_variable.rm_so != -1 && loop_variable.rm_eo != -1);
+		assert(loop_meat.rm_so != -1 && loop_meat.rm_eo != -1);
+
+		/* This is the thing we're going to render over and over and over again. */
+		char loop_piece_to_render[loop_meat.rm_eo - loop_meat.rm_so];
+		memset(loop_piece_to_render, '\0', sizeof(loop_piece_to_render));
+		strncpy(loop_piece_to_render, buf + loop_meat.rm_so, sizeof(loop_piece_to_render));
+
+		char loop_variable_name_rendered[loop_variable.rm_eo - loop_variable.rm_so];
+		memset(loop_variable_name_rendered, '\0', sizeof(loop_variable_name_rendered));
+		strncpy(loop_variable_name_rendered, buf + loop_variable.rm_so, sizeof(loop_variable_name_rendered));
+
+		line to_render_line = { .size = sizeof(loop_piece_to_render), .data = loop_piece_to_render };
+		/* Now we start iterating through values in our context, looking for ARR
+		 * types that have the correct name. */
+		ol_stack *current_value = ctext->values;
+
+		/* We linearly search through our variables because I don't have
+		 * a hash map. C is "fast enough" */
+		int matched_at_least_once = 0;
+		while (current_value->next != NULL) {
+			const greshunkel_tuple *tuple = (greshunkel_tuple *)current_value->data;
+			current_value = current_value->next;
+			if (tuple->type != GSHKL_ARR)
+				continue;
+
+			/* Found an array. */
+			assert(tuple->name != NULL);
+
+			int strcmp_result = strncmp(tuple->name, buf + variable_name.rm_so, strlen(tuple->name));
+			if (tuple->type == GSHKL_ARR && strcmp_result == 0) {
+				matched_at_least_once = 1;
+				int i;
+				const size_t num_elements = sizeof(tuple->value.arr)/sizeof(tuple->value.arr[0]);
+				greshunkel_ctext *temp_contexts[num_elements];
+				memset(temp_contexts, '\0', sizeof(temp_contexts));
+				/* Now we loop through the array incredulously. */
+				for (i = 0; i < num_elements; i++) {
+					const greshunkel_tuple *current_loop_var = tuple->value.arr[i];
+					if (current_loop_var == NULL)
+						break;
+					/* TODO: For now, only strings are supported in arrays. */
+					assert(current_loop_var->type == GSHKL_STR);
+
+					/* Recurse contexts until my fucking mind melts. */
+					temp_contexts[i] = gshkl_init_context();
+					gshkl_add_string(temp_contexts[i], loop_variable_name_rendered, current_loop_var->value.str);
+					line rendered_piece = _interpolate_line(temp_contexts[i], to_render_line, vr);
+
+					const size_t old_size = to_return.size;
+					to_return.size += rendered_piece.size;
+					to_return.data = realloc(to_return.data, to_return.size);
+					strncpy(to_return.data + old_size, rendered_piece.data, rendered_piece.size);
+					free(rendered_piece.data);
+				}
+
+				/* Free all of the contexts we just made. */
+				for (i = 0; i < sizeof(temp_contexts)/sizeof(temp_contexts[0]); i++) {
+					if (temp_contexts[i] == NULL)
+						break;
+					gshkl_free_context(temp_contexts[i]);
+				}
+				break;
+			}
+			current_value = current_value->next;
+
+		}
+		assert(matched_at_least_once == 1);
+	}
+
+	return to_return;
+}
+
 static inline void _compile_regex(regex_t *vr, regex_t *lr) {
 	int reti = regcomp(vr, variable_regex, REG_EXTENDED);
 	assert(reti == 0);
@@ -357,7 +411,7 @@ char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const s
 		 * in the offset and just let it go. If it processes more than the
 		 * size of the current line, we know it did something.
 		 * Append the whole line it gets back. */
-		to_append = _interpolate_loop(ctext, &loop_regex, to_render + num_read, &loop_readahead);
+		to_append = _interpolate_loop(ctext, &loop_regex, &var_regex, to_render + num_read, &loop_readahead);
 
 		/* Otherwise just interpolate the line like normal. */
 		if (loop_readahead == 0) {
