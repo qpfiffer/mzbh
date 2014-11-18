@@ -230,6 +230,7 @@ _interpolate_line(const greshunkel_ctext *ctext, const line current_line, const 
 	line new_line_to_add = {0};
 	regmatch_t match[2];
 	const line *operating_line = &current_line;
+	assert(operating_line->data != NULL);
 
 	while (regexec(var_regex, operating_line->data, 2, match, 0) == 0) {
 		int matched_at_least_once = 0;
@@ -268,7 +269,7 @@ _interpolate_line(const greshunkel_ctext *ctext, const line current_line, const 
 			current_value = current_value->next;
 		}
 		/* Blow up if we had a variable that wasn't in the context. */
-		assert(matched_at_least_once = 1);
+		assert(matched_at_least_once == 1);
 
 		free(interpolated_line.data);
 		interpolated_line.size = new_line_to_add.size;
@@ -312,9 +313,10 @@ _interpolate_loop(const greshunkel_ctext *ctext, const regex_t *lr, const regex_
 		memset(loop_piece_to_render, '\0', sizeof(loop_piece_to_render));
 		strncpy(loop_piece_to_render, buf + loop_meat.rm_so, sizeof(loop_piece_to_render));
 
-		char loop_variable_name_rendered[loop_variable.rm_eo - loop_variable.rm_so];
-		memset(loop_variable_name_rendered, '\0', sizeof(loop_variable_name_rendered));
-		strncpy(loop_variable_name_rendered, buf + loop_variable.rm_so, sizeof(loop_variable_name_rendered));
+		char loop_variable_name_rendered[WISDOM_OF_WORDS] = {0};
+		const size_t _bigger = loop_variable.rm_eo - loop_variable.rm_so > WISDOM_OF_WORDS ? WISDOM_OF_WORDS :
+			loop_variable.rm_eo - loop_variable.rm_so;
+		strncpy(loop_variable_name_rendered, buf + loop_variable.rm_so, _bigger);
 
 		line to_render_line = { .size = sizeof(loop_piece_to_render), .data = loop_piece_to_render };
 		/* Now we start iterating through values in our context, looking for ARR
@@ -435,6 +437,7 @@ char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const s
 		free(to_append.data);
 	}
 	_destroy_regex(&var_regex, &loop_regex);
+	rendered[*outsize - 1] = '\0';
 	return rendered;
 
 error:
