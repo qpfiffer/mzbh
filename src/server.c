@@ -1,6 +1,7 @@
 // vim: noet ts=4 sw=4
 #include <arpa/inet.h>
 #include <assert.h>
+#include <dirent.h>
 #include <fcntl.h>
 #include <netdb.h>
 #include <regex.h>
@@ -125,13 +126,21 @@ static int index_handler(const http_request *request, http_response *response) {
 	/* Render that shit */
 	size_t new_size = 0;
 	greshunkel_ctext *ctext = gshkl_init_context();
-	//greshunkel_var *boards = gshkl_add_array(ctext, "BOARDS");
+	greshunkel_var *boards = gshkl_add_array(ctext, "BOARDS");
 
-	/*
-	struct dirrent *dir = readdir_r(webm_location()
-	while () {
+	/* What the fuck, posix? */
+	struct dirent dirent_thing = {0};
+	//strncpy(dirent_thing.d_name, webm_location(), sizeof(dirent_thing.d_name));
+
+	DIR *dirstream = opendir(webm_location());
+	while (1) {
+		struct dirent *result = NULL;
+		readdir_r(dirstream, &dirent_thing, &result);
+		if (!result)
+			break;
+		gshkl_add_string_to_loop(boards, result->d_name);
 	}
-	*/
+	closedir(dirstream);
 
 	char *rendered = gshkl_render(ctext, mmapd_region, original_size, &new_size);
 	gshkl_free_context(ctext);
