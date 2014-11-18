@@ -15,7 +15,7 @@ struct line {
 typedef struct line line;
 
 static const char variable_regex[] = "xXx @([a-zA-Z_0-9]+) xXx";
-static const char loop_regex[] = "xXx LOOP ([a-zA-Z_]+) ([a-zA-Z_]+) xXx(.*)xXx BBL xXx";
+static const char loop_regex[] = "^\\s+xXx LOOP ([a-zA-Z_]+) ([a-zA-Z_]+) xXx(.*)xXx BBL xXx";
 
 greshunkel_ctext *gshkl_init_context() {
 	greshunkel_ctext *ctext = calloc(1, sizeof(greshunkel_ctext));
@@ -225,6 +225,42 @@ static line read_line(const char *buf) {
 }
 
 static line
+_interpolate_loop(const greshunkel_ctext *ctext, const regex_t *lr, const char *buf, size_t *num_read) {
+	line to_return = {0};
+	*num_read = 0;
+
+	regmatch_t match[3];
+	/* TODO: Support loops inside of loops. That probably means a
+	 * while loop here. */
+	if (regexec(lr, buf, 3, match, 0) == 0) {
+		/* We found a fucking loop, holy shit */
+		*num_read = match[0].rm_eo;
+		ol_stack *current_value = ctext->values;
+
+		/* We linearly search through our variables because I don't have
+		 * a hash map. C is "fast enough" */
+		while (current_value->next != NULL) {
+			current_value = current_value->next;
+			/*
+			const greshunkel_tuple *tuple = (greshunkel_tuple *)current_value->data;
+			const regmatch_t inner_match = match[1];
+			assert(inner_match.rm_so != -1 && inner_match.rm_eo != -1);
+
+			assert(tuple->name != NULL);
+			int strcmp_result = strncmp(tuple->name, operating_line->data + inner_match.rm_so, strlen(tuple->name));
+			if (tuple->type == GSHKL_STR && strcmp_result == 0) {
+			}
+			*/
+		}
+		to_return.size = strlen("IT WORKS");
+		to_return.data = calloc(1, strlen("IT WORKS"));
+		strncpy(to_return.data, "IT WORKS", strlen("IT WORKS"));
+	}
+
+	return to_return;
+}
+
+static line
 _interpolate_line(const greshunkel_ctext *ctext, const line current_line, const regex_t *var_regex) {
 	line interpolated_line = {0};
 	line new_line_to_add = {0};
@@ -314,10 +350,22 @@ char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const s
 	size_t num_read = 0;
 	while (num_read < original_size) {
 		line current_line = read_line(to_render + num_read);
-		num_read += current_line.size;
 
 		line to_append = {0};
-		to_append = _interpolate_line(ctext, current_line, &var_regex);
+		size_t loop_readahead = 0;
+		/* The loop needs to read more than the current line, so we pass
+		 * in the offset and just let it go. If it processes more than the
+		 * size of the current line, we know it did something.
+		 * Append the whole line it gets back. */
+		to_append = _interpolate_loop(ctext, &loop_regex, to_render + num_read, &loop_readahead);
+
+		/* Otherwise just interpolate the line like normal. */
+		if (loop_readahead == 0) {
+			to_append = _interpolate_line(ctext, current_line, &var_regex);
+			num_read += current_line.size;
+		} else {
+			num_read += loop_readahead;
+		}
 
 		/* Fuck this */
 		const size_t old_outsize = *outsize;

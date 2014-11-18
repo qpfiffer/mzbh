@@ -12,7 +12,7 @@ const char document[] =
 "		<p>This is an integer: xXx @FAKEINT xXx</p>\n"
 "		<ul>\n"
 "		xXx LOOP i LOOP_TEST xXx\n"
-"			<li>xXx i xXx</li>\n"
+"			<li>xXx @i xXx</li>\n"
 "		xXx BBL xXx\n"
 "		</ul>\n"
 "	</body>\n"
