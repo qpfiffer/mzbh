@@ -20,9 +20,6 @@
 const int SELECT_TIMEOUT = 5;
 const char *BOARDS[] = {"a", "b", "gif", "e", "h", "v", "wsg"};
 
-const char WEBMS_DIR_DEFAULT[] = "./webms";
-const char *WEBMS_DIR = NULL;
-
 const char FOURCHAN_API_HOST[] = "a.4cdn.org";
 const char FOURCHAN_THUMBNAIL_HOST[] = "t.4cdn.org";
 const char FOURCHAN_IMAGE_HOST[] = "i.4cdn.org";
@@ -55,7 +52,7 @@ static void
 get_image_filename(char fname[MAX_IMAGE_FILENAME_SIZE],
 				   const post_match *p_match) {
 	snprintf(fname, MAX_IMAGE_FILENAME_SIZE, "%s/%s/%s%.*s",
-			WEBMS_DIR, p_match->board, p_match->filename,
+			webm_location(), p_match->board, p_match->filename,
 			(int)sizeof(p_match->file_ext), p_match->file_ext);
 }
 
@@ -285,12 +282,12 @@ error:
 
 static void ensure_directory_for_board(const char *board) {
 	/* Long enough for WEBMS_DIR, a /, the board and a NULL terminator */
-	const size_t buf_siz = strlen(WEBMS_DIR) + sizeof(char) * 2 + strnlen(board, BOARD_STR_LEN);
+	const size_t buf_siz = strlen(webm_location()) + sizeof(char) * 2 + strnlen(board, BOARD_STR_LEN);
 	char to_create[buf_siz];
 	memset(to_create, '\0', buf_siz);
 
 	/* ./webms/b */
-	snprintf(to_create, buf_siz, "%s/%s", WEBMS_DIR, board);
+	snprintf(to_create, buf_siz, "%s/%s", webm_location(), board);
 
 	struct stat st = {0};
 	if (stat(to_create, &st) == -1) {
@@ -421,18 +418,10 @@ int download_images() {
 	FILE *image_file = NULL;
 	post_match *p_match = NULL;
 
-	if (!WEBMS_DIR) {
-		char *env_var = getenv("WEBMS_DIR");
-		if (!env_var) {
-			WEBMS_DIR = WEBMS_DIR_DEFAULT;
-		} else {
-			WEBMS_DIR = env_var;
-		}
-	}
 	struct stat st = {0};
-	if (stat(WEBMS_DIR, &st) == -1) {
-		log_msg(LOG_WARN, "Creating webms directory %s.", WEBMS_DIR);
-		mkdir(WEBMS_DIR, 0755);
+	if (stat(webm_location(), &st) == -1) {
+		log_msg(LOG_WARN, "Creating webms directory %s.", webm_location());
+		mkdir(webm_location(), 0755);
 	}
 
 	ol_stack *images_to_download = NULL;
@@ -471,7 +460,7 @@ int download_images() {
 
 		char thumb_filename[MAX_IMAGE_FILENAME_SIZE] = {0};
 		snprintf(thumb_filename, MAX_IMAGE_FILENAME_SIZE, "%s/%s/thumb_%s.jpg",
-				WEBMS_DIR, p_match->board, p_match->filename);
+				webm_location(), p_match->board, p_match->filename);
 
 		log_msg(LOG_INFO, "Downloading %s%.*s...", p_match->filename, 5, p_match->file_ext);
 

@@ -125,6 +125,14 @@ static int index_handler(const http_request *request, http_response *response) {
 	/* Render that shit */
 	size_t new_size = 0;
 	greshunkel_ctext *ctext = gshkl_init_context();
+	//greshunkel_var *boards = gshkl_add_array(ctext, "BOARDS");
+
+	/*
+	struct dirrent *dir = readdir_r(webm_location()
+	while () {
+	}
+	*/
+
 	char *rendered = gshkl_render(ctext, mmapd_region, original_size, &new_size);
 	gshkl_free_context(ctext);
 
