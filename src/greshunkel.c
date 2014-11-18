@@ -224,6 +224,78 @@ static line read_line(const char *buf) {
 	return to_return;
 }
 
+static line
+_interpolate_line(const greshunkel_ctext *ctext, const line current_line, const regex_t *var_regex) {
+	line interpolated_line = {0};
+	line new_line_to_add = {0};
+	regmatch_t match[2];
+	const line *operating_line = &current_line;
+
+	while (regexec(var_regex, operating_line->data, 2, match, 0) == 0) {
+		int matched_at_least_once = 0;
+		/* We matched. */
+		ol_stack *current_value = ctext->values;
+
+		/* We linearly search through our variables because I don't have
+		 * a hash map. C is "fast enough" */
+		while (current_value->next != NULL) {
+			const greshunkel_tuple *tuple = (greshunkel_tuple *)current_value->data;
+			/* This is the actual part of the regex we care about. */
+			const regmatch_t inner_match = match[1];
+			assert(inner_match.rm_so != -1 && inner_match.rm_eo != -1);
+
+			assert(tuple->name != NULL);
+			int strcmp_result = strncmp(tuple->name, operating_line->data + inner_match.rm_so, strlen(tuple->name));
+			if (tuple->type == GSHKL_STR && strcmp_result == 0) {
+				/* Do actual printing here */
+				const size_t first_piece_size = match[0].rm_so;
+				const size_t middle_piece_size = strlen(tuple->value.str);
+				const size_t last_piece_size = operating_line->size - match[0].rm_eo;
+				/* Sorry, Vishnu... */
+				new_line_to_add.size = first_piece_size + middle_piece_size + last_piece_size;
+				new_line_to_add.data = calloc(1, new_line_to_add.size);
+
+				strncpy(new_line_to_add.data, operating_line->data, first_piece_size);
+				/* TODO: DO NOT ASSUME IT IS ALWAYS A STRING! */
+				strncpy(new_line_to_add.data + first_piece_size, tuple->value.str, middle_piece_size);
+				strncpy(new_line_to_add.data + first_piece_size + middle_piece_size,
+						operating_line->data + match[0].rm_eo,
+						last_piece_size);
+
+				matched_at_least_once = 1;
+				break;
+			}
+			current_value = current_value->next;
+		}
+		/* Blow up if we had a variable that wasn't in the context. */
+		assert(matched_at_least_once = 1);
+
+		free(interpolated_line.data);
+		interpolated_line.size = new_line_to_add.size;
+		interpolated_line.data = new_line_to_add.data;
+		new_line_to_add.size = 0;
+		new_line_to_add.data = NULL;
+		operating_line = &interpolated_line;
+
+		/* Set the next regex check after this one. */
+		memset(match, 0, sizeof(match));
+	}
+	if (interpolated_line.data != NULL)
+		return interpolated_line;
+	line _to_return = { .size = current_line.size, .data = calloc(1, current_line.size)};
+	memcpy(_to_return.data, current_line.data, current_line.size);
+	return _to_return;
+}
+
+static inline void _compile_regex(regex_t *var_regex) {
+	int reti = regcomp(var_regex, variable_regex, REG_EXTENDED);
+	assert(reti == 0);
+}
+
+static inline void _destroy_regex(regex_t *var_regex) {
+	regfree(var_regex);
+}
+
 char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const size_t original_size, size_t *outsize) {
 	assert(to_render != NULL);
 	assert(ctext != NULL);
@@ -232,95 +304,33 @@ char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const s
 	char *rendered = NULL;
 	*outsize = 0;
 
-	regex_t regex;
-	int reti = regcomp(&regex, variable_regex, REG_EXTENDED);
-	assert(reti == 0);
+	regex_t var_regex;
+	_compile_regex(&var_regex);
 
 	size_t num_read = 0;
 	while (num_read < original_size) {
 		line current_line = read_line(to_render + num_read);
-
-		line interpolated_line = {0};
-		line new_line_to_add = {0};
-		regmatch_t match[2];
-		line *operating_line = &current_line;
-
-		while (regexec(&regex, operating_line->data, 2, match, 0) == 0) {
-			int matched_at_least_once = 0;
-			/* We matched. */
-			ol_stack *current_value = ctext->values;
-
-			/* We linearly search through our variables because I don't have
-			 * a hash map. C is "fast enough" */
-			while (current_value->next != NULL) {
-				const greshunkel_tuple *tuple = (greshunkel_tuple *)current_value->data;
-				/* This is the actual part of the regex we care about. */
-				const regmatch_t inner_match = match[1];
-				assert(inner_match.rm_so != -1 && inner_match.rm_eo != -1);
-
-				assert(tuple->name != NULL);
-				int strcmp_result = strncmp(tuple->name, operating_line->data + inner_match.rm_so, strlen(tuple->name));
-				if (tuple->type == GSHKL_STR && strcmp_result == 0) {
-					/* Do actual printing here */
-					const size_t first_piece_size = match[0].rm_so;
-					const size_t middle_piece_size = strlen(tuple->value.str);
-					const size_t last_piece_size = operating_line->size - match[0].rm_eo;
-					/* Sorry, Vishnu... */
-					new_line_to_add.size = first_piece_size + middle_piece_size + last_piece_size;
-					new_line_to_add.data = calloc(1, new_line_to_add.size);
-
-					strncpy(new_line_to_add.data, operating_line->data, first_piece_size);
-					/* TODO: DO NOT ASSUME IT IS ALWAYS A STRING! */
-					strncpy(new_line_to_add.data + first_piece_size, tuple->value.str, middle_piece_size);
-					strncpy(new_line_to_add.data + first_piece_size + middle_piece_size,
-							operating_line->data + match[0].rm_eo,
-							last_piece_size);
-
-					matched_at_least_once = 1;
-					break;
-				}
-				current_value = current_value->next;
-			}
-			/* Blow up if we had a variable that wasn't in the context. */
-			assert(matched_at_least_once = 1);
-
-			free(interpolated_line.data);
-			interpolated_line.size = new_line_to_add.size;
-			interpolated_line.data = new_line_to_add.data;
-			new_line_to_add.size = 0;
-			new_line_to_add.data = NULL;
-			operating_line = &interpolated_line;
-
-			/* Set the next regex check after this one. */
-			memset(match, 0, sizeof(match));
-		}
 		num_read += current_line.size;
 
+		line to_append = _interpolate_line(ctext, current_line, &var_regex);
+
 		/* Fuck this */
-#define MAKE_BUFFER if (rendered == NULL) {\
-				rendered = calloc(1, *outsize);\
-			} else {\
-				char *med_buf = realloc(rendered, *outsize);\
-				if (med_buf == NULL)\
-					goto error;\
-				rendered = med_buf;\
-			}
 
 		const size_t old_outsize = *outsize;
-		if (interpolated_line.size != 0) {
-			*outsize += interpolated_line.size;
-			MAKE_BUFFER
-			strncpy(rendered + old_outsize, interpolated_line.data, interpolated_line.size);
-			free(current_line.data);
-			free(interpolated_line.data);
+		*outsize += to_append.size;
+		if (rendered == NULL) {
+			rendered = calloc(1, *outsize);
 		} else {
-			*outsize += current_line.size;
-			MAKE_BUFFER
-			strncpy(rendered + old_outsize, current_line.data, current_line.size);
-			free(current_line.data);
+			char *med_buf = realloc(rendered, *outsize);
+			if (med_buf == NULL)
+				goto error;
+			rendered = med_buf;
 		}
+		strncpy(rendered + old_outsize, to_append.data, to_append.size);
+		free(current_line.data);
+		free(to_append.data);
 	}
-	regfree(&regex);
+	_destroy_regex(&var_regex);
 	return rendered;
 
 error:
