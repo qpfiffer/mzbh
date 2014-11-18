@@ -316,7 +316,8 @@ char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const s
 		line current_line = read_line(to_render + num_read);
 		num_read += current_line.size;
 
-		line to_append = _interpolate_line(ctext, current_line, &var_regex);
+		line to_append = {0};
+		to_append = _interpolate_line(ctext, current_line, &var_regex);
 
 		/* Fuck this */
 		const size_t old_outsize = *outsize;

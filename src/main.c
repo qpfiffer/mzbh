@@ -19,14 +19,21 @@ void term(int signum) {
 }
 
 void background_work(int debug) {
-	log_msg(LOG_INFO, "BGWorker started.");
-	while (1) {
-		if (download_images() != 0) {
-			log_msg(LOG_WARN, "Something went wrong while downloading images.");
-		}
-		sleep(600);
+start:
+	if (download_images() != 0) {
+		log_msg(LOG_WARN, "Something went wrong while downloading images.");
+	}
+	sleep(600);
+
+	/* We fork and use a goto here to make the kernel clean up
+	 * my memory mess. */
+	bg_worker = fork();
+	if (bg_worker == 0) {
+		log_msg(LOG_INFO, "BGWorker started.");
+		goto start;
 	}
 	log_msg(LOG_INFO, "BGWorker exiting.");
+	exit(0);
 }
 
 int start_bg_worker(int debug) {
