@@ -29,20 +29,7 @@ static inline int _gshkl_add_var_to_context(greshunkel_ctext *ctext, const gresh
 }
 
 static inline int _gshkl_add_var_to_loop(greshunkel_var *loop, const greshunkel_tuple *new_tuple) {
-	int i, added_to_arr = 0;
-	const size_t size = sizeof(loop->arr)/sizeof(loop->arr[0]);
-	for (i = 0; i < size; i++) {
-		if (loop->arr[i] == NULL) {
-			loop->arr[i] = new_tuple;
-			added_to_arr = 1;
-			break;
-		}
-	}
-
-	/* Couldn't add to the loop. */
-	if (added_to_arr == 0)
-		return 1;
-
+	spush(&loop->arr, new_tuple);
 	return 0;
 }
 
@@ -179,13 +166,9 @@ int gshkl_add_string_to_loop(greshunkel_var *loop, const char *value) {
 static void _gshkl_free_arr(greshunkel_tuple *to_free) {
 	assert(to_free->type == GSHKL_ARR);
 
-	int i;
-	const size_t size = sizeof(to_free->value.arr)/sizeof(to_free->value.arr[0]);
-	for (i = 0; i < size; i++) {
-		if (to_free->value.arr[i] == NULL)
-			break;
-		free((struct greshunkel_tuple *)to_free->value.arr[i]);
-		to_free->value.arr[i] = NULL;
+	while (to_free->value.arr != NULL) {
+		greshunkel_tuple *_free_me = (greshunkel_tuple *)spop(&to_free->value.arr);
+		free(_free_me);
 	}
 	free(to_free);
 }
@@ -338,35 +321,27 @@ _interpolate_loop(const greshunkel_ctext *ctext, const regex_t *lr, const regex_
 			int strcmp_result = strncmp(tuple->name, buf + variable_name.rm_so, strlen(tuple->name));
 			if (tuple->type == GSHKL_ARR && strcmp_result == 0) {
 				matched_at_least_once = 1;
-				int i;
-				const size_t num_elements = sizeof(tuple->value.arr)/sizeof(tuple->value.arr[0]);
-				greshunkel_ctext *temp_contexts[num_elements];
-				memset(temp_contexts, '\0', sizeof(temp_contexts));
+
+				ol_stack *cur_stack_p = tuple->value.arr;
 				/* Now we loop through the array incredulously. */
-				for (i = 0; i < num_elements; i++) {
-					const greshunkel_tuple *current_loop_var = tuple->value.arr[i];
-					if (current_loop_var == NULL)
-						break;
+				while (cur_stack_p != NULL) {
+					const greshunkel_tuple *current_loop_var = (greshunkel_tuple *)cur_stack_p->data;
 					/* TODO: For now, only strings are supported in arrays. */
 					assert(current_loop_var->type == GSHKL_STR);
 
 					/* Recurse contexts until my fucking mind melts. */
-					temp_contexts[i] = gshkl_init_context();
-					gshkl_add_string(temp_contexts[i], loop_variable_name_rendered, current_loop_var->value.str);
-					line rendered_piece = _interpolate_line(temp_contexts[i], to_render_line, vr);
+					greshunkel_ctext *_temp_ctext = gshkl_init_context();
+					gshkl_add_string(_temp_ctext, loop_variable_name_rendered, current_loop_var->value.str);
+					line rendered_piece = _interpolate_line(_temp_ctext, to_render_line, vr);
+					gshkl_free_context(_temp_ctext);
 
 					const size_t old_size = to_return.size;
 					to_return.size += rendered_piece.size;
 					to_return.data = realloc(to_return.data, to_return.size);
 					strncpy(to_return.data + old_size, rendered_piece.data, rendered_piece.size);
 					free(rendered_piece.data);
-				}
 
-				/* Free all of the contexts we just made. */
-				for (i = 0; i < sizeof(temp_contexts)/sizeof(temp_contexts[0]); i++) {
-					if (temp_contexts[i] == NULL)
-						break;
-					gshkl_free_context(temp_contexts[i]);
+					cur_stack_p = cur_stack_p->next;
 				}
 				break;
 			}

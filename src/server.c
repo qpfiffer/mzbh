@@ -156,22 +156,27 @@ static int index_handler(const http_request *request, http_response *response) {
 }
 
 static int board_handler(const http_request *request, http_response *response) {
-	int rc = mmap_file("./templates/index.html", response);
+	int rc = mmap_file("./templates/board.html", response);
 	if (rc != 200)
 		return rc;
 	// 1. Render the mmap()'d file with greshunkel
 	const char *mmapd_region = (char *)response->out;
 	const size_t original_size = response->outsize;
 
-	/* Render that shit */
+	const char current_board[32] = "a";
+
 	size_t new_size = 0;
 	greshunkel_ctext *ctext = gshkl_init_context();
-	greshunkel_var *boards = gshkl_add_array(ctext, "BOARDS");
+	gshkl_add_string(ctext, "current_board", current_board);
+	greshunkel_var *boards = gshkl_add_array(ctext, "IMAGES");
 
 	/* What the fuck, posix? */
 	struct dirent dirent_thing = {0};
 
-	DIR *dirstream = opendir(webm_location());
+	/* TODO: Actually find out what board we're on. */
+	char board_dir[256] = {0};
+	snprintf(board_dir, sizeof(board_dir), "%s/%s", webm_location(), current_board);
+	DIR *dirstream = opendir(board_dir);
 	while (1) {
 		struct dirent *result = NULL;
 		readdir_r(dirstream, &dirent_thing, &result);
@@ -239,7 +244,7 @@ const code_to_message response_headers[] = {
 const route all_routes[] = {
 	{"GET", "^/favicon.ico$", &favicon_handler, &mmap_cleanup},
 	{"GET", "^/static/[a-zA-Z0-9/_-]*\\.[a-zA-Z]*$", &static_handler, &mmap_cleanup},
-	{"GET", "^/chug/[a-z]*$", &board_handler, &mmap_cleanup},
+	{"GET", "^/chug/[a-z]*$", &board_handler, &heap_cleanup},
 	{"GET", "^/$", &index_handler, &heap_cleanup},
 };
 

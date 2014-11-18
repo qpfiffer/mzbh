@@ -4,7 +4,7 @@
 #include "stack.h"
 
 #define WISDOM_OF_WORDS 32
-#define MAX_GSHKL_STR_SIZE 32
+#define MAX_GSHKL_STR_SIZE 256
 
 /* AND HE DECREED: */
 /* STRINGS SHALL NEVER BE MORE THAN 32 OCTETS! */
@@ -14,7 +14,7 @@ struct greshunkel_tuple;
 typedef union greshunkel_var {
 	const unsigned int fuck_gcc : 1; /* This tricks GCC into doing smart things. Not used. */
 	char str[MAX_GSHKL_STR_SIZE];
-	const struct greshunkel_tuple *arr[32];
+	ol_stack *arr;
 } greshunkel_var;
 
 typedef enum {

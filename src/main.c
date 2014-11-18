@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <string.h>
 
 #include "http.h"
 #include "server.h"
@@ -51,8 +52,10 @@ int main(int argc, char *argv[]) {
 	signal(SIGINT, term);
 	signal(SIGKILL, term);
 	signal(SIGCHLD, SIG_IGN);
-	if (start_bg_worker(DEBUG) != 0)
-		return -1;
+	if (argc < 2 || strncmp(argv[1], "--serve", strlen("--serve")) != 0) {
+		if (start_bg_worker(DEBUG) != 0)
+			return -1;
+	}
 	int rc = 0;
 	if ((rc = http_serve(main_sock_fd)) != 0) {
 		term(SIGTERM);
