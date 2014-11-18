@@ -14,8 +14,8 @@ struct line {
 
 typedef struct line line;
 
-static const char variable_regex[] = "xXx @([a-zA-Z_0-9\\$]+) xXx";
-static const char loop_regex[] = "xXx LOOP (?P<variable>[a-zA-S_]+) (?P<iter_list>[a-zA-S_\\$]+) xXx(?P<subloop>.*)xXx BBL xXx";
+static const char variable_regex[] = "xXx @([a-zA-Z_0-9]+) xXx";
+static const char loop_regex[] = "xXx LOOP ([a-zA-Z_]+) ([a-zA-Z_]+) xXx(.*)xXx BBL xXx";
 
 greshunkel_ctext *gshkl_init_context() {
 	greshunkel_ctext *ctext = calloc(1, sizeof(greshunkel_ctext));
@@ -287,13 +287,17 @@ _interpolate_line(const greshunkel_ctext *ctext, const line current_line, const 
 	return _to_return;
 }
 
-static inline void _compile_regex(regex_t *var_regex) {
-	int reti = regcomp(var_regex, variable_regex, REG_EXTENDED);
+static inline void _compile_regex(regex_t *vr, regex_t *lr) {
+	int reti = regcomp(vr, variable_regex, REG_EXTENDED);
+	assert(reti == 0);
+
+	reti = regcomp(lr, loop_regex, REG_EXTENDED);
 	assert(reti == 0);
 }
 
-static inline void _destroy_regex(regex_t *var_regex) {
-	regfree(var_regex);
+static inline void _destroy_regex(regex_t *vr, regex_t *lr) {
+	regfree(vr);
+	regfree(lr);
 }
 
 char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const size_t original_size, size_t *outsize) {
@@ -304,8 +308,8 @@ char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const s
 	char *rendered = NULL;
 	*outsize = 0;
 
-	regex_t var_regex;
-	_compile_regex(&var_regex);
+	regex_t var_regex, loop_regex;
+	_compile_regex(&var_regex, &loop_regex);
 
 	size_t num_read = 0;
 	while (num_read < original_size) {
@@ -315,12 +319,9 @@ char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const s
 		line to_append = _interpolate_line(ctext, current_line, &var_regex);
 
 		/* Fuck this */
-
 		const size_t old_outsize = *outsize;
 		*outsize += to_append.size;
-		if (rendered == NULL) {
-			rendered = calloc(1, *outsize);
-		} else {
+		{
 			char *med_buf = realloc(rendered, *outsize);
 			if (med_buf == NULL)
 				goto error;
@@ -330,7 +331,7 @@ char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const s
 		free(current_line.data);
 		free(to_append.data);
 	}
-	_destroy_regex(&var_regex);
+	_destroy_regex(&var_regex, &loop_regex);
 	return rendered;
 
 error:

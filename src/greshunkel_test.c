@@ -13,7 +13,7 @@ const char document[] =
 "		<ul>\n"
 "		xXx LOOP i LOOP_TEST xXx\n"
 "			<li>xXx i xXx</li>\n"
-"		xXx TTYL xXx\n"
+"		xXx BBL xXx\n"
 "		</ul>\n"
 "	</body>\n"
 "</html>\n";
