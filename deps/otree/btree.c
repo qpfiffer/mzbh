@@ -360,7 +360,7 @@ int btree_read_metadata(struct btree *bt) {
     /* TODO: check that they makes sense considered the file size. */
     /* Read root node pointer */
     if (btree_pread_u64(bt,&bt->rootptr,BTREE_HDR_ROOTPTR_POS) == -1) return -1;
-    printf("Root node is at %llu\n", bt->rootptr);
+    /* printf("Root node is at %llu\n", bt->rootptr); */
     /* Read free lists information */
     for (j = 0; j < BTREE_FREELIST_COUNT; j++) {
         uint64_t ptr = 32+BTREE_FREELIST_BLOCK_SIZE*j;
@@ -553,7 +553,7 @@ uint64_t btree_alloc(struct btree *bt, uint32_t size) {
     uint64_t ptr;
     uint32_t realsize;
 
-    printf("ALLOCATIING %lu\n", (unsigned long) size);
+    /* printf("ALLOCATIING %lu\n", (unsigned long) size); */
 
     /* Don't allow allocations bigger than 2GB */
     if (size > (unsigned)(1<<31)) {
@@ -633,7 +633,7 @@ int btree_free(struct btree *bt, uint64_t ptr) {
     if (btree_pread_u64(bt,&size,ptr-sizeof(uint64_t)) == -1) return -1;
     realsize = btree_alloc_realsize(size);
     exp = btree_log_two(realsize);
-    printf("Free %llu bytes (realsize: %llu)\n", size, (uint64_t) realsize);
+    /* printf("Free %llu bytes (realsize: %llu)\n", size, (uint64_t) realsize); */
 
     fli = btree_freelist_index_by_exp(exp);
     fl = &bt->freelist[fli];
@@ -691,16 +691,16 @@ int btree_free(struct btree *bt, uint64_t ptr) {
         fl->last_block[fl->last_items] = ptr-sizeof(uint64_t);
         fl->last_items++;
         /* Write the pointer in the block first */
-        printf("Write freelist item about ptr %llu at %llu\n",
-            ptr, fl->blocks[fl->numblocks-1]+(sizeof(uint64_t)*3)
-            +(sizeof(uint64_t)*(fl->last_items-1)));
+        /* printf("Write freelist item about ptr %llu at %llu\n",
+         *     ptr, fl->blocks[fl->numblocks-1]+(sizeof(uint64_t)*3)
+         *     +(sizeof(uint64_t)*(fl->last_items-1))); */
         btree_pwrite_u64(bt,ptr-sizeof(uint64_t),fl->blocks[fl->numblocks-1]+(sizeof(uint64_t)*3)+(sizeof(uint64_t)*(fl->last_items-1)));
         btree_sync(bt);
         /* Then write the items count. */
-        printf("Write the new count for block %lld: %lld at %lld\n",
-            fl->blocks[fl->numblocks-1],
-            (uint64_t) fl->last_items,
-            fl->blocks[fl->numblocks-1]+sizeof(uint64_t)*2);
+        //printf("Write the new count for block %lld: %lld at %lld\n",
+        //    fl->blocks[fl->numblocks-1],
+        //    (uint64_t) fl->last_items,
+        //    fl->blocks[fl->numblocks-1]+sizeof(uint64_t)*2);
         btree_pwrite_u64(bt,fl->last_items,fl->blocks[fl->numblocks-1]+sizeof(uint64_t)*2);
         btree_sync(bt);
     }
@@ -1006,14 +1006,14 @@ void btree_walk_rec(struct btree *bt, uint64_t nodeptr, int level) {
             btree_walk_rec(bt,n->children[j],level+1);
         }
         for (k = 0; k < level; k++) printf(" ");
-        printf("(@%llu) Key %20s: ", nodeptr, n->keys+(j*BTREE_HASHED_KEY_LEN));
+        //printf("(@%llu) Key %20s: ", nodeptr, n->keys+(j*BTREE_HASHED_KEY_LEN));
         btree_alloc_size(bt,&datalen,n->values[j]);
         data = malloc(datalen+1);
         btree_pread(bt,data,datalen,n->values[j]);
         data[datalen] = '\0';
-        printf("@%llu    %lu bytes: %s\n",
-            n->values[j],
-            (unsigned long)datalen, data);
+        // printf("@%llu    %lu bytes: %s\n",
+        //     n->values[j],
+        //     (unsigned long)datalen, data);
         free(data);
     }
     if (n->children[j] != 0) {
