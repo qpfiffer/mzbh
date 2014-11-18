@@ -35,6 +35,7 @@ static inline int _gshkl_add_var_to_loop(greshunkel_var *loop, const greshunkel_
 		if (loop->arr[i] == NULL) {
 			loop->arr[i] = new_tuple;
 			added_to_arr = 1;
+			break;
 		}
 	}
 
@@ -184,7 +185,9 @@ static void _gshkl_free_arr(greshunkel_tuple *to_free) {
 		if (to_free->value.arr[i] == NULL)
 			break;
 		free((struct greshunkel_tuple *)to_free->value.arr[i]);
+		to_free->value.arr[i] = NULL;
 	}
+	free(to_free);
 }
 
 int gshkl_free_context(greshunkel_ctext *ctext) {
@@ -256,7 +259,8 @@ char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const s
 				assert(inner_match.rm_so != -1 && inner_match.rm_eo != -1);
 
 				assert(tuple->name != NULL);
-				if (strncmp(tuple->name, operating_line->data + inner_match.rm_so, strlen(tuple->name)) == 0) {
+				int strcmp_result = strncmp(tuple->name, operating_line->data + inner_match.rm_so, strlen(tuple->name));
+				if (tuple->type == GSHKL_STR && strcmp_result == 0) {
 					/* Do actual printing here */
 					const size_t first_piece_size = match[0].rm_so;
 					const size_t middle_piece_size = strlen(tuple->value.str);
