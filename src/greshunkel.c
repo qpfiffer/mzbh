@@ -28,6 +28,23 @@ static inline int _gshkl_add_var_to_context(greshunkel_ctext *ctext, const gresh
 	return 0;
 }
 
+static inline int _gshkl_add_var_to_loop(greshunkel_var *loop, const greshunkel_tuple *new_tuple) {
+	int i, added_to_arr = 0;
+	const size_t size = sizeof(loop->arr)/sizeof(loop->arr[0]);
+	for (i = 0; i < size; i++) {
+		if (loop->arr[i] == NULL) {
+			loop->arr[i] = new_tuple;
+			added_to_arr = 1;
+		}
+	}
+
+	/* Couldn't add to the loop. */
+	if (added_to_arr == 0)
+		return 1;
+
+	return 0;
+}
+
 int gshkl_add_string(greshunkel_ctext *ctext, const char name[WISDOM_OF_WORDS], const char value[MAX_GSHKL_STR_SIZE]) {
 	assert(ctext != NULL);
 
@@ -83,9 +100,100 @@ int gshkl_add_int(greshunkel_ctext *ctext, const char name[WISDOM_OF_WORDS], con
 	return 0;
 }
 
+greshunkel_var *gshkl_add_array(greshunkel_ctext *ctext, const char name[WISDOM_OF_WORDS]) {
+	assert(ctext != NULL);
+
+	greshunkel_tuple _stack_tuple = {
+		.name = {0},
+		.type = GSHKL_ARR,
+		.value = {0}
+	};
+	strncpy(_stack_tuple.name, name, WISDOM_OF_WORDS);
+
+	greshunkel_var _stack_var = {0};
+
+	memcpy(&_stack_tuple.value, &_stack_var, sizeof(greshunkel_var));
+
+	greshunkel_tuple *new_tuple = calloc(1, sizeof(greshunkel_tuple));
+	memcpy(new_tuple, &_stack_tuple, sizeof(greshunkel_tuple));
+
+	if (_gshkl_add_var_to_context(ctext, new_tuple) != 0) {
+		free(new_tuple);
+		return NULL;
+	}
+
+	return &new_tuple->value;
+}
+
+int gshkl_add_int_to_loop(greshunkel_var *loop, const int value) {
+	assert(loop != NULL);
+
+	greshunkel_tuple _stack_tuple = {
+		.name = {0},
+		.type = GSHKL_STR,
+		.value = {0}
+	};
+
+	greshunkel_var _stack_var = {0};
+	snprintf(_stack_var.str, MAX_GSHKL_STR_SIZE, "%i", value);
+
+	memcpy(&_stack_tuple.value, &_stack_var, sizeof(greshunkel_var));
+
+	greshunkel_tuple *new_tuple = calloc(1, sizeof(greshunkel_tuple));
+	memcpy(new_tuple, &_stack_tuple, sizeof(greshunkel_tuple));
+
+	if (_gshkl_add_var_to_loop(loop, new_tuple) != 0) {
+		free(new_tuple);
+		return 1;
+	}
+
+	return 0;
+}
+
+int gshkl_add_string_to_loop(greshunkel_var *loop, const char *value) {
+	assert(loop != NULL);
+
+	greshunkel_tuple _stack_tuple = {
+		.name = {0},
+		.type = GSHKL_STR,
+		.value = {0}
+	};
+
+	greshunkel_var _stack_var = {0};
+	strncpy(_stack_var.str, value, MAX_GSHKL_STR_SIZE);
+
+	memcpy(&_stack_tuple.value, &_stack_var, sizeof(greshunkel_var));
+
+	greshunkel_tuple *new_tuple = calloc(1, sizeof(greshunkel_tuple));
+	memcpy(new_tuple, &_stack_tuple, sizeof(greshunkel_tuple));
+
+	if (_gshkl_add_var_to_loop(loop, new_tuple) != 0) {
+		free(new_tuple);
+		return 1;
+	}
+
+	return 0;
+}
+
+static void _gshkl_free_arr(greshunkel_tuple *to_free) {
+	assert(to_free->type == GSHKL_ARR);
+
+	int i;
+	const size_t size = sizeof(to_free->value.arr)/sizeof(to_free->value.arr[0]);
+	for (i = 0; i < size; i++) {
+		if (to_free->value.arr[i] == NULL)
+			break;
+		free((struct greshunkel_tuple *)to_free->value.arr[i]);
+	}
+}
+
 int gshkl_free_context(greshunkel_ctext *ctext) {
 	while (ctext->values->next != NULL) {
 		greshunkel_tuple *next = (greshunkel_tuple *)spop(&ctext->values);
+		if (next->type == GSHKL_ARR) {
+			_gshkl_free_arr(next);
+			continue;
+		}
 		free(next);
 	}
 	free(ctext->values);
@@ -128,7 +236,6 @@ char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const s
 	size_t num_read = 0;
 	while (num_read < original_size) {
 		line current_line = read_line(to_render + num_read);
-		/* Variable rendering pass: */
 
 		line line_to_add = {0};
 		line new_line_to_add = {0};
@@ -148,6 +255,7 @@ char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const s
 				const regmatch_t inner_match = match[1];
 				assert(inner_match.rm_so != -1 && inner_match.rm_eo != -1);
 
+				assert(tuple->name != NULL);
 				if (strncmp(tuple->name, operating_line->data + inner_match.rm_so, strlen(tuple->name)) == 0) {
 					/* Do actual printing here */
 					const size_t first_piece_size = match[0].rm_so;
