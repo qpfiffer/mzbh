@@ -155,6 +155,46 @@ static int index_handler(const http_request *request, http_response *response) {
 	return 200;
 }
 
+static int board_handler(const http_request *request, http_response *response) {
+	int rc = mmap_file("./templates/index.html", response);
+	if (rc != 200)
+		return rc;
+	// 1. Render the mmap()'d file with greshunkel
+	const char *mmapd_region = (char *)response->out;
+	const size_t original_size = response->outsize;
+
+	/* Render that shit */
+	size_t new_size = 0;
+	greshunkel_ctext *ctext = gshkl_init_context();
+	greshunkel_var *boards = gshkl_add_array(ctext, "BOARDS");
+
+	/* What the fuck, posix? */
+	struct dirent dirent_thing = {0};
+
+	DIR *dirstream = opendir(webm_location());
+	while (1) {
+		struct dirent *result = NULL;
+		readdir_r(dirstream, &dirent_thing, &result);
+		if (!result)
+			break;
+		if (result->d_name[0] != '.')
+			gshkl_add_string_to_loop(boards, result->d_name);
+	}
+	closedir(dirstream);
+
+	char *rendered = gshkl_render(ctext, mmapd_region, original_size, &new_size);
+	gshkl_free_context(ctext);
+
+	/* Make sure the response is kept up to date: */
+	response->outsize = new_size;
+	response->out = (unsigned char *)rendered;
+
+	/* Clean up the stuff we're no longer using. */
+	munmap(response->out, original_size);
+	free(response->extra_data);
+	return 200;
+}
+
 static int favicon_handler(const http_request *request, http_response *response) {
 	strncpy(response->mimetype, "image/x-icon", sizeof(response->mimetype));
 	return mmap_file("./static/favicon.ico", response);
@@ -199,6 +239,7 @@ const code_to_message response_headers[] = {
 const route all_routes[] = {
 	{"GET", "^/favicon.ico$", &favicon_handler, &mmap_cleanup},
 	{"GET", "^/static/[a-zA-Z0-9/_-]*\\.[a-zA-Z]*$", &static_handler, &mmap_cleanup},
+	{"GET", "^/chug/[a-z]*$", &board_handler, &mmap_cleanup},
 	{"GET", "^/$", &index_handler, &heap_cleanup},
 };
 
