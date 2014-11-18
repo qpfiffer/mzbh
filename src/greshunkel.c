@@ -240,7 +240,7 @@ char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const s
 	while (num_read < original_size) {
 		line current_line = read_line(to_render + num_read);
 
-		line line_to_add = {0};
+		line interpolated_line = {0};
 		line new_line_to_add = {0};
 		regmatch_t match[2];
 		line *operating_line = &current_line;
@@ -284,12 +284,12 @@ char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const s
 			/* Blow up if we had a variable that wasn't in the context. */
 			assert(matched_at_least_once = 1);
 
-			free(line_to_add.data);
-			line_to_add.size = new_line_to_add.size;
-			line_to_add.data = new_line_to_add.data;
+			free(interpolated_line.data);
+			interpolated_line.size = new_line_to_add.size;
+			interpolated_line.data = new_line_to_add.data;
 			new_line_to_add.size = 0;
 			new_line_to_add.data = NULL;
-			operating_line = &line_to_add;
+			operating_line = &interpolated_line;
 
 			/* Set the next regex check after this one. */
 			memset(match, 0, sizeof(match));
@@ -307,12 +307,12 @@ char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const s
 			}
 
 		const size_t old_outsize = *outsize;
-		if (line_to_add.size != 0) {
-			*outsize += line_to_add.size;
+		if (interpolated_line.size != 0) {
+			*outsize += interpolated_line.size;
 			MAKE_BUFFER
-			strncpy(rendered + old_outsize, line_to_add.data, line_to_add.size);
+			strncpy(rendered + old_outsize, interpolated_line.data, interpolated_line.size);
 			free(current_line.data);
-			free(line_to_add.data);
+			free(interpolated_line.data);
 		} else {
 			*outsize += current_line.size;
 			MAKE_BUFFER
