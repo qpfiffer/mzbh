@@ -115,7 +115,19 @@ static int static_handler(const http_request *request, http_response *response) 
 	return mmap_file(file_path, response);
 }
 
-static int _add_files_in_dir_to_arr(greshunkel_var *loop, const char *dir) {
+static int _only_webms_filter(const char *file_name) {
+	size_t fname_siz = strlen(file_name);
+	/* Wish I had endswith... */
+	const char suffix[] = ".webm";
+	int i = 0;
+	for (; i < strlen(suffix); i++) {
+		if (suffix[i] != file_name[fname_siz - strlen(suffix) + i])
+			return 0;
+	}
+	return 1;
+}
+
+static int _add_files_in_dir_to_arr(greshunkel_var *loop, const char *dir, int (*filter_func)(const char *file_name)) {
 	/* What the fuck, posix? */
 	struct dirent dirent_thing = {0};
 
@@ -128,8 +140,15 @@ static int _add_files_in_dir_to_arr(greshunkel_var *loop, const char *dir) {
 		if (!result)
 			break;
 		if (result->d_name[0] != '.') {
-			gshkl_add_string_to_loop(loop, result->d_name);
-			total++;
+			if (filter_func != NULL) {
+				if (filter_func(result->d_name)) {
+					gshkl_add_string_to_loop(loop, result->d_name);
+					total++;
+				}
+			} else {
+				gshkl_add_string_to_loop(loop, result->d_name);
+				total++;
+			}
 		}
 	}
 	closedir(dirstream);
@@ -150,7 +169,7 @@ static int index_handler(const http_request *request, http_response *response) {
 	greshunkel_ctext *ctext = gshkl_init_context();
 
 	greshunkel_var *boards = gshkl_add_array(ctext, "BOARDS");
-	_add_files_in_dir_to_arr(boards, webm_location());
+	_add_files_in_dir_to_arr(boards, webm_location(), NULL);
 
 	char *rendered = gshkl_render(ctext, mmapd_region, original_size, &new_size);
 	gshkl_free_context(ctext);
@@ -182,10 +201,10 @@ static int board_handler(const http_request *request, http_response *response) {
 
 	char images_dir[256] = {0};
 	snprintf(images_dir, sizeof(images_dir), "%s/%s", webm_location(), current_board);
-	int total = _add_files_in_dir_to_arr(images, images_dir);
+	int total = _add_files_in_dir_to_arr(images, images_dir, &_only_webms_filter);
 
 	greshunkel_var *boards = gshkl_add_array(ctext, "BOARDS");
-	_add_files_in_dir_to_arr(boards, webm_location());
+	_add_files_in_dir_to_arr(boards, webm_location(), NULL);
 
 	gshkl_add_int(ctext, "total", total);
 	char *rendered = gshkl_render(ctext, mmapd_region, original_size, &new_size);
