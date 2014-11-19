@@ -15,7 +15,7 @@ struct line {
 typedef struct line line;
 
 static const char variable_regex[] = "xXx @([a-zA-Z_0-9]+) xXx";
-static const char loop_regex[] = "^\\s+xXx LOOP ([a-zA-Z_]+) ([a-zA-Z_]+) xXx(.*)xXx BBL xXx";
+static const char loop_regex[] = "^\\s+xXx LOOP ([a-zA-Z_]+) ([a-zA-Z_]+) xXx(.*?)xXx BBL xXx";
 
 greshunkel_ctext *gshkl_init_context() {
 	greshunkel_ctext *ctext = calloc(1, sizeof(greshunkel_ctext));
@@ -222,7 +222,7 @@ _interpolate_line(const greshunkel_ctext *ctext, const line current_line, const 
 
 		/* We linearly search through our variables because I don't have
 		 * a hash map. C is "fast enough" */
-		while (current_value->next != NULL) {
+		while (current_value != NULL) {
 			const greshunkel_tuple *tuple = (greshunkel_tuple *)current_value->data;
 			/* This is the actual part of the regex we care about. */
 			const regmatch_t inner_match = match[1];
@@ -252,7 +252,11 @@ _interpolate_line(const greshunkel_ctext *ctext, const line current_line, const 
 			current_value = current_value->next;
 		}
 		/* Blow up if we had a variable that wasn't in the context. */
-		assert(matched_at_least_once == 1);
+		if (matched_at_least_once != 1) {
+			printf("Did not match a variable that needed to be matched.\n");
+			printf("Line: %s\n", operating_line->data);
+			assert(matched_at_least_once == 1);
+		}
 
 		free(interpolated_line.data);
 		interpolated_line.size = new_line_to_add.size;
@@ -309,7 +313,7 @@ _interpolate_loop(const greshunkel_ctext *ctext, const regex_t *lr, const regex_
 		/* We linearly search through our variables because I don't have
 		 * a hash map. C is "fast enough" */
 		int matched_at_least_once = 0;
-		while (current_value->next != NULL) {
+		while (current_value != NULL) {
 			const greshunkel_tuple *tuple = (greshunkel_tuple *)current_value->data;
 			current_value = current_value->next;
 			if (tuple->type != GSHKL_ARR)
@@ -345,10 +349,13 @@ _interpolate_loop(const greshunkel_ctext *ctext, const regex_t *lr, const regex_
 				}
 				break;
 			}
-			current_value = current_value->next;
 
 		}
-		assert(matched_at_least_once == 1);
+		if (matched_at_least_once != 1) {
+			printf("Did not match a variable that needed to be matched.\n");
+			printf("Line: %s\n", buf);
+			assert(matched_at_least_once == 1);
+		}
 	}
 
 	return to_return;

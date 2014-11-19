@@ -115,6 +115,28 @@ static int static_handler(const http_request *request, http_response *response) 
 	return mmap_file(file_path, response);
 }
 
+static int _add_files_in_dir_to_arr(greshunkel_var *loop, const char *dir) {
+	/* What the fuck, posix? */
+	struct dirent dirent_thing = {0};
+
+	/* TODO: Actually find out what board we're on. */
+	DIR *dirstream = opendir(dir);
+	int total = 0;
+	while (1) {
+		struct dirent *result = NULL;
+		readdir_r(dirstream, &dirent_thing, &result);
+		if (!result)
+			break;
+		if (result->d_name[0] != '.') {
+			gshkl_add_string_to_loop(loop, result->d_name);
+			total++;
+		}
+	}
+	closedir(dirstream);
+
+	return total;
+}
+
 static int index_handler(const http_request *request, http_response *response) {
 	int rc = mmap_file("./templates/index.html", response);
 	if (rc != 200)
@@ -126,21 +148,9 @@ static int index_handler(const http_request *request, http_response *response) {
 	/* Render that shit */
 	size_t new_size = 0;
 	greshunkel_ctext *ctext = gshkl_init_context();
+
 	greshunkel_var *boards = gshkl_add_array(ctext, "BOARDS");
-
-	/* What the fuck, posix? */
-	struct dirent dirent_thing = {0};
-
-	DIR *dirstream = opendir(webm_location());
-	while (1) {
-		struct dirent *result = NULL;
-		readdir_r(dirstream, &dirent_thing, &result);
-		if (!result)
-			break;
-		if (result->d_name[0] != '.')
-			gshkl_add_string_to_loop(boards, result->d_name);
-	}
-	closedir(dirstream);
+	_add_files_in_dir_to_arr(boards, webm_location());
 
 	char *rendered = gshkl_render(ctext, mmapd_region, original_size, &new_size);
 	gshkl_free_context(ctext);
@@ -168,25 +178,16 @@ static int board_handler(const http_request *request, http_response *response) {
 	size_t new_size = 0;
 	greshunkel_ctext *ctext = gshkl_init_context();
 	gshkl_add_string(ctext, "current_board", current_board);
-	greshunkel_var *boards = gshkl_add_array(ctext, "IMAGES");
+	greshunkel_var *images = gshkl_add_array(ctext, "IMAGES");
 
-	/* What the fuck, posix? */
-	struct dirent dirent_thing = {0};
+	char images_dir[256] = {0};
+	snprintf(images_dir, sizeof(images_dir), "%s/%s", webm_location(), current_board);
+	int total = _add_files_in_dir_to_arr(images, images_dir);
 
-	/* TODO: Actually find out what board we're on. */
-	char board_dir[256] = {0};
-	snprintf(board_dir, sizeof(board_dir), "%s/%s", webm_location(), current_board);
-	DIR *dirstream = opendir(board_dir);
-	while (1) {
-		struct dirent *result = NULL;
-		readdir_r(dirstream, &dirent_thing, &result);
-		if (!result)
-			break;
-		if (result->d_name[0] != '.')
-			gshkl_add_string_to_loop(boards, result->d_name);
-	}
-	closedir(dirstream);
+	greshunkel_var *boards = gshkl_add_array(ctext, "BOARDS");
+	_add_files_in_dir_to_arr(boards, webm_location());
 
+	gshkl_add_int(ctext, "total", total);
 	char *rendered = gshkl_render(ctext, mmapd_region, original_size, &new_size);
 	gshkl_free_context(ctext);
 
