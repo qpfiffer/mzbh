@@ -17,106 +17,8 @@
 
 #include "logging.h"
 #include "server.h"
+#include "grengine.h"
 #include "greshunkel.h"
-
-#define MAX_READ_LEN 1024
-#define VERB_SIZE 16
-#define MAX_MATCHES 4
-
-const char r_200[] =
-	"HTTP/1.1 200 OK\r\n"
-	"Content-Type: %s\r\n"
-	"Content-Length: %zu\r\n"
-	"Connection: close\r\n"
-	"Server: waifu.xyz/bitch\r\n\r\n";
-
-const char r_404[] =
-	"HTTP/1.1 404 Not Found\r\n"
-	"Content-Type: %s\r\n"
-	"Content-Length: %zu\r\n"
-	"Connection: close\r\n"
-	"Server: waifu.xyz/bitch\r\n\r\n";
-
-typedef struct {
-	const int code;
-	const char *message;
-} code_to_message;
-
-typedef struct {
-	char verb[VERB_SIZE];
-	char resource[128];
-	regmatch_t matches[MAX_MATCHES];
-} http_request;
-
-typedef struct {
-	unsigned char *out;
-	size_t outsize;
-	char mimetype[32];
-	void *extra_data;
-} http_response;
-
-typedef struct route {
-	char verb[VERB_SIZE];
-	char route_match[256];
-	size_t expected_matches;
-	int (*handler)(const http_request *request, http_response *response);
-	void (*cleanup)(http_response *response);
-} route;
-
-static int mmap_file(const char *file_path, http_response *response) {
-	response->extra_data = calloc(1, sizeof(struct stat));
-
-	if (stat(file_path, response->extra_data) == -1) {
-		response->out = (unsigned char *)"<html><body><p>No such file.</p></body></html>";
-		response->outsize= strlen("<html><body><p>No such file.</p></body></html>");
-		return 404;
-	}
-	int fd = open(file_path, O_RDONLY);
-	if (fd <= 0) {
-		response->out = (unsigned char *)"<html><body><p>Could not open file.</p></body></html>";
-		response->outsize= strlen("<html><body><p>could not open file.</p></body></html>");
-		return 404;
-	}
-
-	const struct stat st = *(struct stat *)response->extra_data;
-	response->out = mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-	response->outsize = st.st_size;
-
-	if (response->out == MAP_FAILED) {
-		response->out = (unsigned char *)"<html><body><p>Could not open file.</p></body></html>";
-		response->outsize= strlen("<html><body><p>could not open file.</p></body></html>");
-		close(fd);
-		return 404;
-	}
-	close(fd);
-	return 200;
-}
-
-/* Various handlers for our routes: */
-static int static_handler(const http_request *request, http_response *response) {
-	/* Remove the leading slash: */
-	const char *file_path = request->resource + sizeof(char);
-
-	/* Figure out the mimetype for this resource: */
-	char ending[4] = {0};
-	int i, j = sizeof(ending);
-	const size_t res_len = strlen(request->resource);
-	for (i = res_len; i > (res_len - sizeof(ending)); i--) {
-		ending[--j] = request->resource[i];
-	}
-
-	/* This is how we do mimetypes. lol. */
-	if (strncasecmp(ending, "css", sizeof(ending)) == 0) {
-		strncpy(response->mimetype, "text/css", sizeof(response->mimetype));
-	} else if (strncasecmp(ending, "jpg", sizeof(ending)) == 0) {
-		strncpy(response->mimetype, "image/jpeg", sizeof(response->mimetype));
-	} else if (strncasecmp(ending, "webm", sizeof(ending)) == 0) {
-		strncpy(response->mimetype, "video/webm", sizeof(response->mimetype));
-	} else {
-		strncpy(response->mimetype, "application/octet-stream", sizeof(response->mimetype));
-	}
-	return mmap_file(file_path, response);
-}
 
 static int _only_webms_filter(const char *file_name) {
 	size_t fname_siz = strlen(file_name);
@@ -157,6 +59,32 @@ static int _add_files_in_dir_to_arr(greshunkel_var *loop, const char *dir, int (
 	closedir(dirstream);
 
 	return total;
+}
+
+/* Various handlers for our routes: */
+static int static_handler(const http_request *request, http_response *response) {
+	/* Remove the leading slash: */
+	const char *file_path = request->resource + sizeof(char);
+
+	/* Figure out the mimetype for this resource: */
+	char ending[4] = {0};
+	int i, j = sizeof(ending);
+	const size_t res_len = strlen(request->resource);
+	for (i = res_len; i > (res_len - sizeof(ending)); i--) {
+		ending[--j] = request->resource[i];
+	}
+
+	/* This is how we do mimetypes. lol. */
+	if (strncasecmp(ending, "css", sizeof(ending)) == 0) {
+		strncpy(response->mimetype, "text/css", sizeof(response->mimetype));
+	} else if (strncasecmp(ending, "jpg", sizeof(ending)) == 0) {
+		strncpy(response->mimetype, "image/jpeg", sizeof(response->mimetype));
+	} else if (strncasecmp(ending, "webm", sizeof(ending)) == 0) {
+		strncpy(response->mimetype, "video/webm", sizeof(response->mimetype));
+	} else {
+		strncpy(response->mimetype, "application/octet-stream", sizeof(response->mimetype));
+	}
+	return mmap_file(file_path, response);
 }
 
 static int index_handler(const http_request *request, http_response *response) {
@@ -231,41 +159,6 @@ static int favicon_handler(const http_request *request, http_response *response)
 	return mmap_file("./static/favicon.ico", response);
 }
 
-static int r_404_handler(const http_request *request, http_response *response) {
-	response->out = (unsigned char *)"<h1>\"Welcome to Die|</h1>";
-	response->outsize = strlen("<h1>\"Welcome to Die|</h1>");
-	return 404;
-}
-
-/* Cleanup functions used after handlers have made a bunch of bullshit: */
-static void heap_cleanup(http_response *response) {
-	free(response->out);
-}
-
-static void mmap_cleanup(http_response *response) {
-	const struct stat *st = (struct stat *)response->extra_data;
-	munmap(response->out, st->st_size);
-	free(response->extra_data);
-}
-
-static void stack_cleanup(http_response *response) {
-	/* Do nothing. */
-}
-
-/* Used to handle 404s: */
-const route r_404_route = {
-	.verb = "GET",
-	.route_match = "^.*$",
-	.handler = (&r_404_handler),
-	.cleanup = (&stack_cleanup)
-};
-
-/* This is used to map between the return codes of responses to their headers: */
-const code_to_message response_headers[] = {
-	{200, r_200},
-	{404, r_404}
-};
-
 /* All other routes: */
 const route all_routes[] = {
 	{"GET", "^/favicon.ico$", 0, &favicon_handler, &mmap_cleanup},
@@ -273,33 +166,6 @@ const route all_routes[] = {
 	{"GET", "^/chug/([a-zA-Z]*)$", 1, &board_handler, &heap_cleanup},
 	{"GET", "^/$", 0, &index_handler, &heap_cleanup},
 };
-
-static int parse_request(const char to_read[MAX_READ_LEN], http_request *out) {
-	/* Find the verb */
-	const char *verb_end = strnstr(to_read, " ", MAX_READ_LEN);
-	if (verb_end == NULL)
-		goto error;
-
-	const size_t verb_size = verb_end - to_read >= sizeof(out->verb) ? sizeof(out->verb) - 1: verb_end - to_read;
-	strncpy(out->verb, to_read, verb_size);
-
-	if (strncmp(out->verb, "GET", verb_size) != 0) {
-		log_msg(LOG_WARN, "Don't know verb %s.", out->verb);
-		goto error;
-	}
-
-	const char *res_offset = verb_end + sizeof(char);
-	const char *resource_end = strnstr(res_offset, " ", sizeof(out->resource));
-	if (resource_end == NULL)
-		goto error;
-
-	const size_t resource_size = resource_end - res_offset >= sizeof(out->resource) ? sizeof(out->resource) : resource_end - res_offset;
-	strncpy(out->resource, res_offset, resource_size);
-	return 0;
-
-error:
-	return -1;
-}
 
 static int respond(const int accept_fd) {
 	char to_read[MAX_READ_LEN] = {0};
@@ -366,7 +232,9 @@ static int respond(const int accept_fd) {
 
 	/* Figure out what header we need to use: */
 	const code_to_message *matched_response = NULL;
-	for (i = 0; i < (sizeof(response_headers)/sizeof(response_headers[0])); i++) {
+	const code_to_message *response_headers = get_response_headers();
+	const unsigned int num_elements = get_response_headers_num_elements();
+	for (i = 0; i < num_elements; i++) {
 		code_to_message current_response = response_headers[i];
 		if (current_response.code == response_code) {
 			matched_response = &response_headers[i];
