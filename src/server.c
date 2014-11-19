@@ -21,6 +21,7 @@
 
 #define MAX_READ_LEN 1024
 #define VERB_SIZE 16
+#define MAX_MATCHES 4
 
 const char r_200[] =
 	"HTTP/1.1 200 OK\r\n"
@@ -44,6 +45,7 @@ typedef struct {
 typedef struct {
 	char verb[VERB_SIZE];
 	char resource[128];
+	regmatch_t matches[MAX_MATCHES];
 } http_request;
 
 typedef struct {
@@ -56,6 +58,7 @@ typedef struct {
 typedef struct route {
 	char verb[VERB_SIZE];
 	char route_match[256];
+	size_t expected_matches;
 	int (*handler)(const http_request *request, http_response *response);
 	void (*cleanup)(http_response *response);
 } route;
@@ -192,7 +195,10 @@ static int board_handler(const http_request *request, http_response *response) {
 	const char *mmapd_region = (char *)response->out;
 	const size_t original_size = response->outsize;
 
-	const char current_board[32] = "a";
+	char current_board[32] = {0};
+	const size_t board_len = request->matches[1].rm_eo - request->matches[1].rm_so;
+	const size_t bgr = sizeof(current_board) > board_len ? board_len : sizeof(current_board);
+	strncpy(current_board, request->resource + request->matches[1].rm_so, bgr);
 
 	size_t new_size = 0;
 	greshunkel_ctext *ctext = gshkl_init_context();
@@ -262,10 +268,10 @@ const code_to_message response_headers[] = {
 
 /* All other routes: */
 const route all_routes[] = {
-	{"GET", "^/favicon.ico$", &favicon_handler, &mmap_cleanup},
-	{"GET", "^/static/[a-zA-Z0-9/_-]*\\.[a-zA-Z]*$", &static_handler, &mmap_cleanup},
-	{"GET", "^/chug/[a-z]*$", &board_handler, &heap_cleanup},
-	{"GET", "^/$", &index_handler, &heap_cleanup},
+	{"GET", "^/favicon.ico$", 0, &favicon_handler, &mmap_cleanup},
+	{"GET", "^/static/[a-zA-Z0-9/_-]*\\.[a-zA-Z]*$", 0, &static_handler, &mmap_cleanup},
+	{"GET", "^/chug/([a-zA-Z]*)$", 1, &board_handler, &heap_cleanup},
+	{"GET", "^/$", 0, &index_handler, &heap_cleanup},
 };
 
 static int parse_request(const char to_read[MAX_READ_LEN], http_request *out) {
@@ -309,7 +315,8 @@ static int respond(const int accept_fd) {
 
 	http_request request = {
 		.verb = {0},
-		.resource = {0}
+		.resource = {0},
+		.matches = {{0}}
 	};
 	rc = parse_request(to_read, &request);
 	if (rc != 0) {
@@ -324,8 +331,9 @@ static int respond(const int accept_fd) {
 		if (strcmp(cur_route->verb, request.verb) != 0)
 			continue;
 
+		assert(cur_route->expected_matches < MAX_MATCHES);
 		regex_t regex;
-		int reti = regcomp(&regex, cur_route->route_match, 0);
+		int reti = regcomp(&regex, cur_route->route_match, REG_EXTENDED);
 		if (reti != 0) {
 			char errbuf[128];
 			regerror(reti, &regex, errbuf, sizeof(errbuf));
@@ -333,7 +341,10 @@ static int respond(const int accept_fd) {
 			assert(reti == 0);
 		}
 
-		reti = regexec(&regex, request.resource, 0, NULL, 0);
+		if (request.matches > 0)
+			reti = regexec(&regex, request.resource, cur_route->expected_matches + 1, request.matches, 0);
+		else
+			reti = regexec(&regex, request.resource, 0, NULL, 0);
 		regfree(&regex);
 		if (reti == 0) {
 			matching_route = &all_routes[i];
