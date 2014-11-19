@@ -103,7 +103,6 @@ static char *receive_chunked_http(const int request_fd) {
 	/* Check for a 200: */
 	if (raw_buf == NULL || strstr(raw_buf, "200") == NULL) {
 		log_msg(LOG_ERR, "Could not find 200 return code in response.");
-		printf("Raw buffer: \n%s", raw_buf);
 		goto error;
 	}
 
@@ -241,7 +240,6 @@ static char *receive_http(const int request_fd, size_t *out) {
 	/* Check for a 200: */
 	if (raw_buf == NULL || strstr(raw_buf, "200") == NULL) {
 		log_msg(LOG_ERR, "Could not find 200 return code in response.");
-		printf("Raw buffer: \n%s", raw_buf);
 		goto error;
 	}
 
