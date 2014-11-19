@@ -15,7 +15,7 @@ struct line {
 typedef struct line line;
 
 static const char variable_regex[] = "xXx @([a-zA-Z_0-9]+) xXx";
-static const char loop_regex[] = "^\\s+xXx LOOP ([a-zA-Z_]+) ([a-zA-Z_]+) xXx(.*?)xXx BBL xXx";
+static const char loop_regex[] = "^\\s+xXx LOOP ([a-zA-Z_]+) ([a-zA-Z_]+) xXx(.*)xXx BBL xXx";
 
 greshunkel_ctext *gshkl_init_context() {
 	greshunkel_ctext *ctext = calloc(1, sizeof(greshunkel_ctext));
@@ -284,16 +284,22 @@ _interpolate_loop(const greshunkel_ctext *ctext, const regex_t *lr, const regex_
 	/* TODO: Support loops inside of loops. That probably means a
 	 * while loop here. */
 	if (regexec(lr, buf, 4, match, 0) == 0) {
-		/* We found a fucking loop, holy shit */
-		*num_read = match[0].rm_eo;
 		/* Variables we're going to need: */
 		const regmatch_t loop_variable = match[1];
 		const regmatch_t variable_name = match[2];
-		const regmatch_t loop_meat = match[3];
+		regmatch_t loop_meat = match[3];
 		/* Make sure they were matched: */
 		assert(variable_name.rm_so != -1 && variable_name.rm_eo != -1);
 		assert(loop_variable.rm_so != -1 && loop_variable.rm_eo != -1);
 		assert(loop_meat.rm_so != -1 && loop_meat.rm_eo != -1);
+
+		size_t possible_dif = strstr(buf + loop_meat.rm_so, "xXx BBL xXx") - buf;
+		if (possible_dif != loop_meat.rm_so) {
+			loop_meat.rm_eo = possible_dif;
+		}
+
+		/* We found a fucking loop, holy shit */
+		*num_read = loop_meat.rm_eo + strlen("xXx BBL xXx");
 
 		/* This is the thing we're going to render over and over and over again. */
 		char loop_piece_to_render[loop_meat.rm_eo - loop_meat.rm_so];
