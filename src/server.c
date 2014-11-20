@@ -160,120 +160,12 @@ static int favicon_handler(const http_request *request, http_response *response)
 }
 
 /* All other routes: */
-const route all_routes[] = {
+static const route all_routes[] = {
 	{"GET", "^/favicon.ico$", 0, &favicon_handler, &mmap_cleanup},
 	{"GET", "^/static/[a-zA-Z0-9/_-]*\\.[a-zA-Z]*$", 0, &static_handler, &mmap_cleanup},
 	{"GET", "^/chug/([a-zA-Z]*)$", 1, &board_handler, &heap_cleanup},
 	{"GET", "^/$", 0, &index_handler, &heap_cleanup},
 };
-
-static int respond(const int accept_fd) {
-	char to_read[MAX_READ_LEN] = {0};
-	char *actual_response = NULL;
-	http_response response = {.mimetype = "text/html", 0};
-	const route *matching_route = NULL;
-
-	int rc = recv(accept_fd, to_read, MAX_READ_LEN, 0);
-	if (rc <= 0) {
-		log_msg(LOG_ERR, "Did not receive any information from accepted connection.");
-		goto error;
-	}
-
-	http_request request = {
-		.verb = {0},
-		.resource = {0},
-		.matches = {{0}}
-	};
-	rc = parse_request(to_read, &request);
-	if (rc != 0) {
-		log_msg(LOG_ERR, "Could not parse request.");
-		goto error;
-	}
-
-	/* Find our matching route: */
-	int i;
-	for (i = 0; i < (sizeof(all_routes)/sizeof(all_routes[0])); i++) {
-		const route *cur_route = &all_routes[i];
-		if (strcmp(cur_route->verb, request.verb) != 0)
-			continue;
-
-		assert(cur_route->expected_matches < MAX_MATCHES);
-		regex_t regex;
-		int reti = regcomp(&regex, cur_route->route_match, REG_EXTENDED);
-		if (reti != 0) {
-			char errbuf[128];
-			regerror(reti, &regex, errbuf, sizeof(errbuf));
-			log_msg(LOG_ERR, "%s", errbuf);
-			assert(reti == 0);
-		}
-
-		if (request.matches > 0)
-			reti = regexec(&regex, request.resource, cur_route->expected_matches + 1, request.matches, 0);
-		else
-			reti = regexec(&regex, request.resource, 0, NULL, 0);
-		regfree(&regex);
-		if (reti == 0) {
-			matching_route = &all_routes[i];
-			break;
-		}
-	}
-
-	/* If we didn't find one just use the 404 route: */
-	if (matching_route == NULL)
-		matching_route = &r_404_route;
-
-	/* Run the handler through with the data we have: */
-	const int response_code = matching_route->handler(&request, &response);
-	assert(response.outsize > 0);
-	assert(response.out != NULL);
-
-	log_msg(LOG_FUN, "\"%s %s\" %i %i", request.verb, request.resource,
-			response_code, response.outsize);
-
-	/* Figure out what header we need to use: */
-	const code_to_message *matched_response = NULL;
-	const code_to_message *response_headers = get_response_headers();
-	const unsigned int num_elements = get_response_headers_num_elements();
-	for (i = 0; i < num_elements; i++) {
-		code_to_message current_response = response_headers[i];
-		if (current_response.code == response_code) {
-			matched_response = &response_headers[i];
-			break;
-		}
-	}
-	/* Blow up if we don't have that code. We should have them all at
-	 * compile time. */
-	assert(matched_response != NULL);
-
-	/* Embed the handler's text into the header: */
-	const size_t integer_length = INT_LEN(response.outsize);
-	const size_t header_size = strlen(response.mimetype) + strlen(matched_response->message) + integer_length - strlen("%s") - strlen("%zu");
-	const size_t actual_response_siz = response.outsize + header_size;
-	actual_response = malloc(actual_response_siz + 1);
-	memset(actual_response, '\0', actual_response_siz + 1);
-	/* snprintf the header because it's just a string: */
-	snprintf(actual_response, actual_response_siz, matched_response->message, response.mimetype, response.outsize);
-	/* memcpy the rest because it could be anything: */
-	memcpy(actual_response + header_size, response.out, response.outsize);
-
-	/* Send that shit over the wire: */
-	const size_t bytes_siz = actual_response_siz;
-	rc = send(accept_fd, actual_response, bytes_siz, 0);
-	if (rc <= 0) {
-		log_msg(LOG_ERR, "Could not send response.");
-		goto error;
-	}
-	matching_route->cleanup(&response);
-	free(actual_response);
-
-	return 0;
-
-error:
-	if (matching_route != NULL)
-		matching_route->cleanup(&response);
-	free(actual_response);
-	return -1;
-}
 
 int http_serve(int main_sock_fd) {
 	int rc = -1;
@@ -314,7 +206,7 @@ int http_serve(int main_sock_fd) {
 		} else {
 			pid_t child = fork();
 			if (child == 0) {
-				respond(new_fd);
+				respond(new_fd, all_routes, sizeof(all_routes)/sizeof(all_routes[0]));
 				close(new_fd);
 				exit(0);
 			}

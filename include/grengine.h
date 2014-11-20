@@ -67,3 +67,8 @@ const size_t get_response_headers_num_elements();
 
 /* Parses a raw bytestream into an http_request object. */
 int parse_request(const char to_read[MAX_READ_LEN], http_request *out);
+/* Takes an accepted socket, an array of routes and the number of handlers in said array,
+ * then calls the first handler to match the requested resource. It is responsible for
+ * writing the result of the handler to the socket. */
+int respond(const int accept_fd, const route *all_routes, const size_t route_num_elements);
+
