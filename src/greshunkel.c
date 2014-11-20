@@ -208,6 +208,12 @@ int gshkl_free_context(greshunkel_ctext *ctext) {
 		free(next);
 	}
 	free(ctext->values);
+
+	while (ctext->filter_functions->next != NULL) {
+		greshunkel_filter *next = (greshunkel_filter *)spop(&ctext->filter_functions);
+		free(next);
+	}
+	free(ctext->filter_functions);
 	free(ctext);
 	return 0;
 }
@@ -275,9 +281,9 @@ _filter_line(const greshunkel_ctext *ctext, const line *operating_line, const re
 					strncpy(to_return.data + first_piece_size + middle_piece_size,
 							operating_line->data + filter_matches[0].rm_eo,
 							last_piece_size);
-					operating_line = &to_return;
 					if (filter->clean_up != NULL)
 						filter->clean_up(filter_result);
+					return to_return;
 				}
 				current_func = current_func->next;
 			}
@@ -352,6 +358,8 @@ _interpolate_line(const greshunkel_ctext *ctext, const line current_line, const 
 		memset(match, 0, sizeof(match));
 	}
 	line filtered_line = _filter_line(ctext, operating_line, filter_regex);
+	if (&filtered_line != operating_line)
+		free(operating_line->data);
 
 	/* Well looks like we didn't do anything. Return a new copy of the original line. */
 	line _to_return = { .size = filtered_line.size, .data = calloc(1, filtered_line.size)};

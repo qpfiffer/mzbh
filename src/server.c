@@ -25,15 +25,24 @@ static int _only_webms_filter(const char *file_name) {
 }
 
 static char *thumbnail_for_image(const char *argument) {
-	//const size_t arg_len = strlen(argument);
-	return "0";
+	const size_t arg_len = strlen(argument);
+	const size_t stop_at = arg_len - strlen("webm");
+
+	const char prefix[] = "/t/thumb_";
+	const size_t prefix_siz = strlen(prefix);
+
+	char *to_return = calloc(1, stop_at + strlen("jpg") + prefix_siz);
+	strncpy(to_return, prefix, prefix_siz);
+	strncat(to_return, argument, stop_at);
+	strncat(to_return, "jpg", strlen("jpg"));
+	strncpy(to_return + prefix_siz + stop_at, "jpg", strlen("jpg"));
+	return to_return;
 }
 
 static int _add_files_in_dir_to_arr(greshunkel_var *loop, const char *dir, int (*filter_func)(const char *file_name)) {
 	/* What the fuck, posix? */
 	struct dirent dirent_thing = {0};
 
-	/* TODO: Actually find out what board we're on. */
 	DIR *dirstream = opendir(dir);
 	int total = 0;
 	while (1) {
