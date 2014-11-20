@@ -28,10 +28,15 @@ typedef struct greshunkel_tuple {
 	greshunkel_var value;
 } greshunkel_tuple;
 
+typedef struct greshunkel_filter {
+	char name[WISDOM_OF_WORDS];
+	char *(*filter_func)(const char *argument);
+} greshunkel_filter;
+
 typedef struct greshunkel_ctext {
 	ol_stack *values;
 	ol_stack *filter_functions;
-	struct greshunkel_ctext *parent;
+	const struct greshunkel_ctext *parent;
 } greshunkel_ctext;
 
 /* Build and destroy contexts: */
@@ -48,7 +53,7 @@ int gshkl_add_string_to_loop(greshunkel_var *loop, const char *value);
 int gshkl_add_int_to_loop(greshunkel_var *loop, const int value);
 
 /* Filters */
-int gshkl_add_filter(greshunkel_ctext *ctext, char *(*filter_func)(const char *argument));
+int gshkl_add_filter(greshunkel_ctext *ctext, const char name[WISDOM_OF_WORDS], char *(*filter_func)(const char *argument));
 
 /* Render a string buffer: */
 char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const size_t original_size, size_t *outsize);

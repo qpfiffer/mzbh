@@ -24,6 +24,13 @@ greshunkel_ctext *gshkl_init_context() {
 	ctext->filter_functions = calloc(1, sizeof(ol_stack));
 	return ctext;
 }
+static greshunkel_ctext *_gshkl_init_child_context(const greshunkel_ctext *parent) {
+	greshunkel_ctext *ctext = calloc(1, sizeof(greshunkel_ctext));
+	ctext->values = calloc(1, sizeof(ol_stack));
+	ctext->filter_functions = calloc(1, sizeof(ol_stack));
+	ctext->parent = parent;
+	return ctext;
+}
 
 static inline int _gshkl_add_var_to_context(greshunkel_ctext *ctext, const greshunkel_tuple *new_tuple) {
 	spush(&ctext->values, new_tuple);
@@ -35,8 +42,14 @@ static inline int _gshkl_add_var_to_loop(greshunkel_var *loop, const greshunkel_
 	return 0;
 }
 
-int gshkl_add_filter(greshunkel_ctext *ctext, char *(*filter_func)(const char *argument)) {
-	spush(&ctext->filter_functions, filter_func);
+int gshkl_add_filter(greshunkel_ctext *ctext,
+		const char name[WISDOM_OF_WORDS],
+		char *(*filter_func)(const char *argument)) {
+	greshunkel_filter *new_filter = calloc(1, sizeof(greshunkel_filter));
+	new_filter->filter_func = filter_func;
+	strncpy(new_filter->name, name, sizeof(new_filter->name));
+
+	spush(&ctext->filter_functions, new_filter);
 	return 0;
 }
 
@@ -215,6 +228,62 @@ static line read_line(const char *buf) {
 }
 
 static line
+_filter_line(const greshunkel_ctext *ctext, const line *operating_line, const regex_t *filter_regex) {
+	line to_return = {0};
+	/* Now we match template filters: */
+	regmatch_t filter_matches[3];
+	/* TODO: More than one filter per line. */
+	if (regexec(filter_regex, operating_line->data, 3, filter_matches, 0) == 0) {
+		int matched_at_least_once = 0;
+		const regmatch_t function_name = filter_matches[1];
+		const regmatch_t argument = filter_matches[2];
+
+		const greshunkel_ctext *current_ctext = ctext;
+		while (current_ctext != NULL) {
+			ol_stack *current_func = current_ctext->filter_functions;
+			while (current_func->data != NULL) {
+				greshunkel_filter *filter = (greshunkel_filter *)current_func->data;
+				int strncmp_res = strncmp(filter->name,
+						operating_line->data + function_name.rm_so,
+						strlen(filter->name));
+				if (strncmp_res == 0) {
+					matched_at_least_once = 1;
+					/* Render the argument out so we can pass it to the filter function. */
+					char rendered_argument[argument.rm_eo - argument.rm_so];
+					memset(rendered_argument, '\0', sizeof(rendered_argument));
+					strncpy(rendered_argument,
+							operating_line->data + argument.rm_so,
+							sizeof(rendered_argument));
+					/* Pass it to the filter function. */
+					char *filter_result = filter->filter_func(rendered_argument);
+					const size_t result_size = strlen(filter_result);
+
+					const size_t first_piece_size = filter_matches[0].rm_so;
+					const size_t middle_piece_size = result_size;
+					const size_t last_piece_size = operating_line->size - filter_matches[0].rm_eo;
+					/* Sorry, Vishnu... */
+					to_return.size = first_piece_size + middle_piece_size + last_piece_size;
+					to_return.data = calloc(1, to_return.size);
+
+					strncpy(to_return.data, operating_line->data, first_piece_size);
+					strncpy(to_return.data + first_piece_size, filter_result, middle_piece_size);
+					strncpy(to_return.data + first_piece_size + middle_piece_size,
+							operating_line->data + filter_matches[0].rm_eo,
+							last_piece_size);
+					operating_line = &to_return;
+				}
+				current_func = current_func->next;
+			}
+			current_ctext = current_ctext->parent;
+		}
+		assert(matched_at_least_once == 1);
+	}
+
+	/* We didn't match any filters. Just return the operating line. */
+	return *operating_line;
+}
+
+static line
 _interpolate_line(const greshunkel_ctext *ctext, const line current_line, const regex_t *var_regex, const regex_t *filter_regex) {
 	line interpolated_line = {0};
 	line new_line_to_add = {0};
@@ -275,10 +344,11 @@ _interpolate_line(const greshunkel_ctext *ctext, const line current_line, const 
 		/* Set the next regex check after this one. */
 		memset(match, 0, sizeof(match));
 	}
-	if (interpolated_line.data != NULL)
-		return interpolated_line;
-	line _to_return = { .size = current_line.size, .data = calloc(1, current_line.size)};
-	memcpy(_to_return.data, current_line.data, current_line.size);
+	line filtered_line = _filter_line(ctext, operating_line, filter_regex);
+
+	/* Well looks like we didn't do anything. Return a new copy of the original line. */
+	line _to_return = { .size = filtered_line.size, .data = calloc(1, filtered_line.size)};
+	memcpy(_to_return.data, filtered_line.data, filtered_line.size);
 	return _to_return;
 }
 
@@ -347,7 +417,7 @@ _interpolate_loop(const greshunkel_ctext *ctext, const regex_t *lr, const regex_
 					assert(current_loop_var->type == GSHKL_STR);
 
 					/* Recurse contexts until my fucking mind melts. */
-					greshunkel_ctext *_temp_ctext = gshkl_init_context();
+					greshunkel_ctext *_temp_ctext = _gshkl_init_child_context(ctext);
 					gshkl_add_string(_temp_ctext, loop_variable_name_rendered, current_loop_var->value.str);
 					line rendered_piece = _interpolate_line(_temp_ctext, to_render_line, vr, fr);
 					gshkl_free_context(_temp_ctext);

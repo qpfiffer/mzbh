@@ -18,6 +18,7 @@ const char document[] =
 "		xXx LOOP i LOOP_TEST xXx\n"
 "			<li>XxX return_z xXx @i xXx XxX</li>\n"
 "		xXx BBL xXx\n"
+"		<p>XxX return_hello doesnt_matter_at_all XxX</p>\n"
 "		</ul>\n"
 "	</body>\n"
 "</html>\n";
@@ -26,11 +27,16 @@ char *return_z(const char *argument) {
 	return "z";
 }
 
+char *return_hello(const char *arg) {
+	return "HELLO!";
+}
+
 int main(int argc, char *argv[]) {
 	size_t new_size = 0;
 
 	greshunkel_ctext *ctext = gshkl_init_context();
-	gshkl_add_filter(ctext, &return_z);
+	gshkl_add_filter(ctext, "return_z", &return_z);
+	gshkl_add_filter(ctext, "return_hello", &return_hello);
 
 	gshkl_add_string(ctext, "TEST", "This is a test.");
 	gshkl_add_int(ctext, "FAKEINT", 666);
