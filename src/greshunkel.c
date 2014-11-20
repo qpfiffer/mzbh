@@ -52,6 +52,7 @@ int gshkl_add_filter(greshunkel_ctext *ctext,
 		void (*clean_up)(char *filter_result)) {
 	greshunkel_filter *new_filter = calloc(1, sizeof(greshunkel_filter));
 	new_filter->filter_func = filter_func;
+	new_filter->clean_up = clean_up;
 	strncpy(new_filter->name, name, sizeof(new_filter->name));
 
 	spush(&ctext->filter_functions, new_filter);
@@ -72,6 +73,7 @@ int gshkl_add_string(greshunkel_ctext *ctext, const char name[WISDOM_OF_WORDS], 
 	/* Copy the value of the string into the var object: */
 	greshunkel_var _stack_var = {0};
 	strncpy(_stack_var.str, value, MAX_GSHKL_STR_SIZE);
+	_stack_var.str[MAX_GSHKL_STR_SIZE] = '\0';
 
 	/* Copy the var object itself into the tuple's var space: */
 	memcpy(&_stack_tuple.value, &_stack_var, sizeof(greshunkel_var));
@@ -174,6 +176,7 @@ int gshkl_add_string_to_loop(greshunkel_var *loop, const char *value) {
 
 	greshunkel_var _stack_var = {0};
 	strncpy(_stack_var.str, value, MAX_GSHKL_STR_SIZE);
+	_stack_var.str[MAX_GSHKL_STR_SIZE] = '\0';
 
 	memcpy(&_stack_tuple.value, &_stack_var, sizeof(greshunkel_var));
 
@@ -265,6 +268,7 @@ _filter_line(const greshunkel_ctext *ctext, const line *operating_line, const re
 					strncpy(rendered_argument,
 							operating_line->data + argument.rm_so,
 							sizeof(rendered_argument));
+					rendered_argument[sizeof(rendered_argument)] = '\0';
 					/* Pass it to the filter function. */
 					char *filter_result = filter->filter_func(rendered_argument);
 					const size_t result_size = strlen(filter_result);

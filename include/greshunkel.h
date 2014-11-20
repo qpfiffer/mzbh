@@ -13,7 +13,7 @@
 struct greshunkel_tuple;
 typedef union greshunkel_var {
 	const unsigned int fuck_gcc : 1; /* This tricks GCC into doing smart things. Not used. */
-	char str[MAX_GSHKL_STR_SIZE];
+	char str[MAX_GSHKL_STR_SIZE + 1];
 	ol_stack *arr;
 } greshunkel_var;
 

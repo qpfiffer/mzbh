@@ -196,8 +196,7 @@ int respond(const int accept_fd, const route *all_routes, const size_t route_num
 	const size_t integer_length = INT_LEN(response.outsize);
 	const size_t header_size = strlen(response.mimetype) + strlen(matched_response->message) + integer_length - strlen("%s") - strlen("%zu");
 	const size_t actual_response_siz = response.outsize + header_size;
-	actual_response = malloc(actual_response_siz + 1);
-	memset(actual_response, '\0', actual_response_siz + 1);
+	actual_response = calloc(1, actual_response_siz + 1);
 	/* snprintf the header because it's just a string: */
 	snprintf(actual_response, actual_response_siz, matched_response->message, response.mimetype, response.outsize);
 	/* memcpy the rest because it could be anything: */
@@ -210,7 +209,8 @@ int respond(const int accept_fd, const route *all_routes, const size_t route_num
 		log_msg(LOG_ERR, "Could not send response.");
 		goto error;
 	}
-	matching_route->cleanup(&response);
+	if (matching_route->cleanup != NULL)
+		matching_route->cleanup(&response);
 	free(actual_response);
 
 	return 0;

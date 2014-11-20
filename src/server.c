@@ -31,7 +31,7 @@ static char *thumbnail_for_image(const char *argument) {
 	const char prefix[] = "/t/thumb_";
 	const size_t prefix_siz = strlen(prefix);
 
-	char *to_return = calloc(1, stop_at + strlen("jpg") + prefix_siz);
+	char *to_return = calloc(1, stop_at + strlen("jpg") + prefix_siz + 1);
 	strncpy(to_return, prefix, prefix_siz);
 	strncat(to_return, argument, stop_at);
 	strncat(to_return, "jpg", strlen("jpg"));
