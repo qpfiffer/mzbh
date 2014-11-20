@@ -326,7 +326,7 @@ _interpolate_line(const greshunkel_ctext *ctext, const line current_line, const 
 				const size_t last_piece_size = operating_line->size - match[0].rm_eo;
 				/* Sorry, Vishnu... */
 				new_line_to_add.size = first_piece_size + middle_piece_size + last_piece_size;
-				new_line_to_add.data = calloc(1, new_line_to_add.size);
+				new_line_to_add.data = calloc(1, new_line_to_add.size + 1);
 
 				strncpy(new_line_to_add.data, operating_line->data, first_piece_size);
 				/* TODO: DO NOT ASSUME IT IS ALWAYS A STRING! */
@@ -358,13 +358,10 @@ _interpolate_line(const greshunkel_ctext *ctext, const line current_line, const 
 		memset(match, 0, sizeof(match));
 	}
 	line filtered_line = _filter_line(ctext, operating_line, filter_regex);
-	if (&filtered_line != operating_line)
+	if (filtered_line.data != interpolated_line.data && interpolated_line.data != NULL)
 		free(operating_line->data);
 
-	/* Well looks like we didn't do anything. Return a new copy of the original line. */
-	line _to_return = { .size = filtered_line.size, .data = calloc(1, filtered_line.size)};
-	memcpy(_to_return.data, filtered_line.data, filtered_line.size);
-	return _to_return;
+	return filtered_line;
 }
 
 static line
@@ -372,7 +369,7 @@ _interpolate_loop(const greshunkel_ctext *ctext, const regex_t *lr, const regex_
 	line to_return = {0};
 	*num_read = 0;
 
-	regmatch_t match[4];
+	regmatch_t match[4] = {{0}};
 	/* TODO: Support loops inside of loops. That probably means a
 	 * while loop here. */
 	if (regexec(lr, buf, 4, match, 0) == 0) {
@@ -385,7 +382,9 @@ _interpolate_loop(const greshunkel_ctext *ctext, const regex_t *lr, const regex_
 		assert(loop_variable.rm_so != -1 && loop_variable.rm_eo != -1);
 		assert(loop_meat.rm_so != -1 && loop_meat.rm_eo != -1);
 
-		size_t possible_dif = strstr(buf + loop_meat.rm_so, "xXx BBL xXx") - buf;
+		size_t possible_dif = 0;
+		const char *closest_BBL = strstr(buf + loop_meat.rm_so, "xXx BBL xXx");
+		possible_dif = closest_BBL - buf;
 		if (possible_dif != loop_meat.rm_so) {
 			loop_meat.rm_eo = possible_dif;
 		}
@@ -517,7 +516,8 @@ char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const s
 			rendered = med_buf;
 		}
 		strncpy(rendered + old_outsize, to_append.data, to_append.size);
-		free(current_line.data);
+		if (to_append.data != current_line.data)
+			free(current_line.data);
 		free(to_append.data);
 	}
 	_destroy_regex(&var_regex, &loop_regex, &filter_regex);
