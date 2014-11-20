@@ -24,6 +24,11 @@ static int _only_webms_filter(const char *file_name) {
 	return endswith(file_name, ".webm");
 }
 
+static char *thumbnail_for_image(const char *argument) {
+	//const size_t arg_len = strlen(argument);
+	return "0";
+}
+
 static int _add_files_in_dir_to_arr(greshunkel_var *loop, const char *dir, int (*filter_func)(const char *file_name)) {
 	/* What the fuck, posix? */
 	struct dirent dirent_thing = {0};
@@ -122,6 +127,7 @@ static int board_handler(const http_request *request, http_response *response) {
 
 	size_t new_size = 0;
 	greshunkel_ctext *ctext = gshkl_init_context();
+	gshkl_add_filter(ctext, "thumbnail_for_image", thumbnail_for_image, filter_cleanup);
 	gshkl_add_string(ctext, "current_board", current_board);
 	greshunkel_var *images = gshkl_add_array(ctext, "IMAGES");
 

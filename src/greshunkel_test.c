@@ -35,8 +35,8 @@ int main(int argc, char *argv[]) {
 	size_t new_size = 0;
 
 	greshunkel_ctext *ctext = gshkl_init_context();
-	gshkl_add_filter(ctext, "return_z", &return_z);
-	gshkl_add_filter(ctext, "return_hello", &return_hello);
+	gshkl_add_filter(ctext, "return_z", &return_z, NULL);
+	gshkl_add_filter(ctext, "return_hello", &return_hello, NULL);
 
 	gshkl_add_string(ctext, "TEST", "This is a test.");
 	gshkl_add_int(ctext, "FAKEINT", 666);

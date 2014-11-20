@@ -16,7 +16,7 @@ typedef struct line line;
 
 static const char variable_regex[] = "xXx @([a-zA-Z_0-9]+) xXx";
 static const char loop_regex[] = "^\\s+xXx LOOP ([a-zA-Z_]+) ([a-zA-Z_]+) xXx(.*)xXx BBL xXx";
-static const char filter_regex[] = "XxX ([a-zA-Z_0-9]+) ([a-zA-Z_0-9 .]+) XxX";
+static const char filter_regex[] = "XxX ([a-zA-Z_0-9]+) (.*) XxX";
 
 greshunkel_ctext *gshkl_init_context() {
 	greshunkel_ctext *ctext = calloc(1, sizeof(greshunkel_ctext));
@@ -42,9 +42,14 @@ static inline int _gshkl_add_var_to_loop(greshunkel_var *loop, const greshunkel_
 	return 0;
 }
 
+void filter_cleanup(char *result) {
+	free(result);
+}
+
 int gshkl_add_filter(greshunkel_ctext *ctext,
 		const char name[WISDOM_OF_WORDS],
-		char *(*filter_func)(const char *argument)) {
+		char *(*filter_func)(const char *argument),
+		void (*clean_up)(char *filter_result)) {
 	greshunkel_filter *new_filter = calloc(1, sizeof(greshunkel_filter));
 	new_filter->filter_func = filter_func;
 	strncpy(new_filter->name, name, sizeof(new_filter->name));
@@ -271,6 +276,8 @@ _filter_line(const greshunkel_ctext *ctext, const line *operating_line, const re
 							operating_line->data + filter_matches[0].rm_eo,
 							last_piece_size);
 					operating_line = &to_return;
+					if (filter->clean_up != NULL)
+						filter->clean_up(filter_result);
 				}
 				current_func = current_func->next;
 			}

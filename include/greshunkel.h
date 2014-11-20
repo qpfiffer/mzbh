@@ -31,6 +31,7 @@ typedef struct greshunkel_tuple {
 typedef struct greshunkel_filter {
 	char name[WISDOM_OF_WORDS];
 	char *(*filter_func)(const char *argument);
+	void (*clean_up)(char *result);
 } greshunkel_filter;
 
 typedef struct greshunkel_ctext {
@@ -53,7 +54,14 @@ int gshkl_add_string_to_loop(greshunkel_var *loop, const char *value);
 int gshkl_add_int_to_loop(greshunkel_var *loop, const int value);
 
 /* Filters */
-int gshkl_add_filter(greshunkel_ctext *ctext, const char name[WISDOM_OF_WORDS], char *(*filter_func)(const char *argument));
+/* The clean_up function will be called after the result of your filter function
+ * has been used. It can be NULL'd out if you don't need it. */
+int gshkl_add_filter(greshunkel_ctext *ctext,
+		const char name[WISDOM_OF_WORDS],
+		char *(*filter_func)(const char *argument),
+		void (*clean_up)(char *filter_result));
+/* Commonly used filter that just free()'s the result. */
+void filter_cleanup(char *result);
 
 /* Render a string buffer: */
 char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const size_t original_size, size_t *outsize);
