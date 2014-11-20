@@ -14,14 +14,23 @@ const char document[] =
 "		xXx LOOP i LOOP_TEST xXx\n"
 "			<li>xXx @i xXx</li>\n"
 "		xXx BBL xXx\n"
+"\n"
+"		xXx LOOP i LOOP_TEST xXx\n"
+"			<li>XxX return_z xXx @i xXx XxX</li>\n"
+"		xXx BBL xXx\n"
 "		</ul>\n"
 "	</body>\n"
 "</html>\n";
+
+char *return_z(const char *argument) {
+	return "z";
+}
 
 int main(int argc, char *argv[]) {
 	size_t new_size = 0;
 
 	greshunkel_ctext *ctext = gshkl_init_context();
+	gshkl_add_filter(ctext, &return_z);
 
 	gshkl_add_string(ctext, "TEST", "This is a test.");
 	gshkl_add_int(ctext, "FAKEINT", 666);
