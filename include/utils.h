@@ -5,5 +5,6 @@
 
 #define INT_LEN(x) floor(log10(abs(x))) + 1
 
+int endswith(const char *string, const char *suffix);
 char *strnstr(const char *haystack, const char *needle, size_t len);
 const char *webm_location();

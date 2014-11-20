@@ -19,6 +19,21 @@ const char *webm_location() {
 	return WEBMS_DIR;
 }
 
+int endswith(const char *string, const char *suffix) {
+	size_t string_siz = strlen(string);
+	size_t suffix_siz = strlen(suffix);
+
+	if (string_siz < suffix_siz)
+		return 0;
+
+	int i = 0;
+	for (; i < suffix_siz; i++) {
+		if (suffix[i] != string[string_siz - suffix_siz + i])
+			return 0;
+	}
+	return 1;
+}
+
 /* Pulled from here: http://stackoverflow.com/a/25705264 */
 char *strnstr(const char *haystack, const char *needle, size_t len) {
 	int i;

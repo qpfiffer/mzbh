@@ -21,15 +21,7 @@
 #include "greshunkel.h"
 
 static int _only_webms_filter(const char *file_name) {
-	size_t fname_siz = strlen(file_name);
-	/* Wish I had endswith... */
-	const char suffix[] = ".webm";
-	int i = 0;
-	for (; i < strlen(suffix); i++) {
-		if (suffix[i] != file_name[fname_siz - strlen(suffix) + i])
-			return 0;
-	}
-	return 1;
+	return endswith(file_name, ".webm");
 }
 
 static int _add_files_in_dir_to_arr(greshunkel_var *loop, const char *dir, int (*filter_func)(const char *file_name)) {
