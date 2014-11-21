@@ -23,7 +23,7 @@ btree.o: ./deps/otree/btree.c
 %.o: ./src/%.c
 	$(CC) $(CFLAGS) $(INCLUDES) -c $<
 
-dbctl: btree.o dbctl.o
+dbctl: btree.o dbctl.o logging.o
 	$(CC) $(CLAGS) $(INCLUDES) -o dbctl $^ -lm
 
 $(NAME): btree.o grengine.o greshunkel.o utils.o logging.o server.o stack.o parse.o http.o main.o parson.o
