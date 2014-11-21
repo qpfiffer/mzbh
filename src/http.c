@@ -14,8 +14,7 @@
 #include "parse.h"
 #include "utils.h"
 #include "logging.h"
-
-#define MAX_IMAGE_FILENAME_SIZE 512
+#include "models.h"
 
 const int SELECT_TIMEOUT = 5;
 const char *BOARDS[] = {"a", "b", "gif", "e", "h", "v", "wsg"};
@@ -280,7 +279,7 @@ error:
 
 static void ensure_directory_for_board(const char *board) {
 	/* Long enough for WEBMS_DIR, a /, the board and a NULL terminator */
-	const size_t buf_siz = strlen(webm_location()) + sizeof(char) * 2 + strnlen(board, BOARD_STR_LEN);
+	const size_t buf_siz = strlen(webm_location()) + sizeof(char) * 2 + strnlen(board, MAX_BOARD_NAME_SIZE);
 	char to_create[buf_siz];
 	memset(to_create, '\0', buf_siz);
 
@@ -311,7 +310,7 @@ static ol_stack *build_thread_index() {
 	for (i = 0; i < (sizeof(BOARDS)/sizeof(BOARDS[0])); i++) {
 		const char *current_board = BOARDS[i];
 
-		const size_t api_request_siz = strlen(CATALOG_REQUEST) + strnlen(current_board, BOARD_STR_LEN);
+		const size_t api_request_siz = strlen(CATALOG_REQUEST) + strnlen(current_board, MAX_BOARD_NAME_SIZE);
 		char new_api_request[api_request_siz];
 		memset(new_api_request, '\0', api_request_siz);
 
@@ -339,7 +338,7 @@ static ol_stack *build_thread_index() {
 			/* Template out a request to the 4chan API for it */
 			/* (The 30 is because I don't want to find the length of the
 			 * integer thread number) */
-			const size_t thread_req_size = sizeof(THREAD_REQUEST) + strnlen(match->board, BOARD_STR_LEN) + 30;
+			const size_t thread_req_size = sizeof(THREAD_REQUEST) + strnlen(match->board, MAX_BOARD_NAME_SIZE) + 30;
 			char templated_req[thread_req_size];
 			memset(templated_req, '\0', thread_req_size);
 
