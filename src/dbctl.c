@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 #include "btree.h"
+#include "db.h"
 #include "logging.h"
 #include "sha3api_ref.h"
 #include "utils.h"
@@ -28,8 +29,14 @@ static int _add_directory(const char *directory_to_open) {
 		if (!result)
 			break;
 		if (result->d_name[0] != '.' && endswith(result->d_name, ".webm")) {
-			/* total += _add_directory(result->d_name); */
-			log_msg(LOG_FUN, "Adding %s...", result->d_name);
+			const size_t full_path_siz = strlen(directory_to_open) + strlen(result->d_name);
+			char full_path[full_path_siz];
+			memset(full_path, '\0', full_path_siz);
+			sprintf(full_path, "%s/%s", directory_to_open, result->d_name);
+
+			char outbuf[128] = {0};
+			if (hash_image(full_path, outbuf))
+				log_msg(LOG_FUN, "%s: %s", result->d_name, outbuf);
 			total++;
 		}
 	}
