@@ -54,12 +54,16 @@ int mmap_file(const char *file_path, http_response *response) {
 	if (stat(file_path, response->extra_data) == -1) {
 		response->out = (unsigned char *)"<html><body><p>No such file.</p></body></html>";
 		response->outsize= strlen("<html><body><p>No such file.</p></body></html>");
+		free(response->extra_data);
+		response->extra_data = NULL;
 		return 404;
 	}
 	int fd = open(file_path, O_RDONLY);
 	if (fd <= 0) {
 		response->out = (unsigned char *)"<html><body><p>Could not open file.</p></body></html>";
 		response->outsize= strlen("<html><body><p>could not open file.</p></body></html>");
+		free(response->extra_data);
+		response->extra_data = NULL;
 		return 404;
 	}
 
@@ -71,20 +75,25 @@ int mmap_file(const char *file_path, http_response *response) {
 		response->out = (unsigned char *)"<html><body><p>Could not open file.</p></body></html>";
 		response->outsize= strlen("<html><body><p>could not open file.</p></body></html>");
 		close(fd);
+		free(response->extra_data);
+		response->extra_data = NULL;
 		return 404;
 	}
 	close(fd);
 	return 200;
 }
 
-void heap_cleanup(http_response *response) {
-	free(response->out);
+void heap_cleanup(const int status_code, http_response *response) {
+	if (status_code == 200)
+		free(response->out);
 }
 
-void mmap_cleanup(http_response *response) {
-	const struct stat *st = (struct stat *)response->extra_data;
-	munmap(response->out, st->st_size);
-	free(response->extra_data);
+void mmap_cleanup(const int status_code, http_response *response) {
+	if (status_code == 200) {
+		const struct stat *st = (struct stat *)response->extra_data;
+		munmap(response->out, st->st_size);
+		free(response->extra_data);
+	}
 }
 
 int parse_request(const char to_read[MAX_READ_LEN], http_request *out) {
@@ -210,14 +219,14 @@ int respond(const int accept_fd, const route *all_routes, const size_t route_num
 		goto error;
 	}
 	if (matching_route->cleanup != NULL)
-		matching_route->cleanup(&response);
+		matching_route->cleanup(response_code, &response);
 	free(actual_response);
 
 	return 0;
 
 error:
 	if (matching_route != NULL)
-		matching_route->cleanup(&response);
+		matching_route->cleanup(500, &response);
 	free(actual_response);
 	return -1;
 }

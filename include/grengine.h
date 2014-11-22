@@ -34,7 +34,7 @@ typedef struct route {
 	char route_match[256];
 	size_t expected_matches;
 	int (*handler)(const http_request *request, http_response *response);
-	void (*cleanup)(http_response *response);
+	void (*cleanup)(const int status_code, http_response *response);
 } route;
 
 
@@ -58,8 +58,8 @@ static const route r_404_route = {
 int mmap_file(const char *file_path, http_response *response);
 
 /* Cleanup functions used after handlers have made a bunch of bullshit: */
-void heap_cleanup(http_response *response);
-void mmap_cleanup(http_response *response);
+void heap_cleanup(const int status_code, http_response *response);
+void mmap_cleanup(const int status_code, http_response *response);
 
 /* Get the global code to message mapping. */
 const code_to_message *get_response_headers();

@@ -1,5 +1,5 @@
-CFLAGS=-Werror -Wall -g3
-INCLUDES=-I./include/ -I./deps/otree/
+CFLAGS=-Werror -Wall -O2 -g3
+INCLUDES=-pthread -I./include/ -I./deps/otree/
 CC=gcc
 NAME=waifu.xyz
 

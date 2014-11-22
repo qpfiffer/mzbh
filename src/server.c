@@ -4,6 +4,7 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <netdb.h>
+#include <pthread.h>
 #include <regex.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
@@ -19,6 +20,8 @@
 #include "server.h"
 #include "grengine.h"
 #include "greshunkel.h"
+
+#define NUM_THREADS 4
 
 static int _only_webms_filter(const char *file_name) {
 	return endswith(file_name, ".webm");
@@ -174,6 +177,25 @@ static const route all_routes[] = {
 	{"GET", "^/$", 0, &index_handler, &heap_cleanup},
 };
 
+static void *acceptor(void *arg) {
+	const int main_sock_fd = *(int*)arg;
+	while(1) {
+		struct sockaddr_storage their_addr = {0};
+		socklen_t sin_size = sizeof(their_addr);
+
+		int new_fd = accept(main_sock_fd, (struct sockaddr *)&their_addr, &sin_size);
+
+		if (new_fd == -1) {
+			log_msg(LOG_ERR, "Could not accept new connection.");
+			return NULL;
+		} else {
+			respond(new_fd, all_routes, sizeof(all_routes)/sizeof(all_routes[0]));
+			close(new_fd);
+		}
+	}
+	return NULL;
+}
+
 int http_serve(int main_sock_fd) {
 	int rc = -1;
 	main_sock_fd = socket(PF_INET, SOCK_STREAM, 0);
@@ -202,23 +224,17 @@ int http_serve(int main_sock_fd) {
 		goto error;
 	}
 
-	struct sockaddr_storage their_addr = {0};
-	socklen_t sin_size = sizeof(their_addr);
-	while(1) {
-		int new_fd = accept(main_sock_fd, (struct sockaddr *)&their_addr, &sin_size);
+	/* Our acceptor pool: */
+	pthread_t workers[NUM_THREADS - 1];
 
-		if (new_fd == -1) {
-			log_msg(LOG_ERR, "Could not accept new connection.");
+	int i;
+	for (i = 0; i < NUM_THREADS - 1; i++) {
+		if (pthread_create(&workers[i], NULL, acceptor, &main_sock_fd) != 0) {
 			goto error;
-		} else {
-			pid_t child = fork();
-			if (child == 0) {
-				respond(new_fd, all_routes, sizeof(all_routes)/sizeof(all_routes[0]));
-				close(new_fd);
-				exit(0);
-			}
 		}
 	}
+	/* Turn the main thread into a worker as well. */
+	acceptor(&main_sock_fd);
 
 	close(main_sock_fd);
 	return 0;
