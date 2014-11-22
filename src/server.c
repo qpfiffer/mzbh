@@ -225,16 +225,19 @@ int http_serve(int main_sock_fd) {
 	}
 
 	/* Our acceptor pool: */
-	pthread_t workers[NUM_THREADS - 1];
+	pthread_t workers[NUM_THREADS];
 
 	int i;
-	for (i = 0; i < NUM_THREADS - 1; i++) {
+	for (i = 0; i < NUM_THREADS; i++) {
 		if (pthread_create(&workers[i], NULL, acceptor, &main_sock_fd) != 0) {
 			goto error;
 		}
 	}
-	/* Turn the main thread into a worker as well. */
-	acceptor(&main_sock_fd);
+
+	for (i = 0; i < NUM_THREADS; i++) {
+		pthread_join(workers[i], NULL);
+	}
+
 
 	close(main_sock_fd);
 	return 0;

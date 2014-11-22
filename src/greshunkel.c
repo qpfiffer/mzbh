@@ -387,7 +387,8 @@ _interpolate_loop(const greshunkel_ctext *ctext, const regex_t *lr, const regex_
 		assert(loop_meat.rm_so != -1 && loop_meat.rm_eo != -1);
 
 		size_t possible_dif = 0;
-		const char *closest_BBL = strstr(buf + loop_meat.rm_so, "xXx BBL xXx");
+		const char *closest_BBL = NULL;
+		closest_BBL = strstr(buf + loop_meat.rm_so, "xXx BBL xXx");
 		possible_dif = closest_BBL - buf;
 		if (possible_dif != loop_meat.rm_so) {
 			loop_meat.rm_eo = possible_dif;

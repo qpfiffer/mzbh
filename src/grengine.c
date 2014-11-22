@@ -64,6 +64,7 @@ int mmap_file(const char *file_path, http_response *response) {
 		response->outsize= strlen("<html><body><p>could not open file.</p></body></html>");
 		free(response->extra_data);
 		response->extra_data = NULL;
+		close(fd);
 		return 404;
 	}
 
