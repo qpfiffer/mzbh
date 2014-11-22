@@ -7,7 +7,7 @@ following goals in mind:
 * No dependencies (other than files I can embed into the project directly)
 * Should be able to run indefinitely (no memory leaks)
 * Should be pretty fast
-* Should be able to run on a cheapo, $5.00 a motn 32-bit VPS with no issues.
+* Should be able to run on a cheapo, $5.00 a month 32-bit VPS with no issues.
 
 # Installation
 
