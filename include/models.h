@@ -1,5 +1,6 @@
 // vim: noet ts=4 sw=4
 #pragma once
+#include <time.h>
 
 #define MAX_IMAGE_FILENAME_SIZE 512
 #define MAX_BOARD_NAME_SIZE 16

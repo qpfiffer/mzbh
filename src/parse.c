@@ -7,8 +7,9 @@
 #include "parse.h"
 #include "parson.h"
 #include "logging.h"
+#include "models.h"
 
-ol_stack *parse_catalog_json(const char *all_json, const char board[BOARD_STR_LEN]) {
+ol_stack *parse_catalog_json(const char *all_json, const char board[MAX_BOARD_NAME_SIZE]) {
 	JSON_Value *catalog = json_parse_string(all_json);
 
 	if (json_value_get_type(catalog) != JSONArray)
@@ -55,7 +56,7 @@ ol_stack *parse_catalog_json(const char *all_json, const char board[BOARD_STR_LE
 
 				thread_match *match = malloc(sizeof(thread_match));
 				match->thread_num = thread_num;
-				strncpy(match->board, board, BOARD_STR_LEN - 1);
+				strncpy(match->board, board, MAX_BOARD_NAME_SIZE - 1);
 
 				spush(&matches, match);
 			}
