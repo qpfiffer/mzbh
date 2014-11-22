@@ -17,7 +17,7 @@
    Programmed by Danilo Gligoroski, August 2009.
 */
 #include <string.h>
-#include "SHA3api_ref.h"
+#include "sha3api_ref.h"
 
 #define rotl32(x,n)   (((x) << (n)) | ((x) >> (32 - (n))))
 #define rotr32(x,n)   (((x) >> (n)) | ((x) << (32 - (n))))

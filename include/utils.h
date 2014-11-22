@@ -7,4 +7,6 @@
 
 int endswith(const char *string, const char *suffix);
 char *strnstr(const char *haystack, const char *needle, size_t len);
+
 const char *webm_location();
+const char *db_location();

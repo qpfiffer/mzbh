@@ -6,9 +6,12 @@
 const char WEBMS_DIR_DEFAULT[] = "./webms";
 const char *WEBMS_DIR = NULL;
 
+const char DB_LOCATION_DEFAULT[] = "./webms/waifu.db";
+const char *DB_LOCATION = NULL;
+
 const char *webm_location() {
 	if (!WEBMS_DIR) {
-		char *env_var = getenv("WEBMS_DIR");
+		char *env_var = getenv("WFU_WEBMS_DIR");
 		if (!env_var) {
 			WEBMS_DIR = WEBMS_DIR_DEFAULT;
 		} else {
@@ -17,6 +20,19 @@ const char *webm_location() {
 	}
 
 	return WEBMS_DIR;
+}
+
+const char *db_location() {
+	if (!DB_LOCATION) {
+		char *env_var = getenv("WFU_DB_LOCATION");
+		if (!env_var) {
+			DB_LOCATION = DB_LOCATION_DEFAULT;
+		} else {
+			DB_LOCATION = env_var;
+		}
+	}
+
+	return DB_LOCATION;
 }
 
 int endswith(const char *string, const char *suffix) {
