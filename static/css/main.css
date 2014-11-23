@@ -10,3 +10,9 @@ body {
 #landing {
 	padding-bottom: 2em;
 }
+.image {
+	display: inline-block;
+	width: 20%;
+	height: 200px;
+	margin-bottom: 2em;
+}
