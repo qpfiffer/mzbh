@@ -48,6 +48,21 @@ int r_404_handler(const http_request *request, http_response *response) {
 	return 404;
 }
 
+void guess_mimetype(const char *ending, const size_t ending_siz, http_response *response) {
+	/* This is how we do mimetypes. lol. */
+	if (strncasecmp(ending, ".css", ending_siz) == 0) {
+		strncpy(response->mimetype, "text/css", sizeof(response->mimetype));
+	} else if (strncasecmp(ending, ".jpg", ending_siz) == 0) {
+		strncpy(response->mimetype, "image/jpeg", sizeof(response->mimetype));
+	} else if (strncasecmp(ending, ".webm", ending_siz) == 0) {
+		strncpy(response->mimetype, "video/webm", sizeof(response->mimetype));
+	} else if (strncasecmp(ending, ".html", ending_siz) == 0) {
+		strncpy(response->mimetype, "text/html", sizeof(response->mimetype));
+	} else {
+		strncpy(response->mimetype, "application/octet-stream", sizeof(response->mimetype));
+	}
+}
+
 int mmap_file(const char *file_path, http_response *response) {
 	response->extra_data = calloc(1, sizeof(struct stat));
 
@@ -81,6 +96,19 @@ int mmap_file(const char *file_path, http_response *response) {
 		return 404;
 	}
 	close(fd);
+
+	/* Figure out the mimetype for this resource: */
+	char ending[16] = {0};
+	int i = sizeof(ending);
+	const size_t res_len = strlen(file_path);
+	for (i = res_len; i > (res_len - sizeof(ending)); i--) {
+		if (file_path[i] == '.')
+			break;
+	}
+	strncpy(ending, file_path + i, sizeof(ending));
+	log_msg(LOG_WARN, "Ending: %s", ending);
+	guess_mimetype(ending, sizeof(ending), response);
+
 	return 200;
 }
 

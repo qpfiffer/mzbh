@@ -31,7 +31,7 @@ static char *thumbnail_for_image(const char *argument) {
 	const size_t arg_len = strlen(argument);
 	const size_t stop_at = arg_len - strlen("webm");
 
-	const char prefix[] = "/t/thumb_";
+	const char prefix[] = "thumb_";
 	const size_t prefix_siz = strlen(prefix);
 
 	char *to_return = calloc(1, stop_at + strlen("jpg") + prefix_siz + 1);
@@ -74,25 +74,12 @@ static int _add_files_in_dir_to_arr(greshunkel_var *loop, const char *dir, int (
 static int static_handler(const http_request *request, http_response *response) {
 	/* Remove the leading slash: */
 	const char *file_path = request->resource + sizeof(char);
+	return mmap_file(file_path, response);
+}
 
-	/* Figure out the mimetype for this resource: */
-	char ending[4] = {0};
-	int i, j = sizeof(ending);
-	const size_t res_len = strlen(request->resource);
-	for (i = res_len; i > (res_len - sizeof(ending)); i--) {
-		ending[--j] = request->resource[i];
-	}
-
-	/* This is how we do mimetypes. lol. */
-	if (strncasecmp(ending, "css", sizeof(ending)) == 0) {
-		strncpy(response->mimetype, "text/css", sizeof(response->mimetype));
-	} else if (strncasecmp(ending, "jpg", sizeof(ending)) == 0) {
-		strncpy(response->mimetype, "image/jpeg", sizeof(response->mimetype));
-	} else if (strncasecmp(ending, "webm", sizeof(ending)) == 0) {
-		strncpy(response->mimetype, "video/webm", sizeof(response->mimetype));
-	} else {
-		strncpy(response->mimetype, "application/octet-stream", sizeof(response->mimetype));
-	}
+static int board_static_handler(const http_request *request, http_response *response) {
+	/* Remove the leading slash: */
+	const char *file_path = request->resource + sizeof(char);
 	return mmap_file(file_path, response);
 }
 
@@ -174,6 +161,7 @@ static const route all_routes[] = {
 	{"GET", "^/favicon.ico$", 0, &favicon_handler, &mmap_cleanup},
 	{"GET", "^/static/[a-zA-Z0-9/_-]*\\.[a-zA-Z]*$", 0, &static_handler, &mmap_cleanup},
 	{"GET", "^/chug/([a-zA-Z]*)$", 1, &board_handler, &heap_cleanup},
+	{"GET", "^/chug/([a-zA-Z]*)/(.*)(.webm|.jpg)$", 1, &board_static_handler, &mmap_cleanup},
 	{"GET", "^/$", 0, &index_handler, &heap_cleanup},
 };
 

@@ -56,6 +56,8 @@ static const route r_404_route = {
  * to be handled later by mmap_cleanup.
  */
 int mmap_file(const char *file_path, http_response *response);
+/* Helper function that blindly guesses the mimetype based on the file extension. */
+void guess_mimetype(const char *ending, const size_t ending_siz, http_response *response);
 
 /* Cleanup functions used after handlers have made a bunch of bullshit: */
 void heap_cleanup(const int status_code, http_response *response);
