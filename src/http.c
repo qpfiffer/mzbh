@@ -17,7 +17,7 @@
 #include "models.h"
 
 const int SELECT_TIMEOUT = 5;
-const char *BOARDS[] = {"a", "b", "gif", "e", "h", "v", "wsg"};
+const char *BOARDS[] = {"a", "b", "g", "gif", "e", "h", "sci", "v", "wsg"};
 
 const char FOURCHAN_API_HOST[] = "a.4cdn.org";
 const char FOURCHAN_THUMBNAIL_HOST[] = "t.4cdn.org";
