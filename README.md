@@ -23,8 +23,8 @@ There is no installation. this will just build a handful of binaries you can use
 # Running
 
 You can either run the main binary inside of Docker (`bootstrap.sh` is handy for
-this) or you can just run the binary raw. There are a handful of environment
-variables you can set to affect where the program will keep files:
+this), inside a Vagrant VM, or you can just run the binary raw. There are a handful
+of environment variables you can set to affect where the program will keep files:
 
 * `WFU_WEBMS_DIR` - Location to store webm files. Defaults to `./webms/`
 * `WFU_DB_LOCATION` - Location to store the main database file. Defaults to
@@ -37,4 +37,13 @@ The `bootstrap.sh` script basically does this:
 ```Bash
 docker build -t waifu.xyz .
 docker run --rm -t -v $(pwd)/webms:/app/webms -p 8080:8080 waifu.xyz
-````
+```
+## Running with Vagrant
+
+You can install and run everything from a Vagrant VM. It is configured to share
+and use the repo directory for data.
+
+```Bash
+vagrant up --provision
+vagrant ssh -c 'cd /waifu.xyz && ./waifu.xyz'
+```
