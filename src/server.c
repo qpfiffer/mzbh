@@ -91,12 +91,16 @@ static int board_static_handler(const http_request *request, http_response *resp
 	const size_t fname_bgr = sizeof(file_name) > file_name_len ? file_name_len : sizeof(file_name);
 	strncpy(file_name, request->resource + request->matches[2].rm_so, fname_bgr);
 
+	char file_name_decoded[MAX_IMAGE_FILENAME_SIZE] = {0};
+	url_decode(file_name, file_name_len, file_name_decoded);
+	log_msg(LOG_WARN, "Decoded: %s", file_name_decoded);
+
 	const size_t full_path_size = strlen(webm_loc) + strlen("/") +
 								  strlen(current_board) + strlen("/") +
-								  strlen(file_name) + 1;
+								  strlen(file_name_decoded) + 1;
 	char full_path[full_path_size];
 	memset(full_path, '\0', full_path_size);
-	snprintf(full_path, full_path_size, "%s/%s/%s", webm_loc, current_board, file_name);
+	snprintf(full_path, full_path_size, "%s/%s/%s", webm_loc, current_board, file_name_decoded);
 
 	return mmap_file(full_path, response);
 }

@@ -71,3 +71,27 @@ char *strnstr(const char *haystack, const char *needle, size_t len) {
 	}
 	return NULL;
 }
+
+void url_decode(const char *src, const size_t src_siz, char *dest) {
+	int srcIter = 0, destIter = 0;
+	while (srcIter < src_siz) {
+		if (src[srcIter] == '%' && srcIter + 2 < src_siz) {
+			/* Theres definitely a better way to do this but I don't care
+			 * right now. */
+			if (src[srcIter + 1] == '2' && src[srcIter + 2] == '0') {
+				dest[destIter] = ' ';
+				srcIter += 3;
+				destIter++;
+			}
+			if (src[srcIter + 1] == '3' && src[srcIter + 2] == 'E') {
+				dest[destIter] = '>';
+				srcIter += 3;
+				destIter++;
+			}
+		}
+
+		dest[destIter] = src[srcIter];
+		destIter++;
+		srcIter++;
+	}
+}
