@@ -3,7 +3,6 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "btree.h"
 #include "db.h"
 #include "logging.h"
 #include "sha3api_ref.h"
