@@ -13,6 +13,7 @@ body {
 .image {
 	display: inline-block;
 	width: 20%;
+	max-height: 200px;
 	height: 200px;
 	margin-bottom: 2em;
 	vertical-align: top;
