@@ -310,39 +310,43 @@ _interpolate_line(const greshunkel_ctext *ctext, const line current_line, const 
 
 	while (regexec(var_regex, operating_line->data, 2, match, 0) == 0) {
 		int matched_at_least_once = 0;
-		/* We matched. */
-		ol_stack *current_value = ctext->values;
 
 		/* We linearly search through our variables because I don't have
 		 * a hash map. C is "fast enough" */
-		while (current_value != NULL) {
-			const greshunkel_tuple *tuple = (greshunkel_tuple *)current_value->data;
-			/* This is the actual part of the regex we care about. */
-			const regmatch_t inner_match = match[1];
-			assert(inner_match.rm_so != -1 && inner_match.rm_eo != -1);
+		const greshunkel_ctext *current_ctext = ctext;
+		while (current_ctext != NULL) {
+			/* We matched. */
+			ol_stack *current_value = current_ctext->values;
+			while (current_value->data != NULL) {
+				const greshunkel_tuple *tuple = (greshunkel_tuple *)current_value->data;
+				/* This is the actual part of the regex we care about. */
+				const regmatch_t inner_match = match[1];
+				assert(inner_match.rm_so != -1 && inner_match.rm_eo != -1);
 
-			assert(tuple->name != NULL);
-			int strcmp_result = strncmp(tuple->name, operating_line->data + inner_match.rm_so, strlen(tuple->name));
-			if (tuple->type == GSHKL_STR && strcmp_result == 0) {
-				/* Do actual printing here */
-				const size_t first_piece_size = match[0].rm_so;
-				const size_t middle_piece_size = strlen(tuple->value.str);
-				const size_t last_piece_size = operating_line->size - match[0].rm_eo;
-				/* Sorry, Vishnu... */
-				new_line_to_add.size = first_piece_size + middle_piece_size + last_piece_size;
-				new_line_to_add.data = calloc(1, new_line_to_add.size + 1);
+				assert(tuple->name != NULL);
+				int strcmp_result = strncmp(tuple->name, operating_line->data + inner_match.rm_so, strlen(tuple->name));
+				if (tuple->type == GSHKL_STR && strcmp_result == 0) {
+					/* Do actual printing here */
+					const size_t first_piece_size = match[0].rm_so;
+					const size_t middle_piece_size = strlen(tuple->value.str);
+					const size_t last_piece_size = operating_line->size - match[0].rm_eo;
+					/* Sorry, Vishnu... */
+					new_line_to_add.size = first_piece_size + middle_piece_size + last_piece_size;
+					new_line_to_add.data = calloc(1, new_line_to_add.size + 1);
 
-				strncpy(new_line_to_add.data, operating_line->data, first_piece_size);
-				/* TODO: DO NOT ASSUME IT IS ALWAYS A STRING! */
-				strncpy(new_line_to_add.data + first_piece_size, tuple->value.str, middle_piece_size);
-				strncpy(new_line_to_add.data + first_piece_size + middle_piece_size,
-						operating_line->data + match[0].rm_eo,
-						last_piece_size);
+					strncpy(new_line_to_add.data, operating_line->data, first_piece_size);
+					/* TODO: DO NOT ASSUME IT IS ALWAYS A STRING! */
+					strncpy(new_line_to_add.data + first_piece_size, tuple->value.str, middle_piece_size);
+					strncpy(new_line_to_add.data + first_piece_size + middle_piece_size,
+							operating_line->data + match[0].rm_eo,
+							last_piece_size);
 
-				matched_at_least_once = 1;
-				break;
+					matched_at_least_once = 1;
+					break;
+				}
+				current_value = current_value->next;
 			}
-			current_value = current_value->next;
+			current_ctext = current_ctext->parent;
 		}
 		/* Blow up if we had a variable that wasn't in the context. */
 		if (matched_at_least_once != 1) {
