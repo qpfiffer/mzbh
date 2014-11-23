@@ -15,4 +15,8 @@ body {
 	width: 20%;
 	height: 200px;
 	margin-bottom: 2em;
+	vertical-align: top;
+}
+.image img {
+	width: 100%;
 }
