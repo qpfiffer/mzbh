@@ -20,6 +20,7 @@
 #include "server.h"
 #include "grengine.h"
 #include "greshunkel.h"
+#include "models.h"
 
 #define NUM_THREADS 4
 
@@ -78,9 +79,27 @@ static int static_handler(const http_request *request, http_response *response) 
 }
 
 static int board_static_handler(const http_request *request, http_response *response) {
-	/* Remove the leading slash: */
-	const char *file_path = request->resource + sizeof(char);
-	return mmap_file(file_path, response);
+	const char *webm_loc = webm_location();
+
+	char current_board[32] = {0};
+	const size_t board_len = request->matches[1].rm_eo - request->matches[1].rm_so;
+	const size_t bgr = sizeof(current_board) > board_len ? board_len : sizeof(current_board);
+	strncpy(current_board, request->resource + request->matches[1].rm_so, bgr);
+
+	char file_name[MAX_IMAGE_FILENAME_SIZE] = {0};
+	const size_t file_name_len = request->matches[2].rm_eo - request->matches[2].rm_so;
+	const size_t fname_bgr = sizeof(file_name) > file_name_len ? file_name_len : sizeof(file_name);
+	strncpy(file_name, request->resource + request->matches[2].rm_so, fname_bgr);
+
+	const size_t full_path_size = strlen(webm_loc) + strlen("/") +
+								  strlen(current_board) + strlen("/") +
+								  strlen(file_name) + 1;
+	char full_path[full_path_size];
+	memset(full_path, '\0', full_path_size);
+	snprintf(full_path, full_path_size, "%s/%s/%s", webm_loc, current_board, file_name);
+	log_msg(LOG_WARN, "File name: %s", full_path);
+
+	return mmap_file(full_path, response);
 }
 
 static int index_handler(const http_request *request, http_response *response) {
@@ -161,7 +180,7 @@ static const route all_routes[] = {
 	{"GET", "^/favicon.ico$", 0, &favicon_handler, &mmap_cleanup},
 	{"GET", "^/static/[a-zA-Z0-9/_-]*\\.[a-zA-Z]*$", 0, &static_handler, &mmap_cleanup},
 	{"GET", "^/chug/([a-zA-Z]*)$", 1, &board_handler, &heap_cleanup},
-	{"GET", "^/chug/([a-zA-Z]*)/(.*)(.webm|.jpg)$", 1, &board_static_handler, &mmap_cleanup},
+	{"GET", "^/chug/([a-zA-Z]*)/((.*)(.webm|.jpg))$", 2, &board_static_handler, &mmap_cleanup},
 	{"GET", "^/$", 0, &index_handler, &heap_cleanup},
 };
 

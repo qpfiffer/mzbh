@@ -106,7 +106,6 @@ int mmap_file(const char *file_path, http_response *response) {
 			break;
 	}
 	strncpy(ending, file_path + i, sizeof(ending));
-	log_msg(LOG_WARN, "Ending: %s", ending);
 	guess_mimetype(ending, sizeof(ending), response);
 
 	return 200;
