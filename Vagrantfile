@@ -3,10 +3,10 @@
 
 $setup = <<SCRIPT
   make=$(which make)
-  [ ! -n "$make" ] && sudo apt-get install make -y
+  [ $? -eq 1 ] && sudo apt-get install make -y
   echo "export WFU_WEBMS_DIR=/waifu.xyz/webms" >> /home/vagrant/.bashrc
   echo "export WFU_DB_LOCATION=/waifu.xyz/webms/waifu.db" >> /home/vagrant/.bashrc
-  [ ! -f /waifu.xyz/waifu.xyz ] && cd /waifu.xyz && make
+  cd /waifu.xyz && make clean && make
   echo "waifu.xyz downloaded and built"
 SCRIPT
 
