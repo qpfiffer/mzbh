@@ -52,6 +52,14 @@ of environment variables you can set to affect where the program will keep files
 * `WFU_DB_LOCATION` - Location to store the main database file. Defaults to
   `./webms/waifu.db`
 
+## Running Raw
+
+After compiling with `make`, just run the created binary:
+
+```
+./waifu.xyz
+```
+
 ## Running with Docker
 
 The `bootstrap.sh` script basically does this:
