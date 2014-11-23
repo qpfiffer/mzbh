@@ -9,6 +9,28 @@ following goals in mind:
 * Should be pretty fast
 * Should be able to run on a cheapo, $5.00 a month 32-bit VPS with no issues.
 
+## Webserver
+
+The webserver is something of my own design because I hate dependencies. It's
+not great but it'll get the job done. You can run just the webserver with:
+
+```
+./waifu.xyz --serve
+```
+
+This runs the webserver by itself without starting the scraper component.
+
+## Scraper
+
+The scraper hits the 4chan API very slowly and fetches threads it thinks will
+have `.webm`s in them. It then downloads the `.webm` and thumbnails for
+thumbnails for said `.webm`. These are stuck in the `WFU_WEBMS_DIR` location,
+organized by board.
+
+The goal is to retain as much metadata as possible while still allowing the
+files to exist in a pure state (no hash filenames, not embedded in a database
+somewhere.)
+
 # Installation
 
 1. `make`
