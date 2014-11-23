@@ -93,7 +93,7 @@ static int board_static_handler(const http_request *request, http_response *resp
 
 	char file_name_decoded[MAX_IMAGE_FILENAME_SIZE] = {0};
 	url_decode(file_name, file_name_len, file_name_decoded);
-	log_msg(LOG_WARN, "Decoded: %s", file_name_decoded);
+	//log_msg(LOG_WARN, "Decoded: %s", file_name_decoded);
 
 	const size_t full_path_size = strlen(webm_loc) + strlen("/") +
 								  strlen(current_board) + strlen("/") +
