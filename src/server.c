@@ -97,7 +97,6 @@ static int board_static_handler(const http_request *request, http_response *resp
 	char full_path[full_path_size];
 	memset(full_path, '\0', full_path_size);
 	snprintf(full_path, full_path_size, "%s/%s/%s", webm_loc, current_board, file_name);
-	log_msg(LOG_WARN, "File name: %s", full_path);
 
 	return mmap_file(full_path, response);
 }
