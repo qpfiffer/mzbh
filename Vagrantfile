@@ -7,7 +7,6 @@ $setup = <<SCRIPT
   echo "export WFU_WEBMS_DIR=/waifu.xyz/webms" >> /home/vagrant/.bashrc
   echo "export WFU_DB_LOCATION=/waifu.xyz/webms/waifu.db" >> /home/vagrant/.bashrc
   cd /waifu.xyz && make clean && make
-  echo "waifu.xyz downloaded and built"
 SCRIPT
 
 Vagrant.configure("2") do |config|
