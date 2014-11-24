@@ -47,12 +47,34 @@ const char THUMB_REQUEST[] =
 	"Host: t.4cdn.org\r\n"
 	"Accept: */*\r\n\r\n";
 
-static void
-get_image_filename(char fname[MAX_IMAGE_FILENAME_SIZE],
+static int
+get_non_colliding_image_filename(char fname[MAX_IMAGE_FILENAME_SIZE],
 				   const post_match *p_match) {
-	snprintf(fname, MAX_IMAGE_FILENAME_SIZE, "%s/%s/%s%.*s",
-			webm_location(), p_match->board, p_match->filename,
-			(int)sizeof(p_match->file_ext), p_match->file_ext);
+	snprintf(fname, MAX_IMAGE_FILENAME_SIZE, "%s/%s/%zu_%s%.*s",
+			webm_location(), p_match->board, p_match->size,
+			p_match->filename, (int)sizeof(p_match->file_ext),
+			p_match->file_ext);
+
+	struct stat ifname = {0};
+	if (stat(fname, &ifname) == -1) {
+		return 0;
+	} else if (ifname.st_size == p_match->size) {
+		log_msg(LOG_INFO, "Skipping %s.", fname);
+		return 1;
+	} else if (ifname.st_size != p_match->size) {
+		log_msg(LOG_WARN, "Found duplicate filename for %s with incorrect size. Bad download?",
+				fname);
+		return 0;
+	}
+
+	return 0;
+}
+
+static void
+get_thumb_filename(
+		char thumb_filename[MAX_IMAGE_FILENAME_SIZE], const post_match *p_match) {
+	snprintf(thumb_filename, MAX_IMAGE_FILENAME_SIZE, "%s/%s/thumb_%zu_%s.jpg",
+			webm_location(), p_match->board, p_match->size, p_match->filename);
 }
 
 static char *receive_chunked_http(const int request_fd) {
@@ -370,12 +392,10 @@ static ol_stack *build_thread_index() {
 				/* TODO: Don't add it to the images to download if we already
 				 * have that image, with that size, from that board. */
 				char fname[MAX_IMAGE_FILENAME_SIZE] = {0};
-				get_image_filename(fname, p_match);
+				int should_skip = get_non_colliding_image_filename(fname, p_match);
 
-				struct stat ifname = {0};
-				if (stat(fname, &ifname) != -1 &&
-					ifname.st_size == p_match->size) {
-					log_msg(LOG_INFO, "Skipping %s.", fname);
+				/* We already have that file. */
+				if (should_skip) {
 					free(p_match);
 					continue;
 				}
@@ -447,19 +467,16 @@ int download_images() {
 		p_match = (post_match *)spop(&images_to_download);
 
 		char image_filename[MAX_IMAGE_FILENAME_SIZE] = {0};
-		get_image_filename(image_filename, p_match);
+		int should_skip = get_non_colliding_image_filename(image_filename, p_match);
 
-		/* We already have this file, don't need to download it again. */
-		struct stat ifname = {0};
-		if (stat(image_filename, &ifname) != -1 && ifname.st_size == p_match->size) {
-			log_msg(LOG_INFO, "Skipping %s.", image_filename);
+		/* We already have that file. */
+		if (should_skip) {
 			free(p_match);
 			continue;
 		}
 
 		char thumb_filename[MAX_IMAGE_FILENAME_SIZE] = {0};
-		snprintf(thumb_filename, MAX_IMAGE_FILENAME_SIZE, "%s/%s/thumb_%s.jpg",
-				webm_location(), p_match->board, p_match->filename);
+		get_thumb_filename(thumb_filename, image_filename, p_match);
 
 		log_msg(LOG_INFO, "Downloading %s%.*s...", p_match->filename, 5, p_match->file_ext);
 
