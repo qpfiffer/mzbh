@@ -88,6 +88,16 @@ void url_decode(const char *src, const size_t src_siz, char *dest) {
 				srcIter += 3;
 				destIter++;
 			}
+			if (src[srcIter + 1] == '5' && src[srcIter + 2] == 'B') {
+				dest[destIter] = '[';
+				srcIter += 3;
+				destIter++;
+			}
+			if (src[srcIter + 1] == '5' && src[srcIter + 2] == 'D') {
+				dest[destIter] = ']';
+				srcIter += 3;
+				destIter++;
+			}
 		}
 
 		dest[destIter] = src[srcIter];
