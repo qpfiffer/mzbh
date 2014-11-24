@@ -425,7 +425,7 @@ int download_images() {
 
 	ol_stack *images_to_download = NULL;
 	images_to_download = build_thread_index();
-	if (!images_to_download) {
+	if (images_to_download == NULL) {
 		log_msg(LOG_WARN, "No images to download.");
 		goto error;
 	}
