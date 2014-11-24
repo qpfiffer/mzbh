@@ -78,22 +78,29 @@ static int static_handler(const http_request *request, http_response *response) 
 	return mmap_file(file_path, response);
 }
 
-static int board_static_handler(const http_request *request, http_response *response) {
-	const char *webm_loc = webm_location();
-
-	char current_board[32] = {0};
+static void get_current_board(char current_board[32], const http_request *request) {
 	const size_t board_len = request->matches[1].rm_eo - request->matches[1].rm_so;
 	const size_t bgr = sizeof(current_board) > board_len ? board_len : sizeof(current_board);
 	strncpy(current_board, request->resource + request->matches[1].rm_so, bgr);
+}
 
+static void get_webm_from_from_board(char file_name_decoded[MAX_IMAGE_FILENAME_SIZE], const http_request *request) {
 	char file_name[MAX_IMAGE_FILENAME_SIZE] = {0};
 	const size_t file_name_len = request->matches[2].rm_eo - request->matches[2].rm_so;
 	const size_t fname_bgr = sizeof(file_name) > file_name_len ? file_name_len : sizeof(file_name);
 	strncpy(file_name, request->resource + request->matches[2].rm_so, fname_bgr);
 
-	char file_name_decoded[MAX_IMAGE_FILENAME_SIZE] = {0};
 	url_decode(file_name, file_name_len, file_name_decoded);
-	//log_msg(LOG_WARN, "Decoded: %s", file_name_decoded);
+}
+
+static int board_static_handler(const http_request *request, http_response *response) {
+	const char *webm_loc = webm_location();
+
+	char current_board[32] = {0};
+	get_current_board(current_board, request);
+
+	char file_name_decoded[MAX_IMAGE_FILENAME_SIZE] = {0};
+	get_webm_from_from_board(file_name_decoded, request);
 
 	const size_t full_path_size = strlen(webm_loc) + strlen("/") +
 								  strlen(current_board) + strlen("/") +
@@ -133,6 +140,36 @@ static int index_handler(const http_request *request, http_response *response) {
 	return 200;
 }
 
+static int webm_handler(const http_request *request, http_response *response) {
+	int rc = mmap_file("./templates/webm.html", response);
+	if (rc != 200)
+		return rc;
+	// 1. Render the mmap()'d file with greshunkel
+	const char *mmapd_region = (char *)response->out;
+	const size_t original_size = response->outsize;
+
+	char current_board[32] = {0};
+	get_current_board(current_board, request);
+
+	size_t new_size = 0;
+	greshunkel_ctext *ctext = gshkl_init_context();
+	gshkl_add_string(ctext, "current_board", current_board);
+
+	greshunkel_var *boards = gshkl_add_array(ctext, "BOARDS");
+	_add_files_in_dir_to_arr(boards, webm_location(), NULL);
+
+	char *rendered = gshkl_render(ctext, mmapd_region, original_size, &new_size);
+	gshkl_free_context(ctext);
+
+	/* Clean up the stuff we're no longer using. */
+	munmap(response->out, original_size);
+	free(response->extra_data);
+
+	/* Make sure the response is kept up to date: */
+	response->outsize = new_size;
+	response->out = (unsigned char *)rendered;
+	return 200;
+}
 static int board_handler(const http_request *request, http_response *response) {
 	int rc = mmap_file("./templates/board.html", response);
 	if (rc != 200)
@@ -142,9 +179,7 @@ static int board_handler(const http_request *request, http_response *response) {
 	const size_t original_size = response->outsize;
 
 	char current_board[32] = {0};
-	const size_t board_len = request->matches[1].rm_eo - request->matches[1].rm_so;
-	const size_t bgr = sizeof(current_board) > board_len ? board_len : sizeof(current_board);
-	strncpy(current_board, request->resource + request->matches[1].rm_so, bgr);
+	get_current_board(current_board, request);
 
 	size_t new_size = 0;
 	greshunkel_ctext *ctext = gshkl_init_context();
@@ -183,7 +218,8 @@ static const route all_routes[] = {
 	{"GET", "^/favicon.ico$", 0, &favicon_handler, &mmap_cleanup},
 	{"GET", "^/static/[a-zA-Z0-9/_-]*\\.[a-zA-Z]*$", 0, &static_handler, &mmap_cleanup},
 	{"GET", "^/chug/([a-zA-Z]*)$", 1, &board_handler, &heap_cleanup},
-	{"GET", "^/chug/([a-zA-Z]*)/((.*)(.webm|.jpg))$", 2, &board_static_handler, &mmap_cleanup},
+	{"GET", "^/slurp/([a-zA-Z]*)/(([a-zA-Z0-9\\-_%]*)(.webm|.jpg))$", 2, &webm_handler, &heap_cleanup},
+	{"GET", "^/chug/([a-zA-Z]*)/(([a-zA-Z0-9\\-_%]*)(.webm|.jpg))$", 2, &board_static_handler, &mmap_cleanup},
 	{"GET", "^/$", 0, &index_handler, &heap_cleanup},
 };
 
