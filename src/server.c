@@ -123,13 +123,13 @@ static int index_handler(const http_request *request, http_response *response) {
 	char *rendered = gshkl_render(ctext, mmapd_region, original_size, &new_size);
 	gshkl_free_context(ctext);
 
-	/* Make sure the response is kept up to date: */
-	response->outsize = new_size;
-	response->out = (unsigned char *)rendered;
-
 	/* Clean up the stuff we're no longer using. */
 	munmap(response->out, original_size);
 	free(response->extra_data);
+
+	/* Make sure the response is kept up to date: */
+	response->outsize = new_size;
+	response->out = (unsigned char *)rendered;
 	return 200;
 }
 
@@ -163,13 +163,13 @@ static int board_handler(const http_request *request, http_response *response) {
 	char *rendered = gshkl_render(ctext, mmapd_region, original_size, &new_size);
 	gshkl_free_context(ctext);
 
-	/* Make sure the response is kept up to date: */
-	response->outsize = new_size;
-	response->out = (unsigned char *)rendered;
-
 	/* Clean up the stuff we're no longer using. */
 	munmap(response->out, original_size);
 	free(response->extra_data);
+
+	/* Make sure the response is kept up to date: */
+	response->outsize = new_size;
+	response->out = (unsigned char *)rendered;
 	return 200;
 }
 
