@@ -158,6 +158,10 @@ static int webm_handler(const http_request *request, http_response *response) {
 	greshunkel_var *boards = gshkl_add_array(ctext, "BOARDS");
 	_add_files_in_dir_to_arr(boards, webm_location(), NULL);
 
+	char file_name_decoded[MAX_IMAGE_FILENAME_SIZE] = {0};
+	get_webm_from_from_board(file_name_decoded, request);
+	gshkl_add_string(ctext, "image", file_name_decoded);
+
 	char *rendered = gshkl_render(ctext, mmapd_region, original_size, &new_size);
 	gshkl_free_context(ctext);
 
