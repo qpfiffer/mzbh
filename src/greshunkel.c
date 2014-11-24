@@ -335,7 +335,6 @@ _interpolate_line(const greshunkel_ctext *ctext, const line current_line, const 
 					new_line_to_add.data = calloc(1, new_line_to_add.size + 1);
 
 					strncpy(new_line_to_add.data, operating_line->data, first_piece_size);
-					/* TODO: DO NOT ASSUME IT IS ALWAYS A STRING! */
 					strncpy(new_line_to_add.data + first_piece_size, tuple->value.str, middle_piece_size);
 					strncpy(new_line_to_add.data + first_piece_size + middle_piece_size,
 							operating_line->data + match[0].rm_eo,
