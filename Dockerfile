@@ -1,4 +1,6 @@
-FROM qpfiffer/muslbase
+FROM phusion/baseimage
+
+RUN apt-get update && apt-get install build-essential -y
 
 RUN mkdir -p /app; mkdir -p /app/webms
 COPY src /app/src

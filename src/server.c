@@ -220,7 +220,7 @@ int http_serve(int main_sock_fd) {
 	struct sockaddr_in hints = {0};
 	hints.sin_family		 = AF_INET;
 	hints.sin_port			 = htons(8080);
-	hints.sin_addr.s_addr	 = htonl(INADDR_LOOPBACK);
+	hints.sin_addr.s_addr	 = htonl(INADDR_ANY);
 
 	rc = bind(main_sock_fd, (struct sockaddr *)&hints, sizeof(hints));
 	if (rc < 0) {
@@ -242,10 +242,12 @@ int http_serve(int main_sock_fd) {
 		if (pthread_create(&workers[i], NULL, acceptor, &main_sock_fd) != 0) {
 			goto error;
 		}
+		log_msg(LOG_INFO, "Thread %i started.", i);
 	}
 
 	for (i = 0; i < NUM_THREADS; i++) {
 		pthread_join(workers[i], NULL);
+		log_msg(LOG_INFO, "Thread %i stopped.", i);
 	}
 
 
