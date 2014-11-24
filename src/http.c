@@ -476,7 +476,7 @@ int download_images() {
 		}
 
 		char thumb_filename[MAX_IMAGE_FILENAME_SIZE] = {0};
-		get_thumb_filename(thumb_filename, image_filename, p_match);
+		get_thumb_filename(thumb_filename, p_match);
 
 		log_msg(LOG_INFO, "Downloading %s%.*s...", p_match->filename, 5, p_match->file_ext);
 
