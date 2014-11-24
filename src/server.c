@@ -222,8 +222,8 @@ static const route all_routes[] = {
 	{"GET", "^/favicon.ico$", 0, &favicon_handler, &mmap_cleanup},
 	{"GET", "^/static/[a-zA-Z0-9/_-]*\\.[a-zA-Z]*$", 0, &static_handler, &mmap_cleanup},
 	{"GET", "^/chug/([a-zA-Z]*)$", 1, &board_handler, &heap_cleanup},
-	{"GET", "^/slurp/([a-zA-Z]*)/(([a-zA-Z0-9\\[\\]\\-_%\\.]*)(.webm|.jpg))$", 2, &webm_handler, &heap_cleanup},
-	{"GET", "^/chug/([a-zA-Z]*)/(([a-zA-Z0-9\\[\\]\\-_%\\.]*)(.webm|.jpg))$", 2, &board_static_handler, &mmap_cleanup},
+	{"GET", "^/slurp/([a-zA-Z]*)/((.*)(.webm|.jpg))$", 2, &webm_handler, &heap_cleanup},
+	{"GET", "^/chug/([a-zA-Z]*)/((.*)(.webm|.jpg))$", 2, &board_static_handler, &mmap_cleanup},
 	{"GET", "^/$", 0, &index_handler, &heap_cleanup},
 };
 
