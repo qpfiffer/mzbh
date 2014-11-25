@@ -10,6 +10,7 @@
 #include <sys/mman.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -44,14 +45,11 @@ static char *thumbnail_for_image(const char *argument) {
 }
 
 static int _add_files_in_dir_to_arr(greshunkel_var *loop, const char *dir, int (*filter_func)(const char *file_name)) {
-	/* What the fuck, posix? */
-	struct dirent dirent_thing = {0};
-
 	DIR *dirstream = opendir(dir);
 	int total = 0;
 	while (1) {
 		struct dirent *result = NULL;
-		readdir_r(dirstream, &dirent_thing, &result);
+		result = readdir(dirstream);
 		if (!result)
 			break;
 		if (result->d_name[0] != '.') {
