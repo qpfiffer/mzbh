@@ -252,6 +252,14 @@ _filter_line(const greshunkel_ctext *ctext, const line *operating_line, const re
 		const regmatch_t function_name = filter_matches[1];
 		const regmatch_t argument = filter_matches[2];
 
+		/* Render the argument out so we can pass it to the filter function. */
+		char rendered_argument[argument.rm_eo - argument.rm_so];
+		memset(rendered_argument, '\0', sizeof(rendered_argument));
+		strncpy(rendered_argument,
+				operating_line->data + argument.rm_so,
+				sizeof(rendered_argument));
+		rendered_argument[sizeof(rendered_argument)] = '\0';
+
 		const greshunkel_ctext *current_ctext = ctext;
 		while (current_ctext != NULL) {
 			ol_stack *current_func = current_ctext->filter_functions;
@@ -262,13 +270,6 @@ _filter_line(const greshunkel_ctext *ctext, const line *operating_line, const re
 						strlen(filter->name));
 				if (strncmp_res == 0) {
 					matched_at_least_once = 1;
-					/* Render the argument out so we can pass it to the filter function. */
-					char rendered_argument[argument.rm_eo - argument.rm_so];
-					memset(rendered_argument, '\0', sizeof(rendered_argument));
-					strncpy(rendered_argument,
-							operating_line->data + argument.rm_so,
-							sizeof(rendered_argument));
-					rendered_argument[sizeof(rendered_argument)] = '\0';
 					/* Pass it to the filter function. */
 					char *filter_result = filter->filter_func(rendered_argument);
 					const size_t result_size = strlen(filter_result);
