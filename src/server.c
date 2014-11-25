@@ -45,11 +45,18 @@ static char *thumbnail_for_image(const char *argument) {
 }
 
 static int _add_files_in_dir_to_arr(greshunkel_var *loop, const char *dir, int (*filter_func)(const char *file_name)) {
+	/* Apparently readdir_r can be stack-smashed so we do it on the heap
+	 * instead.
+	 */
+	size_t dirent_siz = offsetof(struct dirent, d_name) +
+							  pathconf(dir, _PC_NAME_MAX) + 1;
+	struct dirent *dirent_thing = calloc(1, dirent_siz);
+
 	DIR *dirstream = opendir(dir);
 	int total = 0;
 	while (1) {
 		struct dirent *result = NULL;
-		result = readdir(dirstream);
+		readdir_r(dirstream, dirent_thing, &result);
 		if (!result)
 			break;
 		if (result->d_name[0] != '.') {
@@ -65,6 +72,7 @@ static int _add_files_in_dir_to_arr(greshunkel_var *loop, const char *dir, int (
 		}
 	}
 	closedir(dirstream);
+	free(dirent_thing);
 
 	return total;
 }
