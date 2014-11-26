@@ -18,14 +18,14 @@ int hash_image(const char *file_path, char outbuf[128]) {
 	}
 
 	data_ptr = mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-	unsigned char hash[IMAGE_HASH_SIZE/8] = {0};
+	unsigned char hash[HASH_ARRAY_SIZE] = {0};
 
 	if (Hash(IMAGE_HASH_SIZE, data_ptr, st.st_size, hash) != 0) {
 		goto error;
 	}
 
 	int j = 0;
-	for (j=0; j<(IMAGE_HASH_SIZE/8); j++)
+	for (j = 0; j < sizeof(hash); j++)
 		sprintf(outbuf + (j * 2), "%02X", hash[j]);
 	munmap(data_ptr, st.st_size);
 	close(fd);
