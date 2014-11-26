@@ -1,12 +1,12 @@
 // vim: noet ts=4 sw=4
 #pragma once
-
-// Size of BMW hash
-#define IMAGE_HASH_SIZE 1024
-#define HASH_ARRAY_SIZE IMAGE_HASH_SIZE/8
-
-/* Namespaces for when we create our keys */
-#define WAIFU_NMSPC waifu
-#define WEBM_NMSPC webm
+#include "common_defs.h"
 
 int hash_image(const char *file_path, char outbuf[128]);
+
+/* Attempts to add an image to the database.
+ * Returns 0 if the image was a duplicate, in which case an alias
+ * was added.
+ * Returns 1 if the image was added and it was new.
+ */
+int add_image_to_db(const char *file_path, const char board[MAX_BOARD_NAME_SIZE]);

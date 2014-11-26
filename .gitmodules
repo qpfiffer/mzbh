@@ -1,0 +1,3 @@
+[submodule "OlegDB"]
+	path = OlegDB
+	url = https://github.com/infoforcefeed/OlegDB.git

@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdio.h>
 
+#include "common_defs.h"
 #include "db.h"
 #include "logging.h"
 #include "sha3api_ref.h"
@@ -17,7 +18,7 @@ static void usage(const char *program_name) {
 	log_msg(LOG_ERR, "full_scan		--	Scans the entire webm directory and makes sure everything is in the DB.", program_name);
 }
 
-static int _add_directory(const char *directory_to_open) {
+static int _add_directory(const char *directory_to_open, const char board[MAX_BOARD_NAME_SIZE]) {
 	struct dirent dirent_thing = {0};
 
 	DIR *dirstream = opendir(directory_to_open);
@@ -33,9 +34,7 @@ static int _add_directory(const char *directory_to_open) {
 			memset(full_path, '\0', full_path_siz);
 			sprintf(full_path, "%s/%s", directory_to_open, result->d_name);
 
-			char outbuf[128] = {0};
-			if (hash_image(full_path, outbuf))
-				log_msg(LOG_FUN, "%s: %s", result->d_name, outbuf);
+			add_image_to_db(full_path, board);
 			total++;
 		}
 	}
@@ -59,10 +58,12 @@ static int full_scan() {
 			/* +1 for \0, +1 for an extra / */
 			const size_t FULLPATH_SIZ = strlen(WEBMS_LOCATION) + strlen(result->d_name) + 2;
 			char full_path[FULLPATH_SIZ];
+			char board_name[MAX_BOARD_NAME_SIZE] = {0};
 			memset(full_path, '\0', FULLPATH_SIZ);
 			snprintf(full_path, FULLPATH_SIZ, "%s/%s", WEBMS_LOCATION, result->d_name);
+			strncpy(board_name, result->d_name, MAX_BOARD_NAME_SIZE);
 
-			total += _add_directory(full_path);
+			total += _add_directory(full_path, board_name);
 		}
 	}
 	closedir(dirstream);

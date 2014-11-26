@@ -8,7 +8,7 @@
 #include "db.h"
 #include "sha3api_ref.h"
 
-int hash_image(const char *file_path, char outbuf[128]) {
+int hash_image(const char *file_path, char outbuf[HASH_ARRAY_SIZE]) {
 	int fd = open(file_path, O_RDONLY);
 	unsigned char *data_ptr = NULL;
 
@@ -35,5 +35,9 @@ error:
 	if (data_ptr != NULL)
 		munmap(data_ptr, st.st_size);
 	close(fd);
+	return 0;
+}
+
+int add_image_to_db(const char *file_path, const char board[MAX_BOARD_NAME_SIZE]) {
 	return 0;
 }
