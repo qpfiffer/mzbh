@@ -4,6 +4,10 @@
 
 int hash_image(const char *file_path, char outbuf[128]);
 
+/* Opens the waifu db.
+ * Returns 0 on failure, 1 on success. */
+int open_db(const char *location);
+
 /* Attempts to add an image to the database.
  * Returns 0 if the image was a duplicate, in which case an alias
  * was added.

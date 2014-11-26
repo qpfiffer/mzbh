@@ -8,6 +8,10 @@
 #include "db.h"
 #include "sha3api_ref.h"
 
+int open_db(const char *location) {
+	return 0;
+}
+
 int hash_image(const char *file_path, char outbuf[HASH_ARRAY_SIZE]) {
 	int fd = open(file_path, O_RDONLY);
 	unsigned char *data_ptr = NULL;
