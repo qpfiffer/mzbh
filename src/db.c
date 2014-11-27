@@ -6,11 +6,10 @@
 #include <unistd.h>
 
 #include "db.h"
+#include "logging.h"
+#include "models.h"
 #include "sha3api_ref.h"
-
-int open_db(const char *location) {
-	return 0;
-}
+#include "utils.h"
 
 int hash_image(const char *file_path, char outbuf[HASH_ARRAY_SIZE]) {
 	int fd = open(file_path, O_RDONLY);
@@ -42,6 +41,40 @@ error:
 	return 0;
 }
 
+webm *get_image(const char image_hash[HASH_ARRAY_SIZE]) {
+	return NULL;
+}
+
 int add_image_to_db(const char *file_path, const char board[MAX_BOARD_NAME_SIZE]) {
+	char image_hash[HASH_ARRAY_SIZE] = {0};
+	if (!hash_image(file_path, image_hash))
+		return 1;
+
+	webm *_old_webm = get_image(image_hash);
+	if (_old_webm == NULL) {
+		time_t modified_time = get_file_creation_date(file_path);
+		if (modified_time == 0) {
+			log_msg(LOG_ERR, "File does not exist.");
+			return 1;
+		}
+		size_t size = get_file_size(file_path);
+		if (size == 0) {
+			log_msg(LOG_ERR, "File does not exist.");
+			return 1;
+		}
+
+		webm to_insert = {
+			.is_alias = 0,
+			.file_hash = {0},
+			.filename = {0},
+			.board = {0},
+			.created_at = modified_time,
+			.size = size
+		};
+		char *serialized = serialize_webm(&to_insert);
+		log_msg(LOG_INFO, "Serialized: %s", serialized);
+		free(serialized);
+	} else {
+	}
 	return 0;
 }

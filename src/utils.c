@@ -105,3 +105,17 @@ void url_decode(const char *src, const size_t src_siz, char *dest) {
 		srcIter++;
 	}
 }
+
+time_t get_file_creation_date(const char *file_path) {
+	struct stat st = {0};
+	if (stat(file_path, &st) == -1)
+		return 0;
+	return st.st_mtime;
+}
+
+size_t get_file_size(const char *file_path) {
+	struct stat st = {0};
+	if (stat(file_path, &st) == -1)
+		return 0;
+	return st.st_size;
+}

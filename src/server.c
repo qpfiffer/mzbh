@@ -84,9 +84,9 @@ static int static_handler(const http_request *request, http_response *response) 
 	return mmap_file(file_path, response);
 }
 
-static void get_current_board(char current_board[32], const http_request *request) {
+static void get_current_board(char current_board[MAX_BOARD_NAME_SIZE], const http_request *request) {
 	const size_t board_len = request->matches[1].rm_eo - request->matches[1].rm_so;
-	const size_t bgr = sizeof(current_board) > board_len ? board_len : sizeof(current_board);
+	const size_t bgr = MAX_BOARD_NAME_SIZE > board_len ? board_len : MAX_BOARD_NAME_SIZE;
 	strncpy(current_board, request->resource + request->matches[1].rm_so, bgr);
 }
 
@@ -102,7 +102,7 @@ static void get_webm_from_from_board(char file_name_decoded[MAX_IMAGE_FILENAME_S
 static int board_static_handler(const http_request *request, http_response *response) {
 	const char *webm_loc = webm_location();
 
-	char current_board[32] = {0};
+	char current_board[MAX_BOARD_NAME_SIZE] = {0};
 	get_current_board(current_board, request);
 
 	char file_name_decoded[MAX_IMAGE_FILENAME_SIZE] = {0};
@@ -154,7 +154,7 @@ static int webm_handler(const http_request *request, http_response *response) {
 	const char *mmapd_region = (char *)response->out;
 	const size_t original_size = response->outsize;
 
-	char current_board[32] = {0};
+	char current_board[MAX_BOARD_NAME_SIZE] = {0};
 	get_current_board(current_board, request);
 
 	size_t new_size = 0;
@@ -188,7 +188,7 @@ static int board_handler(const http_request *request, http_response *response) {
 	const char *mmapd_region = (char *)response->out;
 	const size_t original_size = response->outsize;
 
-	char current_board[32] = {0};
+	char current_board[MAX_BOARD_NAME_SIZE] = {0};
 	get_current_board(current_board, request);
 
 	size_t new_size = 0;

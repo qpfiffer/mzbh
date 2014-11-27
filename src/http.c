@@ -55,13 +55,13 @@ get_non_colliding_image_filename(char fname[MAX_IMAGE_FILENAME_SIZE],
 			p_match->filename, (int)sizeof(p_match->file_ext),
 			p_match->file_ext);
 
-	struct stat ifname = {0};
-	if (stat(fname, &ifname) == -1) {
+	size_t fsize = get_file_size(fname);
+	if (fsize == 0) {
 		return 0;
-	} else if (ifname.st_size == p_match->size) {
+	} else if (fsize == p_match->size) {
 		log_msg(LOG_INFO, "Skipping %s.", fname);
 		return 1;
-	} else if (ifname.st_size != p_match->size) {
+	} else if (fsize != p_match->size) {
 		log_msg(LOG_WARN, "Found duplicate filename for %s with incorrect size. Bad download?",
 				fname);
 		return 0;
@@ -317,6 +317,7 @@ static void ensure_directory_for_board(const char *board) {
 
 static ol_stack *build_thread_index() {
 	int request_fd = 0;
+	ol_stack *images_to_download = NULL;
 	request_fd = connect_to_host(FOURCHAN_API_HOST);
 	if (request_fd < 0) {
 		log_msg(LOG_ERR, "Could not connect to %s.", FOURCHAN_API_HOST);
@@ -325,7 +326,6 @@ static ol_stack *build_thread_index() {
 	log_msg(LOG_INFO, "Connected to %s.", FOURCHAN_API_HOST);
 
 	/* This is where we'll queue up images to be downloaded. */
-	ol_stack *images_to_download = NULL;
 	images_to_download = malloc(sizeof(ol_stack));
 	images_to_download->next = NULL;
 	images_to_download->data = NULL;

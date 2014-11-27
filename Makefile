@@ -1,6 +1,6 @@
 CFLAGS=-Werror -Wall -O2 -g3
 INCLUDES=-pthread -I./include/
-CC=gcc
+CC=clang
 NAME=waifu.xyz
 
 
@@ -20,9 +20,9 @@ greshunkel_test: greshunkel_test.o greshunkel.o stack.o
 	$(CC) $(CFLAGS) $(LIB_INCLUDES) $(INCLUDES) -c $<
 
 ctl: dbctl
-dbctl: blue_midnight_wish.o utils.o dbctl.o db.o logging.o
+dbctl: models.o blue_midnight_wish.o parson.o utils.o dbctl.o db.o logging.o
 	$(CC) $(CLAGS) $(LIB_INCLUDES) $(INCLUDES) -o dbctl $^ -lm $(LIBS)
 
 bin: $(NAME)
-$(NAME): blue_midnight_wish.o grengine.o greshunkel.o db.o utils.o logging.o server.o stack.o parse.o http.o main.o parson.o
+$(NAME): blue_midnight_wish.o models.o grengine.o greshunkel.o db.o utils.o logging.o server.o stack.o parse.o http.o main.o parson.o
 	$(CC) $(CLAGS) $(LIB_INCLUDES) $(INCLUDES) -o $(NAME) $^ -lm $(LIBS)

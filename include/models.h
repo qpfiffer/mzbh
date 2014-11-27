@@ -8,6 +8,8 @@ typedef struct webm {
 	char file_hash[HASH_ARRAY_SIZE];
 	char filename[MAX_IMAGE_FILENAME_SIZE];
 	char board[MAX_BOARD_NAME_SIZE];
-	struct tm created_at;
+	time_t created_at;
 	size_t size;
 } webm;
+
+char *serialize_webm(const webm *to_serialize);

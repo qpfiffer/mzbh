@@ -1,7 +1,8 @@
 // vim: noet ts=4 sw=4
 #pragma once
-#include <stdlib.h>
 #include <math.h>
+#include <stdlib.h>
+#include <time.h>
 
 #define INT_LEN(x) floor(log10(abs(x))) + 1
 
@@ -15,3 +16,6 @@ char *strnstr(const char *haystack, const char *needle, size_t len);
 /* Constant variables in global space. Woooo! */
 const char *webm_location();
 const char *db_location();
+
+time_t get_file_creation_date(const char *file_path);
+size_t get_file_size(const char *file_path);
