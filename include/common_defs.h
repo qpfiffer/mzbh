@@ -2,7 +2,7 @@
 #pragma once
 
 /* Size of BMW hash */
-#define IMAGE_HASH_SIZE 512
+#define IMAGE_HASH_SIZE 256
 #define HASH_ARRAY_SIZE IMAGE_HASH_SIZE/8
 
 /* Namespaces for when we create our keys */
