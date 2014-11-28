@@ -73,6 +73,9 @@ int add_image_to_db(const char *file_path, const char board[MAX_BOARD_NAME_SIZE]
 			.size = size
 		};
 		memcpy(to_insert.file_hash, image_hash, sizeof(to_insert.file_hash));
+		memcpy(to_insert.filename, file_path, sizeof(to_insert.filename));
+		memcpy(to_insert.board, board, sizeof(to_insert.board));
+
 		char *serialized = serialize_webm(&to_insert);
 		log_msg(LOG_INFO, "Serialized: %s", serialized);
 		free(serialized);
