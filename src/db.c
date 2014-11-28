@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "db.h"
@@ -11,7 +12,7 @@
 #include "sha3api_ref.h"
 #include "utils.h"
 
-int hash_image(const char *file_path, char outbuf[HASH_ARRAY_SIZE]) {
+int hash_image(const char *file_path, char outbuf[HASH_IMAGE_STR_SIZE]) {
 	int fd = open(file_path, O_RDONLY);
 	unsigned char *data_ptr = NULL;
 
@@ -28,7 +29,7 @@ int hash_image(const char *file_path, char outbuf[HASH_ARRAY_SIZE]) {
 	}
 
 	int j = 0;
-	for (j = 0; j < sizeof(hash); j++)
+	for (j = 0; j < HASH_ARRAY_SIZE; j++)
 		sprintf(outbuf + (j * 2), "%02X", hash[j]);
 	munmap(data_ptr, st.st_size);
 	close(fd);
@@ -46,7 +47,7 @@ webm *get_image(const char image_hash[HASH_ARRAY_SIZE]) {
 }
 
 int add_image_to_db(const char *file_path, const char board[MAX_BOARD_NAME_SIZE]) {
-	char image_hash[HASH_ARRAY_SIZE] = {0};
+	char image_hash[HASH_IMAGE_STR_SIZE] = {0};
 	if (!hash_image(file_path, image_hash))
 		return 1;
 
@@ -71,6 +72,7 @@ int add_image_to_db(const char *file_path, const char board[MAX_BOARD_NAME_SIZE]
 			.created_at = modified_time,
 			.size = size
 		};
+		memcpy(to_insert.file_hash, image_hash, sizeof(to_insert.file_hash));
 		char *serialized = serialize_webm(&to_insert);
 		log_msg(LOG_INFO, "Serialized: %s", serialized);
 		free(serialized);

@@ -2,7 +2,7 @@
 #pragma once
 #include "common_defs.h"
 
-int hash_image(const char *file_path, char outbuf[128]);
+int hash_image(const char *file_path, char outbuf[HASH_IMAGE_STR_SIZE]);
 
 /* Attempts to add an image to the database.
  * Returns 0 on success.
