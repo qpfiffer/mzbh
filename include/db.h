@@ -4,6 +4,8 @@
 
 int hash_image(const char *file_path, char outbuf[HASH_IMAGE_STR_SIZE]);
 
+char *fetch_data_from_db(const char key[MAX_KEY_SIZE]);
+
 /* Attempts to add an image to the database.
  * Returns 0 on success.
  */

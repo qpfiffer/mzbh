@@ -1,8 +1,13 @@
 // vim: noet ts=4 sw=4
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "models.h"
 #include "parson.h"
+
+void create_webm_key(const char *file_hash, char outbuf[MAX_KEY_SIZE]) {
+	snprintf(outbuf, MAX_KEY_SIZE, "%s%s%s", WAIFU_NMSPC, WEBM_NMSPC, file_hash);
+}
 
 char *serialize_webm(const webm *to_serialize) {
 	JSON_Value *root_value = json_value_init_object();

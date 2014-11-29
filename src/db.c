@@ -42,7 +42,17 @@ error:
 	return 0;
 }
 
+char *fetch_data_from_db(const char key[MAX_KEY_SIZE]) {
+	char *data = NULL;
+	return data;
+}
+
 webm *get_image(const char image_hash[HASH_ARRAY_SIZE]) {
+	char key_name[MAX_KEY_SIZE] = {0};
+	create_webm_key(image_hash, key_name);
+	char *json = fetch_data_from_db(key_name);
+	log_msg(LOG_INFO, "Json from DB: %s", json);
+	/* TODO: Deserialize webm from json here. */
 	return NULL;
 }
 
