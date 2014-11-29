@@ -10,7 +10,7 @@ typedef struct thread_match {
 
 typedef struct post_match {
 	char board[MAX_BOARD_NAME_SIZE];
-	char filename[32];
+	char filename[MAX_IMAGE_FILENAME_SIZE];
 	char file_ext[6];
 	char post_number[32];
 	size_t size;

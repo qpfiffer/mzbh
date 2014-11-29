@@ -10,7 +10,6 @@
 #include "utils.h"
 
 static const char *WEBMS_LOCATION = NULL;
-static const char *DB_LOCATION = NULL;
 
 
 static void usage(const char *program_name) {
@@ -78,10 +77,8 @@ int main(int argc, char *argv[]) {
 	}
 
 	WEBMS_LOCATION = webm_location();
-	DB_LOCATION = db_location();
 
 	log_msg(LOG_INFO, "Using webms dir: %s", WEBMS_LOCATION);
-	log_msg(LOG_INFO, "Using db file: %s", DB_LOCATION);
 
 	int i = 1;
 	for (;i < argc; i++) {
@@ -89,7 +86,8 @@ int main(int argc, char *argv[]) {
 
 		if (strncmp(current_arg, "full_scan", strlen("full_scan")) == 0) {
 			full_scan();
+			return 0;
 		}
 	}
-	return 0;
+	return 1;
 }

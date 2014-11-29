@@ -10,9 +10,9 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "utils.h"
 #include "http.h"
 #include "parse.h"
-#include "utils.h"
 #include "logging.h"
 #include "models.h"
 
@@ -46,36 +46,6 @@ const char THUMB_REQUEST[] =
 	"User-Agent: Mozilla/5.0 (Windows NT 5.1; rv:31.0) Gecko/20100101 Firefox/31.0\r\n"
 	"Host: t.4cdn.org\r\n"
 	"Accept: */*\r\n\r\n";
-
-static int
-get_non_colliding_image_filename(char fname[MAX_IMAGE_FILENAME_SIZE],
-				   const post_match *p_match) {
-	snprintf(fname, MAX_IMAGE_FILENAME_SIZE, "%s/%s/%zu_%s%.*s",
-			webm_location(), p_match->board, p_match->size,
-			p_match->filename, (int)sizeof(p_match->file_ext),
-			p_match->file_ext);
-
-	size_t fsize = get_file_size(fname);
-	if (fsize == 0) {
-		return 0;
-	} else if (fsize == p_match->size) {
-		log_msg(LOG_INFO, "Skipping %s.", fname);
-		return 1;
-	} else if (fsize != p_match->size) {
-		log_msg(LOG_WARN, "Found duplicate filename for %s with incorrect size. Bad download?",
-				fname);
-		return 0;
-	}
-
-	return 0;
-}
-
-static void
-get_thumb_filename(
-		char thumb_filename[MAX_IMAGE_FILENAME_SIZE], const post_match *p_match) {
-	snprintf(thumb_filename, MAX_IMAGE_FILENAME_SIZE, "%s/%s/thumb_%zu_%s.jpg",
-			webm_location(), p_match->board, p_match->size, p_match->filename);
-}
 
 static char *receive_chunked_http(const int request_fd) {
 	char *raw_buf = NULL;

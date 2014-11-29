@@ -1,13 +1,21 @@
 // vim: noet ts=4 sw=4
 #include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
 #include <sys/stat.h>
+#include "logging.h"
+#include "models.h"
+#include "parse.h"
 #include "utils.h"
 
 const char WEBMS_DIR_DEFAULT[] = "./webms";
 const char *WEBMS_DIR = NULL;
 
-const char DB_LOCATION_DEFAULT[] = "./webms/waifu.db";
-const char *DB_LOCATION = NULL;
+const char DB_HOST_DEFAULT[] = "127.0.0.1";
+const char *DB_HOST = NULL;
+
+const int DB_PORT_DEFAULT = 38080;
+const int DB_PORT = 0;
 
 const char *webm_location() {
 	if (!WEBMS_DIR) {
@@ -22,17 +30,30 @@ const char *webm_location() {
 	return WEBMS_DIR;
 }
 
-const char *db_location() {
-	if (!DB_LOCATION) {
-		char *env_var = getenv("WFU_DB_LOCATION");
-		if (!env_var) {
-			DB_LOCATION = DB_LOCATION_DEFAULT;
-		} else {
-			DB_LOCATION = env_var;
-		}
+int get_non_colliding_image_filename(char fname[MAX_IMAGE_FILENAME_SIZE], const post_match *p_match) {
+	snprintf(fname, MAX_IMAGE_FILENAME_SIZE, "%s/%s/%zu_%s%.*s",
+			webm_location(), p_match->board, p_match->size,
+			p_match->filename, (int)sizeof(p_match->file_ext),
+			p_match->file_ext);
+
+	size_t fsize = get_file_size(fname);
+	if (fsize == 0) {
+		return 0;
+	} else if (fsize == p_match->size) {
+		log_msg(LOG_INFO, "Skipping %s.", fname);
+		return 1;
+	} else if (fsize != p_match->size) {
+		log_msg(LOG_WARN, "Found duplicate filename for %s with incorrect size. Bad download?",
+				fname);
+		return 0;
 	}
 
-	return DB_LOCATION;
+	return 0;
+}
+
+void get_thumb_filename(char thumb_filename[MAX_IMAGE_FILENAME_SIZE], const post_match *p_match) {
+	snprintf(thumb_filename, MAX_IMAGE_FILENAME_SIZE, "%s/%s/thumb_%zu_%s.jpg",
+			webm_location(), p_match->board, p_match->size, p_match->filename);
 }
 
 int endswith(const char *string, const char *suffix) {
