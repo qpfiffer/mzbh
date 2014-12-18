@@ -234,7 +234,7 @@ int respond(const int accept_fd, const route *all_routes, const size_t route_num
 	assert(matched_response != NULL);
 
 	/* Embed the handler's text into the header: */
-	const size_t integer_length = INT_LEN(response.outsize);
+	const size_t integer_length = UINT_LEN(response.outsize);
 	const size_t header_size = strlen(response.mimetype) + strlen(matched_response->message) + integer_length - strlen("%s") - strlen("%zu");
 	const size_t actual_response_siz = response.outsize + header_size;
 	actual_response = calloc(1, actual_response_siz + 1);
