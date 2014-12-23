@@ -9,6 +9,10 @@ void create_webm_key(const char *file_hash, char outbuf[MAX_KEY_SIZE]) {
 	snprintf(outbuf, MAX_KEY_SIZE, "%s%s%s", WAIFU_NMSPC, WEBM_NMSPC, file_hash);
 }
 
+webm *deserialize_webm(char *json) {
+	return NULL;
+}
+
 char *serialize_webm(const webm *to_serialize) {
 	JSON_Value *root_value = json_value_init_object();
 	JSON_Object *root_object = json_value_get_object(root_value);
