@@ -62,34 +62,38 @@ int add_image_to_db(const char *file_path, const char board[MAX_BOARD_NAME_SIZE]
 		return 1;
 
 	webm *_old_webm = get_image(image_hash);
+
+	int alias = 1;
 	if (_old_webm == NULL) {
-		time_t modified_time = get_file_creation_date(file_path);
-		if (modified_time == 0) {
-			log_msg(LOG_ERR, "File does not exist.");
-			return 1;
-		}
-		size_t size = get_file_size(file_path);
-		if (size == 0) {
-			log_msg(LOG_ERR, "File does not exist.");
-			return 1;
-		}
-
-		webm to_insert = {
-			.is_alias = 0,
-			.file_hash = {0},
-			.filename = {0},
-			.board = {0},
-			.created_at = modified_time,
-			.size = size
-		};
-		memcpy(to_insert.file_hash, image_hash, sizeof(to_insert.file_hash));
-		memcpy(to_insert.filename, file_path, sizeof(to_insert.filename));
-		memcpy(to_insert.board, board, sizeof(to_insert.board));
-
-		char *serialized = serialize_webm(&to_insert);
-		log_msg(LOG_INFO, "Serialized: %s", serialized);
-		free(serialized);
-	} else {
+		alias = 0;
 	}
+
+	time_t modified_time = get_file_creation_date(file_path);
+	if (modified_time == 0) {
+		log_msg(LOG_ERR, "File does not exist.");
+		return 1;
+	}
+
+	size_t size = get_file_size(file_path);
+	if (size == 0) {
+		log_msg(LOG_ERR, "File does not exist.");
+		return 1;
+	}
+
+	webm to_insert = {
+		.is_alias = alias,
+		.file_hash = {0},
+		.filename = {0},
+		.board = {0},
+		.created_at = modified_time,
+		.size = size
+	};
+	memcpy(to_insert.file_hash, image_hash, sizeof(to_insert.file_hash));
+	memcpy(to_insert.filename, file_path, sizeof(to_insert.filename));
+	memcpy(to_insert.board, board, sizeof(to_insert.board));
+
+	char *serialized = serialize_webm(&to_insert);
+	log_msg(LOG_INFO, "Serialized: %s", serialized);
+	free(serialized);
 	return 0;
 }
