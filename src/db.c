@@ -42,18 +42,37 @@ error:
 	return 0;
 }
 
-char *fetch_data_from_db(const char key[MAX_KEY_SIZE]) {
+char *fetch_data_from_db(const char key[static MAX_KEY_SIZE]) {
 	char *data = NULL;
 	return data;
 }
 
-webm *get_image(const char image_hash[HASH_ARRAY_SIZE]) {
-	char key_name[MAX_KEY_SIZE] = {0};
-	create_webm_key(image_hash, key_name);
-	char *json = fetch_data_from_db(key_name);
+int store_data_in_db(const char key[static MAX_KEY_SIZE], const void *val, const size_t vlen) {
+	return 0;
+}
+
+webm *get_image(const char image_hash[static HASH_ARRAY_SIZE]) {
+	char key[MAX_KEY_SIZE] = {0};
+	create_webm_key(image_hash, key);
+
+	char *json = fetch_data_from_db(key);
 	log_msg(LOG_INFO, "Json from DB: %s", json);
+
 	/* TODO: Deserialize webm from json here. */
 	return NULL;
+}
+
+int set_image(const webm *webm) {
+	char key[MAX_KEY_SIZE] = {0};
+	create_webm_key(webm->file_hash, key);
+
+	char *serialized = serialize_webm(webm);
+	log_msg(LOG_INFO, "Serialized: %s", serialized);
+
+	int ret = store_data_in_db(key, serialized, strlen(serialized));
+	free(serialized);
+
+	return ret;
 }
 
 int add_image_to_db(const char *file_path, const char board[MAX_BOARD_NAME_SIZE]) {
@@ -92,8 +111,6 @@ int add_image_to_db(const char *file_path, const char board[MAX_BOARD_NAME_SIZE]
 	memcpy(to_insert.filename, file_path, sizeof(to_insert.filename));
 	memcpy(to_insert.board, board, sizeof(to_insert.board));
 
-	char *serialized = serialize_webm(&to_insert);
-	log_msg(LOG_INFO, "Serialized: %s", serialized);
-	free(serialized);
+	set_image(&to_insert);
 	return 0;
 }
