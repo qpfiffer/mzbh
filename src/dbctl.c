@@ -2,6 +2,7 @@
 #include <dirent.h>
 #include <string.h>
 #include <stdio.h>
+#include <sys/stat.h>
 
 #include "common_defs.h"
 #include "db.h"
@@ -45,15 +46,22 @@ static int _add_directory(const char *directory_to_open, const char board[MAX_BO
 static int full_scan() {
 	struct dirent dirent_thing = {0};
 
-	DIR *dirstream = opendir(WEBMS_LOCATION);
+	DIR *dirstream = opendir(webm_location());
 	int total = 0;
 	while (1) {
 		struct dirent *result = NULL;
 		readdir_r(dirstream, &dirent_thing, &result);
 		if (!result)
 			break;
+		/* We have to use stat here because d_type isn't supported on all filesystems. */
+		char dir_name[64] = {0};
+
+		sprintf(dir_name, "%s/%s", webm_location(), result->d_name);
+		struct stat st = {0};
+		stat(dir_name, &st);
+
 		/* webms are organized by board */
-		if (result->d_name[0] != '.' && result->d_type == DT_DIR) {
+		if (result->d_name[0] != '.' && S_ISDIR(st.st_mode)) {
 			/* +1 for \0, +1 for an extra / */
 			const size_t FULLPATH_SIZ = strlen(WEBMS_LOCATION) + strlen(result->d_name) + 2;
 			char full_path[FULLPATH_SIZ];

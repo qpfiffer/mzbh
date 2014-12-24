@@ -7,6 +7,7 @@
 #include <unistd.h>
 
 #include "db.h"
+#include "http.h"
 #include "logging.h"
 #include "models.h"
 #include "sha3api_ref.h"
@@ -44,6 +45,10 @@ error:
 
 unsigned char *fetch_data_from_db(const char key[static MAX_KEY_SIZE]) {
 	unsigned char *data = NULL;
+
+	int sock = connect_to_host_with_port(DB_HOST, DB_PORT);
+	close(sock);
+
 	return data;
 }
 

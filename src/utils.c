@@ -30,6 +30,23 @@ const char *webm_location() {
 	return WEBMS_DIR;
 }
 
+void ensure_directory_for_board(const char *board) {
+	/* Long enough for WEBMS_DIR, a /, the board and a NULL terminator */
+	const size_t buf_siz = strlen(webm_location()) + sizeof(char) * 2 + strnlen(board, MAX_BOARD_NAME_SIZE);
+	char to_create[buf_siz];
+	memset(to_create, '\0', buf_siz);
+
+	/* ./webms/b */
+	snprintf(to_create, buf_siz, "%s/%s", webm_location(), board);
+
+	struct stat st = {0};
+	if (stat(to_create, &st) == -1) {
+		log_msg(LOG_WARN, "Creating directory %s.", to_create);
+		mkdir(to_create, 0755);
+	}
+}
+
+
 int get_non_colliding_image_filename(char fname[MAX_IMAGE_FILENAME_SIZE], const post_match *p_match) {
 	snprintf(fname, MAX_IMAGE_FILENAME_SIZE, "%s/%s/%zu_%s%.*s",
 			webm_location(), p_match->board, p_match->size,

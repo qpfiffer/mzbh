@@ -2,6 +2,9 @@
 #pragma once
 #include "common_defs.h"
 
+#define DB_HOST "localhost"
+#define DB_PORT "38080"
+
 int hash_image(const char *file_path, char outbuf[HASH_IMAGE_STR_SIZE]);
 
 unsigned char *fetch_data_from_db(const char key[MAX_KEY_SIZE]);

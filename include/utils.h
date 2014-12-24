@@ -22,6 +22,8 @@ const char *db_location();
 time_t get_file_creation_date(const char *file_path);
 size_t get_file_size(const char *file_path);
 
+void ensure_directory_for_board(const char *board);
+
 struct post_match;
 int get_non_colliding_image_filename(char fname[MAX_IMAGE_FILENAME_SIZE], const struct post_match *p_match);
 void get_thumb_filename(char thumb_filename[MAX_IMAGE_FILENAME_SIZE], const struct post_match *p_match);
