@@ -11,5 +11,5 @@
 #define WAIFU_NMSPC "waifu"
 #define WEBM_NMSPC "webm"
 
-#define MAX_IMAGE_FILENAME_SIZE 1024
+#define MAX_IMAGE_FILENAME_SIZE 255
 #define MAX_BOARD_NAME_SIZE 16

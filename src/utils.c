@@ -47,7 +47,7 @@ void ensure_directory_for_board(const char *board) {
 }
 
 
-int get_non_colliding_image_filename(char fname[MAX_IMAGE_FILENAME_SIZE], const post_match *p_match) {
+int get_non_colliding_image_filename(char fname[static MAX_IMAGE_FILENAME_SIZE], const post_match *p_match) {
 	snprintf(fname, MAX_IMAGE_FILENAME_SIZE, "%s/%s/%zu_%s%.*s",
 			webm_location(), p_match->board, p_match->size,
 			p_match->filename, (int)sizeof(p_match->file_ext),
@@ -68,7 +68,7 @@ int get_non_colliding_image_filename(char fname[MAX_IMAGE_FILENAME_SIZE], const 
 	return 0;
 }
 
-void get_thumb_filename(char thumb_filename[MAX_IMAGE_FILENAME_SIZE], const post_match *p_match) {
+void get_thumb_filename(char thumb_filename[static MAX_IMAGE_FILENAME_SIZE], const post_match *p_match) {
 	snprintf(thumb_filename, MAX_IMAGE_FILENAME_SIZE, "%s/%s/thumb_%zu_%s.jpg",
 			webm_location(), p_match->board, p_match->size, p_match->filename);
 }

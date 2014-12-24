@@ -22,7 +22,7 @@ typedef struct webm {
 	size_t size;
 } webm;
 
-void create_webm_key(const char *file_hash, char outbuf[MAX_KEY_SIZE]);
+void create_webm_key(const char *file_hash, char outbuf[static MAX_KEY_SIZE]);
 char *serialize_webm(const webm *to_serialize);
 webm *deserialize_webm(char *json);
 

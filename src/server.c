@@ -84,13 +84,13 @@ static int static_handler(const http_request *request, http_response *response) 
 	return mmap_file(file_path, response);
 }
 
-static void get_current_board(char current_board[MAX_BOARD_NAME_SIZE], const http_request *request) {
+static void get_current_board(char current_board[static MAX_BOARD_NAME_SIZE], const http_request *request) {
 	const size_t board_len = request->matches[1].rm_eo - request->matches[1].rm_so;
 	const size_t bgr = MAX_BOARD_NAME_SIZE > board_len ? board_len : MAX_BOARD_NAME_SIZE;
 	strncpy(current_board, request->resource + request->matches[1].rm_so, bgr);
 }
 
-static void get_webm_from_from_board(char file_name_decoded[MAX_IMAGE_FILENAME_SIZE], const http_request *request) {
+static void get_webm_from_from_board(char file_name_decoded[static MAX_IMAGE_FILENAME_SIZE], const http_request *request) {
 	char file_name[MAX_IMAGE_FILENAME_SIZE] = {0};
 	const size_t file_name_len = request->matches[2].rm_eo - request->matches[2].rm_so;
 	const size_t fname_bgr = sizeof(file_name) > file_name_len ? file_name_len : sizeof(file_name);
