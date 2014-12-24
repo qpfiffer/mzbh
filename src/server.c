@@ -263,9 +263,10 @@ int http_serve(int main_sock_fd) {
 	int opt = 1;
 	setsockopt(main_sock_fd, SOL_SOCKET, SO_REUSEADDR, (void*) &opt, sizeof(opt));
 
+	const int port = 8080;
 	struct sockaddr_in hints = {0};
 	hints.sin_family		 = AF_INET;
-	hints.sin_port			 = htons(8080);
+	hints.sin_port			 = htons(port);
 	hints.sin_addr.s_addr	 = htonl(INADDR_ANY);
 
 	rc = bind(main_sock_fd, (struct sockaddr *)&hints, sizeof(hints));
@@ -279,6 +280,7 @@ int http_serve(int main_sock_fd) {
 		log_msg(LOG_ERR, "Could not listen on main socket.");
 		goto error;
 	}
+	log_msg(LOG_FUN, "Listening on http://localhost:%i/", port);
 
 	/* Our acceptor pool: */
 	pthread_t workers[NUM_THREADS];
