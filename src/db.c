@@ -2,6 +2,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <sys/mman.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
 #include <string.h>
 #include <unistd.h>
@@ -12,6 +13,8 @@
 #include "models.h"
 #include "sha3api_ref.h"
 #include "utils.h"
+
+static const char db_request[] = "GET /waifu/%s HTTP/1.1\r\n\r\n";
 
 int hash_image(const char *file_path, char outbuf[HASH_IMAGE_STR_SIZE]) {
 	int fd = open(file_path, O_RDONLY);
@@ -45,11 +48,33 @@ error:
 
 unsigned char *fetch_data_from_db(const char key[static MAX_KEY_SIZE]) {
 	unsigned char *data = NULL;
+	char *json_data = NULL;
 
 	int sock = connect_to_host_with_port(DB_HOST, DB_PORT);
-	close(sock);
 
+	const size_t db_request_siz = strlen(db_request) + strnlen(key, MAX_KEY_SIZE);
+	char new_db_request[db_request_siz];
+	memset(new_db_request, '\0', db_request_siz);
+
+	snprintf(new_db_request, db_request_siz, db_request, key);
+	int rc = send(sock, new_db_request, strlen(new_db_request), 0);
+	if (strlen(new_db_request) != rc)
+		goto error;
+
+	size_t json_size = 0;
+	json_data = receive_http(sock, &json_size);
+	if (!json_data)
+		goto error;
+
+	log_msg(LOG_INFO, "Received: %s", json_data);
+
+	close(sock);
 	return data;
+
+error:
+	free(json_data);
+	close(sock);
+	return NULL;
 }
 
 int store_data_in_db(const char key[static MAX_KEY_SIZE], const void *val, const size_t vlen) {
