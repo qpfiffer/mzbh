@@ -7,7 +7,7 @@
 
 int hash_image(const char *file_path, char outbuf[HASH_IMAGE_STR_SIZE]);
 
-unsigned char *fetch_data_from_db(const char key[MAX_KEY_SIZE]);
+unsigned char *fetch_data_from_db(const char key[static MAX_KEY_SIZE], size_t *outdata);
 
 int store_data_in_db(const char key[static MAX_KEY_SIZE], const void *val, const size_t vlen);
 

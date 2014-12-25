@@ -46,9 +46,8 @@ error:
 	return 0;
 }
 
-unsigned char *fetch_data_from_db(const char key[static MAX_KEY_SIZE]) {
-	unsigned char *data = NULL;
-	char *json_data = NULL;
+unsigned char *fetch_data_from_db(const char key[static MAX_KEY_SIZE], size_t *outdata) {
+	unsigned char *_data = NULL;
 
 	int sock = connect_to_host_with_port(DB_HOST, DB_PORT);
 
@@ -61,18 +60,17 @@ unsigned char *fetch_data_from_db(const char key[static MAX_KEY_SIZE]) {
 	if (strlen(new_db_request) != rc)
 		goto error;
 
-	size_t json_size = 0;
-	json_data = receive_http(sock, &json_size);
-	if (!json_data)
+	_data = receive_http(sock, outdata);
+	if (!_data)
 		goto error;
 
-	log_msg(LOG_INFO, "Received: %s", json_data);
+	log_msg(LOG_INFO, "Received: %s", _data);
 
 	close(sock);
-	return data;
+	return _data;
 
 error:
-	free(json_data);
+	free(_data);
 	close(sock);
 	return NULL;
 }
@@ -85,7 +83,8 @@ webm *get_image(const char image_hash[static HASH_ARRAY_SIZE]) {
 	char key[MAX_KEY_SIZE] = {0};
 	create_webm_key(image_hash, key);
 
-	char *json = (char *)fetch_data_from_db(key);
+	size_t json_size = 0;
+	char *json = (char *)fetch_data_from_db(key, &json_size);
 	log_msg(LOG_INFO, "Json from DB: %s", json);
 
 	if (json == NULL)
@@ -115,9 +114,11 @@ int add_image_to_db(const char *file_path, const char board[MAX_BOARD_NAME_SIZE]
 	webm *_old_webm = get_image(image_hash);
 
 	int alias = 1;
-	if (_old_webm == NULL) {
+	if (_old_webm == NULL)
 		alias = 0;
-	}
+
+	/* We don't actually need it... */
+	free(_old_webm);
 
 	time_t modified_time = get_file_creation_date(file_path);
 	if (modified_time == 0) {

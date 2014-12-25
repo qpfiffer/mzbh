@@ -162,8 +162,8 @@ error:
 int download_images() {
 	int thumb_request_fd = 0;
 	int image_request_fd = 0;
-	char *raw_thumb_resp = NULL;
-	char *raw_image_resp = NULL;
+	unsigned char *raw_thumb_resp = NULL;
+	unsigned char *raw_image_resp = NULL;
 	FILE *thumb_file = NULL;
 	FILE *image_file = NULL;
 	post_match *p_match = NULL;

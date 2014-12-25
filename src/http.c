@@ -159,12 +159,12 @@ int connect_to_host(const char *host) {
 	return connect_to_host_with_port(host, "80");
 }
 
-char *receive_http(const int request_fd, size_t *out) {
+unsigned char *receive_http(const int request_fd, size_t *out) {
 	return receive_http_with_timeout(request_fd, SELECT_TIMEOUT, out);
 }
 
-char *receive_http_with_timeout(const int request_fd, const int timeout, size_t *out) {
-	char *raw_buf = NULL;
+unsigned char *receive_http_with_timeout(const int request_fd, const int timeout, size_t *out) {
+	unsigned char *raw_buf = NULL;
 	size_t buf_size = 0;
 	int times_read = 0;
 
@@ -181,7 +181,7 @@ char *receive_http_with_timeout(const int request_fd, const int timeout, size_t 
 	};
 	select(maxfd + 1, &chan_fds, NULL, NULL, &tv);
 
-	char *header_end = NULL, *cursor_pos = NULL;
+	unsigned char *header_end = NULL, *cursor_pos = NULL;
 	size_t result_size = 0;
 	size_t payload_received = 0;
 	size_t total_received = 0;
@@ -198,7 +198,7 @@ char *receive_http_with_timeout(const int request_fd, const int timeout, size_t 
 		int old_offset = buf_size;
 		buf_size += count;
 		if (raw_buf != NULL) {
-			char *new_buf = realloc(raw_buf, buf_size);
+			unsigned char *new_buf = realloc(raw_buf, buf_size);
 			if (new_buf != NULL) {
 				raw_buf = new_buf;
 			} else {
@@ -216,14 +216,14 @@ char *receive_http_with_timeout(const int request_fd, const int timeout, size_t 
 
 		/* Attempt to find the header length. */
 		if (header_end == NULL) {
-			header_end = strstr(raw_buf, "\r\n\r\n");
+			header_end = (unsigned char *)strstr((char *)raw_buf, "\r\n\r\n");
 			if (header_end != NULL) {
 				cursor_pos = header_end  + (sizeof(char) * 4);
 				/* We've received at least part of the payload, add it to the counter. */
 				payload_received += total_received - (cursor_pos - raw_buf);
 
 				result_size = 0;
-				char *offset_for_clength = strnstr(raw_buf, "Content-Length: ", buf_size);
+				unsigned char *offset_for_clength = (unsigned char *)strnstr((char *)raw_buf, "Content-Length: ", buf_size);
 				if (offset_for_clength == NULL) {
 					continue;
 				}
@@ -231,7 +231,7 @@ char *receive_http_with_timeout(const int request_fd, const int timeout, size_t 
 				char siz_buf[128] = {0};
 				int i = 0;
 
-				const char *to_read = offset_for_clength + strlen("Content-Length: ");
+				const unsigned char *to_read = offset_for_clength + strlen("Content-Length: ");
 				while (to_read[i] != '\r' && to_read[i + 1] != '\n' && i < sizeof(siz_buf)) {
 					siz_buf[i] = to_read[i];
 					i++;
@@ -244,7 +244,7 @@ char *receive_http_with_timeout(const int request_fd, const int timeout, size_t 
 
 	/* printf("Full message is %s\n.", raw_buf); */
 	/* Check for a 200: */
-	if (raw_buf == NULL || strstr(raw_buf, "200") == NULL) {
+	if (raw_buf == NULL || strstr((char *)raw_buf, "200") == NULL) {
 		log_msg(LOG_ERR, "Could not find 200 return code in response.");
 		goto error;
 	}
@@ -252,11 +252,11 @@ char *receive_http_with_timeout(const int request_fd, const int timeout, size_t 
 	/* Make sure cursor_pos is up to date, no invalidated
 	 * pointers or anything. */
 	if (header_end != NULL) {
-		header_end = strstr(raw_buf, "\r\n\r\n");
+		header_end = (unsigned char *)strstr((char *)raw_buf, "\r\n\r\n");
 		cursor_pos = header_end  + (sizeof(char) * 4);
 	}
 
-	char *to_return = malloc(result_size);
+	unsigned char *to_return = malloc(result_size);
 	memcpy(to_return, cursor_pos, result_size);
 	*out = result_size;
 	free(raw_buf);
