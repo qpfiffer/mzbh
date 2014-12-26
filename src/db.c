@@ -17,7 +17,7 @@
 
 static const char db_request[] = "GET /waifu/%s HTTP/1.1\r\n\r\n";
 
-int hash_image(const char *file_path, char outbuf[HASH_IMAGE_STR_SIZE]) {
+int hash_image(const char *file_path, char outbuf[static HASH_IMAGE_STR_SIZE]) {
 	int fd = open(file_path, O_RDONLY);
 	unsigned char *data_ptr = NULL;
 
