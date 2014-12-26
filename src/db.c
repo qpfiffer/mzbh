@@ -15,9 +15,9 @@
 #include "sha3api_ref.h"
 #include "utils.h"
 
-static const char db_request[] = "GET /waifu/%s HTTP/1.1\r\n\r\n";
+static const char DB_REQUEST[] = "GET /%s/%s HTTP/1.1\r\n\r\n";
 /*
-static const char db_post[] = "POST /waifu/%s HTTP/1.1\r\n"
+static const char DB_POST[] = "POST /%s/%s HTTP/1.1\r\n"
 	"Content-Length: %zu\r\n"
 	"\r\n"
 	"%s";
@@ -60,11 +60,11 @@ unsigned char *fetch_data_from_db(const char key[static MAX_KEY_SIZE], size_t *o
 	sock = connect_to_host_with_port(DB_HOST, DB_PORT);
 	assert(sock != 0);
 
-	const size_t db_request_siz = strlen(db_request) + strnlen(key, MAX_KEY_SIZE);
+	const size_t db_request_siz = strlen(WAIFU_NMSPC) + strlen(DB_REQUEST) + strnlen(key, MAX_KEY_SIZE);
 	char new_db_request[db_request_siz];
 	memset(new_db_request, '\0', db_request_siz);
 
-	snprintf(new_db_request, db_request_siz, db_request, key);
+	snprintf(new_db_request, db_request_siz, DB_REQUEST, WAIFU_NMSPC, key);
 	int rc = send(sock, new_db_request, strlen(new_db_request), 0);
 	if (strlen(new_db_request) != rc)
 		goto error;

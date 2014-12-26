@@ -10,6 +10,7 @@
 /* Namespaces for when we create our keys */
 #define WAIFU_NMSPC "waifu"
 #define WEBM_NMSPC "webm"
+#define ALIAS_NMSPC "alias"
 
 #define MAX_IMAGE_FILENAME_SIZE 255
 #define MAX_BOARD_NAME_SIZE 16
