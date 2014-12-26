@@ -15,13 +15,16 @@
 #include "sha3api_ref.h"
 #include "utils.h"
 
-static const char DB_REQUEST[] = "GET /%s/%s HTTP/1.1\r\n\r\n";
-/*
+static const char DB_REQUEST[] = "GET /%s/%s HTTP/1.1\r\n"
+	"Host: "DB_HOST":"DB_PORT"\r\n"
+	"\r\n";
+
 static const char DB_POST[] = "POST /%s/%s HTTP/1.1\r\n"
+	"Host: "DB_HOST":"DB_PORT"\r\n"
 	"Content-Length: %zu\r\n"
+	"Content-Type: application/json\r\n"
 	"\r\n"
 	"%s";
-	*/
 
 int hash_image(const char *file_path, char outbuf[static HASH_IMAGE_STR_SIZE]) {
 	int fd = open(file_path, O_RDONLY);
@@ -85,7 +88,35 @@ error:
 }
 
 int store_data_in_db(const char key[static MAX_KEY_SIZE], const void *val, const size_t vlen) {
-	return 0;
+	int sock = 0;
+	sock = connect_to_host_with_port(DB_HOST, DB_PORT);
+	assert(sock != 0);
+
+	const size_t vlen_len = UINT_LEN(vlen);
+	/* See DB_POST for why we need all this. */
+	const size_t db_post_siz = strlen(WAIFU_NMSPC) + strlen(key) + vlen_len + vlen;
+	char new_db_post[db_post_siz];
+	memset(new_db_post, '\0', db_post_siz);
+
+	snprintf(new_db_post, db_post_siz, DB_POST, WAIFU_NMSPC, key, vlen, val);
+	int rc = send(sock, new_db_post, strlen(new_db_post), 0);
+	if (strlen(new_db_post) != rc) {
+		log_msg(LOG_ERR, "Could not send stuff to DB.");
+		return 0;
+	}
+
+	/* I don't really care about the reply, but I probably should. */
+	size_t out;
+	unsigned char *_data = receive_http(sock, &out);
+	if (!_data) {
+		log_msg(LOG_ERR, "No reply from DB.");
+		close(sock);
+		return 0;
+	}
+
+	free(_data);
+	close(sock);
+	return 1;
 }
 
 /* Webm get/set stuff */
@@ -130,7 +161,8 @@ int set_aliased_image(const webm_alias *alias) {
 	return ret;
 }
 
-static int _insert_webm(const char *file_path, const char image_hash[static HASH_IMAGE_STR_SIZE], const char board[static MAX_BOARD_NAME_SIZE]) {
+static int _insert_webm(const char *file_path, const char filename[static MAX_IMAGE_FILENAME_SIZE], 
+						const char image_hash[static HASH_IMAGE_STR_SIZE], const char board[static MAX_BOARD_NAME_SIZE]) {
 	time_t modified_time = get_file_creation_date(file_path);
 	if (modified_time == 0) {
 		log_msg(LOG_ERR, "File does not exist.");
@@ -157,7 +189,8 @@ static int _insert_webm(const char *file_path, const char image_hash[static HASH
 	return set_image(&to_insert);
 }
 
-static int _insert_aliased_webm(const char *file_path, const char image_hash[static HASH_IMAGE_STR_SIZE], const char board[static MAX_BOARD_NAME_SIZE]) {
+static int _insert_aliased_webm(const char *file_path, const char filename[static MAX_IMAGE_FILENAME_SIZE],
+								const char image_hash[static HASH_IMAGE_STR_SIZE], const char board[static MAX_BOARD_NAME_SIZE]) {
 	time_t modified_time = get_file_creation_date(file_path);
 	if (modified_time == 0) {
 		log_msg(LOG_ERR, "File does not exist.");
@@ -191,11 +224,11 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 
 	webm *_old_webm = get_image(image_hash);
 
-	if (_old_webm == NULL)
-		return _insert_webm(filename, image_hash, board);
+	if (!_old_webm)
+		return _insert_webm(file_path, filename, image_hash, board);
 
 	/* We don't actually need it... */
 	free(_old_webm);
 
-	return _insert_aliased_webm(filename, image_hash, board);
+	return _insert_aliased_webm(file_path, filename, image_hash, board);
 }
