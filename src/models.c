@@ -5,7 +5,7 @@
 #include "models.h"
 #include "parson.h"
 
-void create_webm_key(const char *file_hash, char outbuf[MAX_KEY_SIZE]) {
+void create_webm_key(const char file_hash[static HASH_IMAGE_STR_SIZE], char outbuf[static MAX_KEY_SIZE]) {
 	snprintf(outbuf, MAX_KEY_SIZE, "%s%s%s", WAIFU_NMSPC, WEBM_NMSPC, file_hash);
 }
 
@@ -19,7 +19,7 @@ char *serialize_webm(const webm *to_serialize) {
 
 	char *serialized_string = NULL;
 
-	json_object_set_boolean(root_object, "is_alias", (int)to_serialize->is_alias);
+	/* json_object_set_boolean(root_object, "is_alias", (int)to_serialize->is_alias); */
 
 	json_object_set_string(root_object, "file_hash", to_serialize->file_hash);
 	json_object_set_string(root_object, "filename", to_serialize->filename);

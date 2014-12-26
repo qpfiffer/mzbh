@@ -16,6 +16,12 @@
 #include "utils.h"
 
 static const char db_request[] = "GET /waifu/%s HTTP/1.1\r\n\r\n";
+/*
+static const char db_post[] = "POST /waifu/%s HTTP/1.1\r\n"
+	"Content-Length: %zu\r\n"
+	"\r\n"
+	"%s";
+	*/
 
 int hash_image(const char *file_path, char outbuf[static HASH_IMAGE_STR_SIZE]) {
 	int fd = open(file_path, O_RDONLY);
@@ -136,7 +142,6 @@ int add_image_to_db(const char *file_path, const char board[MAX_BOARD_NAME_SIZE]
 	}
 
 	webm to_insert = {
-		.is_alias = alias,
 		.file_hash = {0},
 		.filename = {0},
 		.board = {0},
