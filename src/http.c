@@ -152,7 +152,7 @@ int connect_to_host_with_port(const char *host, const char *port) {
 error:
 	freeaddrinfo(res);
 	close(request_fd);
-	return -1;
+	return 0;
 }
 
 int connect_to_host(const char *host) {

@@ -1,4 +1,5 @@
 // vim: noet ts=4 sw=4
+#include <assert.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <sys/mman.h>
@@ -49,7 +50,9 @@ error:
 unsigned char *fetch_data_from_db(const char key[static MAX_KEY_SIZE], size_t *outdata) {
 	unsigned char *_data = NULL;
 
-	int sock = connect_to_host_with_port(DB_HOST, DB_PORT);
+	int sock = 0;
+	sock = connect_to_host_with_port(DB_HOST, DB_PORT);
+	assert(sock != 0);
 
 	const size_t db_request_siz = strlen(db_request) + strnlen(key, MAX_KEY_SIZE);
 	char new_db_request[db_request_siz];
