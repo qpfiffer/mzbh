@@ -1,6 +1,7 @@
 // vim: noet ts=4 sw=4
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "models.h"
 #include "parson.h"
@@ -10,7 +11,22 @@ void create_webm_key(const char file_hash[static HASH_IMAGE_STR_SIZE], char outb
 }
 
 webm *deserialize_webm(char *json) {
-	return NULL;
+	if (!json)
+		return NULL;
+
+	webm *to_return = calloc(1, sizeof(webm));
+
+	JSON_Value *serialized = json_parse_string(json);
+	JSON_Object *webm_object = json_value_get_object(serialized);
+
+	strncpy(to_return->file_hash, json_object_get_string(webm_object, "file_hash"), sizeof(to_return->file_hash));
+	strncpy(to_return->filename, json_object_get_string(webm_object, "filename"), sizeof(to_return->filename));
+
+	to_return->created_at = (time_t)json_object_get_number(webm_object, "created_at");
+	to_return->size = (size_t)json_object_get_number(webm_object, "size");
+
+	json_value_free(serialized);
+	return to_return;
 }
 
 char *serialize_webm(const webm *to_serialize) {
