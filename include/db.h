@@ -15,4 +15,4 @@ int store_data_in_db(const char key[static MAX_KEY_SIZE], const void *val, const
 /* Attempts to add an image to the database.
  * Returns 0 on success.
  */
-int add_image_to_db(const char *file_path, const char board[MAX_BOARD_NAME_SIZE]);
+int add_image_to_db(const char *file_path, const char *filename, const char board[MAX_BOARD_NAME_SIZE]);

@@ -34,7 +34,7 @@ static int _add_directory(const char *directory_to_open, const char board[MAX_BO
 			memset(full_path, '\0', full_path_siz);
 			sprintf(full_path, "%s/%s", directory_to_open, result->d_name);
 
-			add_image_to_db(full_path, board);
+			add_image_to_db(full_path, result->d_name, board);
 			total++;
 		}
 	}
@@ -97,5 +97,7 @@ int main(int argc, char *argv[]) {
 			return 0;
 		}
 	}
+
+	usage(argv[0]);
 	return 1;
 }

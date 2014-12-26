@@ -184,7 +184,7 @@ static int _insert_aliased_webm(const char *file_path, const char image_hash[sta
 	return set_aliased_image(&to_insert);
 }
 
-int add_image_to_db(const char *file_path, const char board[MAX_BOARD_NAME_SIZE]) {
+int add_image_to_db(const char *file_path, const char *filename, const char board[MAX_BOARD_NAME_SIZE]) {
 	char image_hash[HASH_IMAGE_STR_SIZE] = {0};
 	if (!hash_image(file_path, image_hash))
 		return 0;
@@ -192,10 +192,10 @@ int add_image_to_db(const char *file_path, const char board[MAX_BOARD_NAME_SIZE]
 	webm *_old_webm = get_image(image_hash);
 
 	if (_old_webm == NULL)
-		return _insert_webm(file_path, image_hash, board);
+		return _insert_webm(filename, image_hash, board);
 
 	/* We don't actually need it... */
 	free(_old_webm);
 
-	return _insert_aliased_webm(file_path, image_hash, board);
+	return _insert_aliased_webm(filename, image_hash, board);
 }
