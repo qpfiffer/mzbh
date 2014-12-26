@@ -31,6 +31,9 @@ typedef struct webm_alias {
 	char filename[MAX_IMAGE_FILENAME_SIZE];
 	unsigned char _null_term_hax_2;
 
+	char board[MAX_BOARD_NAME_SIZE];
+	unsigned char _null_term_hax_3;
+
 	time_t created_at;
 } webm_alias;
 
