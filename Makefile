@@ -10,11 +10,15 @@ clean:
 	rm -f *.o
 	rm -f dbctl
 	rm -f greshunkel_test
+	rm -f unit_test
 	rm -f $(NAME)
 
-test: greshunkel_test
+test: greshunkel_test unit_test
 greshunkel_test: greshunkel_test.o greshunkel.o stack.o
 	$(CC) $(CLAGS) $(LIB_INCLUDES) $(INCLUDES) -o greshunkel_test $^ -lm
+
+unit_test: blue_midnight_wish.o models.o grengine.o greshunkel.o db.o utils.o logging.o server.o stack.o parse.o http.o utests.o parson.o
+	$(CC) $(CLAGS) $(LIB_INCLUDES) $(INCLUDES) -o unit_test $^ -lm $(LIBS)
 
 %.o: ./src/%.c
 	$(CC) $(CFLAGS) $(LIB_INCLUDES) $(INCLUDES) -c $<
