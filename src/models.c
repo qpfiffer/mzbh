@@ -48,10 +48,7 @@ char *serialize_webm(const webm *to_serialize) {
 	json_object_set_number(root_object, "created_at", to_serialize->created_at);
 	json_object_set_number(root_object, "size", to_serialize->size);
 
-	const size_t buf_siz = json_serialization_size(root_value);
-	serialized_string = calloc(1, buf_siz);
-	json_serialize_to_buffer(root_value, serialized_string, buf_siz);
-
+	serialized_string = json_serialize_to_string(root_value);
 	json_value_free(root_value);
 	return serialized_string;
 }

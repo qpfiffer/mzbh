@@ -168,7 +168,7 @@ static size_t parson_strlen(const char *string) {
     size_t result = 0;
     size_t i = 0, len = strlen(string);
     for (i = 0; i < len; i++) {
-        if (strchr("\"\\/\b\f\n\r\t", string[i])) /* must be escaped */
+        if (strchr("\"\\\b\f\n\r\t", string[i])) /* must be escaped */
             result += 2;
         else
             result += 1;
@@ -735,7 +735,6 @@ static char * json_serialize_string(const char *string, char *buf) {
         switch (c) {
             case '\"': PRINT_AND_SKIP(buf, "\\\"");   break;
             case '\\': PRINT_AND_SKIP(buf, "\\\\");   break;
-            case '/':  PRINT_AND_SKIP(buf, "\\/");    break;
             case '\b': PRINT_AND_SKIP(buf, "\\b");    break;
             case '\f': PRINT_AND_SKIP(buf, "\\f");    break;
             case '\n': PRINT_AND_SKIP(buf, "\\n");    break;
@@ -1224,8 +1223,8 @@ JSON_Status json_object_set_null(JSON_Object *object, const char *name) {
 }
 
 JSON_Status json_object_dotset_value(JSON_Object *object, const char *name, JSON_Value *value) {
-    char *dot_pos = strchr(name, '.');
-    char *current_name = NULL;
+    const char *dot_pos = strchr(name, '.');
+    const char *current_name = NULL;
     JSON_Object *temp_obj = NULL;
     JSON_Value *new_value = NULL;
     if (value == NULL) {
@@ -1291,8 +1290,8 @@ JSON_Status json_object_remove(JSON_Object *object, const char *name) {
 }
 
 JSON_Status json_object_dotremove(JSON_Object *object, const char *name) {
-    char *dot_pos = strchr(name, '.');
-    char *current_name = NULL;
+    const char *dot_pos = strchr(name, '.');
+    const char *current_name = NULL;
     JSON_Object *temp_obj = NULL;
     if (dot_pos == NULL) {
         return json_object_remove(object, name);
