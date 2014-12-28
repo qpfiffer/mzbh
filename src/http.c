@@ -219,6 +219,15 @@ unsigned char *receive_http_with_timeout(const int request_fd, const int timeout
 			header_end = (unsigned char *)strstr((char *)raw_buf, "\r\n\r\n");
 			if (header_end != NULL) {
 				cursor_pos = header_end  + (sizeof(char) * 4);
+				/* Try to find a 200 or a 201: */
+
+				const char *first_line_end_c = strstr((char *)raw_buf, "\r\n");
+				const size_t first_line_end = first_line_end_c - (char *)raw_buf;
+				if (strnstr((char *)raw_buf, "200", first_line_end) == NULL && strnstr((char *)raw_buf, "201", first_line_end) == NULL) {
+					log_msg(LOG_ERR, "Could not find 200 return code in response.");
+					goto error;
+				}
+
 				/* We've received at least part of the payload, add it to the counter. */
 				payload_received += total_received - (cursor_pos - raw_buf);
 
@@ -242,12 +251,8 @@ unsigned char *receive_http_with_timeout(const int request_fd, const int timeout
 		}
 	}
 
-	/* printf("Full message is %s\n.", raw_buf); */
-	/* Check for a 200: */
-	if (raw_buf == NULL || strstr((char *)raw_buf, "200") == NULL) {
-		log_msg(LOG_ERR, "Could not find 200 return code in response.");
+	if (raw_buf == NULL)
 		goto error;
-	}
 
 	/* Make sure cursor_pos is up to date, no invalidated
 	 * pointers or anything. */
