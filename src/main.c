@@ -7,6 +7,7 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 
+#include "db.h"
 #include "http.h"
 #include "parse.h"
 #include "logging.h"
@@ -291,6 +292,11 @@ int download_images() {
 		log_msg(LOG_INFO, "Wrote %i bytes of image to disk.", iwritten);
 		fclose(image_file);
 		image_file = 0;
+
+		int added = add_image_to_db(image_filename, p_match->filename, p_match->board);
+		if (!added) {
+			log_msg(LOG_WARN, "Could not add image to database. Continuing...");
+		}
 
 		/* Don't need the post match anymore: */
 		free(p_match);

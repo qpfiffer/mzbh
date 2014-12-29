@@ -1,5 +1,4 @@
 // vim: noet ts=4 sw=4
-#include <assert.h>
 #include <stdio.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -26,13 +25,14 @@ static const char DB_POST[] = "POST /%s/%s HTTP/1.1\r\n"
 unsigned char *fetch_data_from_db(const char key[static MAX_KEY_SIZE], size_t *outdata) {
 	unsigned char *_data = NULL;
 
-	int sock = 0;
-	sock = connect_to_host_with_port(DB_HOST, DB_PORT);
-	assert(sock != 0);
-
 	const size_t db_request_siz = strlen(WAIFU_NMSPC) + strlen(DB_REQUEST) + strnlen(key, MAX_KEY_SIZE);
 	char new_db_request[db_request_siz];
 	memset(new_db_request, '\0', db_request_siz);
+
+	int sock = 0;
+	sock = connect_to_host_with_port(DB_HOST, DB_PORT);
+	if (sock == 0)
+		goto error;
 
 	snprintf(new_db_request, db_request_siz, DB_REQUEST, WAIFU_NMSPC, key);
 	int rc = send(sock, new_db_request, strlen(new_db_request), 0);
@@ -55,9 +55,7 @@ error:
 }
 
 int store_data_in_db(const char key[static MAX_KEY_SIZE], const unsigned char *val, const size_t vlen) {
-	int sock = 0;
-	sock = connect_to_host_with_port(DB_HOST, DB_PORT);
-	assert(sock != 0);
+	unsigned char *_data = NULL;
 
 	const size_t vlen_len = UINT_LEN(vlen);
 	/* See DB_POST for why we need all this. */
@@ -65,25 +63,34 @@ int store_data_in_db(const char key[static MAX_KEY_SIZE], const unsigned char *v
 	char new_db_post[db_post_siz + 1];
 	memset(new_db_post, '\0', db_post_siz + 1);
 
+	int sock = 0;
+	sock = connect_to_host_with_port(DB_HOST, DB_PORT);
+	if (sock == 0)
+		goto error;
+
 	sprintf(new_db_post, DB_POST, WAIFU_NMSPC, key, vlen, val);
 	int rc = send(sock, new_db_post, strlen(new_db_post), 0);
 	if (strlen(new_db_post) != rc) {
 		log_msg(LOG_ERR, "Could not send stuff to DB.");
-		return 0;
+		goto error;
 	}
 
 	/* I don't really care about the reply, but I probably should. */
 	size_t out;
-	unsigned char *_data = receive_http(sock, &out);
+	_data = receive_http(sock, &out);
 	if (!_data) {
 		log_msg(LOG_ERR, "No reply from DB.");
-		close(sock);
-		return 0;
+		goto error;
 	}
 
 	free(_data);
 	close(sock);
 	return 1;
+
+error:
+	free(_data);
+	close(sock);
+	return 0;
 }
 
 /* Webm get/set stuff */
