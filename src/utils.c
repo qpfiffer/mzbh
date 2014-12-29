@@ -116,25 +116,23 @@ void url_decode(const char *src, const size_t src_siz, char *dest) {
 		if (src[srcIter] == '%' && srcIter + 2 < src_siz) {
 			/* Theres definitely a better way to do this but I don't care
 			 * right now. */
-			if (src[srcIter + 1] == '2' && src[srcIter + 2] == '0') {
-				dest[destIter] = ' ';
-				srcIter += 3;
-				destIter++;
+			const char it_one = src[srcIter + 1];
+			const char it_two = src[srcIter + 2];
+#define GGGG(arg) dest[destIter] = arg;\
+			srcIter += 3;\
+			destIter++;
+
+			if (it_one == '2' && it_two == '0') {
+				GGGG(' ');
 			}
-			if (src[srcIter + 1] == '3' && src[srcIter + 2] == 'E') {
-				dest[destIter] = '>';
-				srcIter += 3;
-				destIter++;
+			if (it_one == '3' && it_two == 'E') {
+				GGGG('>');
 			}
-			if (src[srcIter + 1] == '5' && src[srcIter + 2] == 'B') {
-				dest[destIter] = '[';
-				srcIter += 3;
-				destIter++;
+			if (it_one == '5' && it_two == 'B') {
+				GGGG('[');
 			}
-			if (src[srcIter + 1] == '5' && src[srcIter + 2] == 'D') {
-				dest[destIter] = ']';
-				srcIter += 3;
-				destIter++;
+			if (it_one == '5' && it_two == 'D') {
+				GGGG(']');
 			}
 		}
 

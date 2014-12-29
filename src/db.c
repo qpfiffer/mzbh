@@ -227,8 +227,17 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 	if (!_old_webm)
 		return _insert_webm(file_path, filename, image_hash, board);
 
-	/* We don't actually need it... */
-	free(_old_webm);
+	/* Check to see if the one we're scanning is the exact match we got from the DB. */
+	if (strncmp(_old_webm->filename, filename, MAX_IMAGE_FILENAME_SIZE) != 0) {
+		free(_old_webm);
+		/* It's not the canonical original, so insert an alias. */
+		return _insert_aliased_webm(file_path, filename, image_hash, board);
+	}
 
-	return _insert_aliased_webm(file_path, filename, image_hash, board);
+	/* The one we got from the DB is the one we're working on, or at least
+	 * it has the same name and file hash.
+	 */
+	free(_old_webm);
+	return 1;
+
 }
