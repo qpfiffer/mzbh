@@ -4,7 +4,7 @@
 /* Size of BMW hash */
 #define IMAGE_HASH_SIZE 256
 #define HASH_ARRAY_SIZE IMAGE_HASH_SIZE/8
-#define HASH_IMAGE_STR_SIZE HASH_ARRAY_SIZE * 2
+#define HASH_IMAGE_STR_SIZE (HASH_ARRAY_SIZE * 2) + 1
 
 #define MAX_KEY_SIZE 255
 /* Namespaces for when we create our keys */
