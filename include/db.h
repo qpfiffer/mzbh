@@ -10,7 +10,7 @@ int hash_image(const char *file_path, char outbuf[static HASH_IMAGE_STR_SIZE]);
 
 /* Set and get functions. */
 unsigned char *fetch_data_from_db(const char key[static MAX_KEY_SIZE], size_t *outdata);
-int store_data_in_db(const char key[static MAX_KEY_SIZE], const void *val, const size_t vlen);
+int store_data_in_db(const char key[static MAX_KEY_SIZE], const unsigned char *val, const size_t vlen);
 
 /* Attempts to add an image to the database.
  * Returns 0 on success.

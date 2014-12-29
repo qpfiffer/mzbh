@@ -87,18 +87,18 @@ error:
 	return NULL;
 }
 
-int store_data_in_db(const char key[static MAX_KEY_SIZE], const void *val, const size_t vlen) {
+int store_data_in_db(const char key[static MAX_KEY_SIZE], const unsigned char *val, const size_t vlen) {
 	int sock = 0;
 	sock = connect_to_host_with_port(DB_HOST, DB_PORT);
 	assert(sock != 0);
 
 	const size_t vlen_len = UINT_LEN(vlen);
 	/* See DB_POST for why we need all this. */
-	const size_t db_post_siz = strlen(WAIFU_NMSPC) + strlen(key) + vlen_len + vlen;
-	char new_db_post[db_post_siz];
-	memset(new_db_post, '\0', db_post_siz);
+	const size_t db_post_siz = strlen(WAIFU_NMSPC) + strlen(key) + strlen(DB_POST) + vlen_len + vlen;
+	char new_db_post[db_post_siz + 1];
+	memset(new_db_post, '\0', db_post_siz + 1);
 
-	snprintf(new_db_post, db_post_siz, DB_POST, WAIFU_NMSPC, key, vlen, val);
+	sprintf(new_db_post, DB_POST, WAIFU_NMSPC, key, vlen, val);
 	int rc = send(sock, new_db_post, strlen(new_db_post), 0);
 	if (strlen(new_db_post) != rc) {
 		log_msg(LOG_ERR, "Could not send stuff to DB.");
@@ -139,9 +139,9 @@ int set_image(const webm *webm) {
 	create_webm_key(webm->file_hash, key);
 
 	char *serialized = serialize_webm(webm);
-	/* log_msg(LOG_INFO, "Serialized: %s", serialized); */
+	log_msg(LOG_INFO, "Serialized: %s", serialized);
 
-	int ret = store_data_in_db(key, serialized, strlen(serialized));
+	int ret = store_data_in_db(key, (unsigned char *)serialized, strlen(serialized));
 	free(serialized);
 
 	return ret;
@@ -155,7 +155,7 @@ int set_aliased_image(const webm_alias *alias) {
 	char *serialized = serialize_alias(alias);
 	/* log_msg(LOG_INFO, "Serialized: %s", serialized); */
 
-	int ret = store_data_in_db(key, serialized, strlen(serialized));
+	int ret = store_data_in_db(key, (unsigned char *)serialized, strlen(serialized));
 	free(serialized);
 
 	return ret;
