@@ -1,11 +1,15 @@
 // vim: noet ts=4 sw=4
+#include <fcntl.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <sys/mman.h>
 #include <sys/stat.h>
+#include <unistd.h>
 #include "logging.h"
 #include "models.h"
 #include "parse.h"
+#include "sha3api_ref.h"
 #include "utils.h"
 
 const char WEBMS_DIR_DEFAULT[] = "./webms";
@@ -154,4 +158,38 @@ size_t get_file_size(const char *file_path) {
 	if (stat(file_path, &st) == -1)
 		return 0;
 	return st.st_size;
+}
+
+int hash_string(const char *string, char outbuf[static HASH_IMAGE_STR_SIZE]) {
+	return 0;
+}
+
+int hash_file(const char *file_path, char outbuf[static HASH_IMAGE_STR_SIZE]) {
+	int fd = open(file_path, O_RDONLY);
+	unsigned char *data_ptr = NULL;
+
+	struct stat st = {0};
+	if (stat(file_path, &st) == -1) {
+		goto error;
+	}
+
+	data_ptr = mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+	unsigned char hash[HASH_ARRAY_SIZE] = {0};
+
+	if (Hash(IMAGE_HASH_SIZE, data_ptr, st.st_size, hash) != 0) {
+		goto error;
+	}
+
+	int j = 0;
+	for (j = 0; j < HASH_ARRAY_SIZE; j++)
+		sprintf(outbuf + (j * 2), "%02X", hash[j]);
+	munmap(data_ptr, st.st_size);
+	close(fd);
+
+	return 1;
+error:
+	if (data_ptr != NULL)
+		munmap(data_ptr, st.st_size);
+	close(fd);
+	return 0;
 }

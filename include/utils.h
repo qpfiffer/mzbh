@@ -27,3 +27,6 @@ void ensure_directory_for_board(const char *board);
 struct post_match;
 int get_non_colliding_image_filename(char fname[static MAX_IMAGE_FILENAME_SIZE], const struct post_match *p_match);
 void get_thumb_filename(char thumb_filename[static MAX_IMAGE_FILENAME_SIZE], const struct post_match *p_match);
+
+int hash_string(const char *string, char outbuf[static HASH_IMAGE_STR_SIZE]);
+int hash_file(const char *filepath, char outbuf[static HASH_IMAGE_STR_SIZE]);

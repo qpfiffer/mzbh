@@ -1,8 +1,6 @@
 // vim: noet ts=4 sw=4
 #include <assert.h>
-#include <fcntl.h>
 #include <stdio.h>
-#include <sys/mman.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <string.h>
@@ -12,7 +10,6 @@
 #include "http.h"
 #include "logging.h"
 #include "models.h"
-#include "sha3api_ref.h"
 #include "utils.h"
 
 static const char DB_REQUEST[] = "GET /%s/%s HTTP/1.1\r\n"
@@ -25,36 +22,6 @@ static const char DB_POST[] = "POST /%s/%s HTTP/1.1\r\n"
 	"Content-Type: application/json\r\n"
 	"\r\n"
 	"%s";
-
-int hash_image(const char *file_path, char outbuf[static HASH_IMAGE_STR_SIZE]) {
-	int fd = open(file_path, O_RDONLY);
-	unsigned char *data_ptr = NULL;
-
-	struct stat st = {0};
-	if (stat(file_path, &st) == -1) {
-		goto error;
-	}
-
-	data_ptr = mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-	unsigned char hash[HASH_ARRAY_SIZE] = {0};
-
-	if (Hash(IMAGE_HASH_SIZE, data_ptr, st.st_size, hash) != 0) {
-		goto error;
-	}
-
-	int j = 0;
-	for (j = 0; j < HASH_ARRAY_SIZE; j++)
-		sprintf(outbuf + (j * 2), "%02X", hash[j]);
-	munmap(data_ptr, st.st_size);
-	close(fd);
-
-	return 1;
-error:
-	if (data_ptr != NULL)
-		munmap(data_ptr, st.st_size);
-	close(fd);
-	return 0;
-}
 
 unsigned char *fetch_data_from_db(const char key[static MAX_KEY_SIZE], size_t *outdata) {
 	unsigned char *_data = NULL;
@@ -219,7 +186,7 @@ static int _insert_aliased_webm(const char *file_path, const char filename[stati
 
 int add_image_to_db(const char *file_path, const char *filename, const char board[MAX_BOARD_NAME_SIZE]) {
 	char image_hash[HASH_IMAGE_STR_SIZE] = {0};
-	if (!hash_image(file_path, image_hash))
+	if (!hash_file(file_path, image_hash))
 		return 0;
 
 	webm *_old_webm = get_image(image_hash);
