@@ -43,7 +43,7 @@ unsigned char *fetch_data_from_db(const char key[static MAX_KEY_SIZE], size_t *o
 	if (!_data)
 		goto error;
 
-	log_msg(LOG_INFO, "Received: %s", _data);
+	/* log_msg(LOG_INFO, "Received: %s", _data); */
 
 	close(sock);
 	return _data;
@@ -93,7 +93,7 @@ webm *get_image(const char image_hash[static HASH_ARRAY_SIZE]) {
 
 	size_t json_size = 0;
 	char *json = (char *)fetch_data_from_db(key, &json_size);
-	log_msg(LOG_INFO, "Json from DB: %s", json);
+	/* log_msg(LOG_INFO, "Json from DB: %s", json); */
 
 	if (json == NULL)
 		return NULL;

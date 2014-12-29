@@ -1,10 +1,12 @@
 // vim: noet ts=4 sw=4
+#include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
 #include "models.h"
 #include "parson.h"
+#include "utils.h"
 
 void create_webm_key(const char file_hash[static HASH_IMAGE_STR_SIZE], char outbuf[static MAX_KEY_SIZE]) {
 	snprintf(outbuf, MAX_KEY_SIZE, "%s%s", WEBM_NMSPC, file_hash);
@@ -54,7 +56,9 @@ char *serialize_webm(const webm *to_serialize) {
 }
 
 void create_alias_key(const char filename[static MAX_IMAGE_FILENAME_SIZE], char outbuf[static MAX_KEY_SIZE]) {
-	snprintf(outbuf, MAX_KEY_SIZE, "%s%s", ALIAS_NMSPC, filename);
+	char str_hash[HASH_IMAGE_STR_SIZE] = {0};
+	assert(hash_string((unsigned char *)filename, strnlen(filename, MAX_IMAGE_FILENAME_SIZE), str_hash));
+	snprintf(outbuf, MAX_KEY_SIZE, "%s%s", ALIAS_NMSPC, str_hash);
 }
 
 char *serialize_alias(const webm_alias *to_serialize) {
