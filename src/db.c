@@ -121,6 +121,19 @@ int set_image(const webm *webm) {
 	return ret;
 }
 
+webm_alias *get_aliased_image(const char filepath[static MAX_IMAGE_FILENAME_SIZE]) {
+	char key[MAX_KEY_SIZE] = {0};
+	create_alias_key(filepath, key);
+
+	size_t json_size = 0;
+	char *json = (char *)fetch_data_from_db(key, &json_size);
+
+	if (json == NULL)
+		return NULL;
+
+	return deserialize_alias(json);
+}
+
 /* Alias get/set stuff */
 int set_aliased_image(const webm_alias *alias) {
 	char key[MAX_KEY_SIZE] = {0};
@@ -205,7 +218,19 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 	if (strncmp(_old_webm->filename, filename, MAX_IMAGE_FILENAME_SIZE) != 0) {
 		free(_old_webm);
 		/* It's not the canonical original, so insert an alias. */
-		return _insert_aliased_webm(file_path, filename, image_hash, board);
+
+		webm_alias *_old_alias = get_aliased_image(file_path);
+		int rc = 1;
+		/* If we DONT already have an alias for this image with this filename, 
+		 * insert one.
+		 * We know if this filename is an alias already because the hash of
+		 * an alias is it's filename.
+		 */
+		if (_old_alias == NULL)
+			rc = _insert_aliased_webm(file_path, filename, image_hash, board);
+
+		free(_old_alias);
+		return rc;
 	}
 
 	/* The one we got from the DB is the one we're working on, or at least
