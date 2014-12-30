@@ -170,7 +170,7 @@ static int _insert_webm(const char *file_path, const char filename[static MAX_IM
 		.size = size
 	};
 	memcpy(to_insert.file_hash, image_hash, sizeof(to_insert.file_hash));
-	memcpy(to_insert.filename, file_path, sizeof(to_insert.filename));
+	memcpy(to_insert.filename, filename, sizeof(to_insert.filename));
 	memcpy(to_insert.board, board, sizeof(to_insert.board));
 
 	return set_image(&to_insert);
@@ -228,6 +228,10 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 		 */
 		if (_old_alias == NULL)
 			rc = _insert_aliased_webm(file_path, filename, image_hash, board);
+
+		/* Regardless, this webm is an alias and we don't care. Delete it. */
+		log_msg(LOG_WARN, "Deleting %s because it is a duplicate...", file_path);
+		//unlink(file_path);
 
 		free(_old_alias);
 		return rc;
