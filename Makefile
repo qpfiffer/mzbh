@@ -1,6 +1,5 @@
 CFLAGS=-Werror -Wall -O2 -g3
 INCLUDES=-pthread -I./include/
-CC=clang
 NAME=waifu.xyz
 
 
