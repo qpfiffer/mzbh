@@ -152,13 +152,13 @@ static int _insert_webm(const char *file_path, const char filename[static MAX_IM
 						const char image_hash[static HASH_IMAGE_STR_SIZE], const char board[static MAX_BOARD_NAME_SIZE]) {
 	time_t modified_time = get_file_creation_date(file_path);
 	if (modified_time == 0) {
-		log_msg(LOG_ERR, "File does not exist.");
+		log_msg(LOG_ERR, "IWMT: '%s' does not exist.", file_path);
 		return 0;
 	}
 
 	size_t size = get_file_size(file_path);
 	if (size == 0) {
-		log_msg(LOG_ERR, "File does not exist.");
+		log_msg(LOG_ERR, "IWFS: '%s' does not exist.", file_path);
 		return 0;
 	}
 
@@ -180,13 +180,13 @@ static int _insert_aliased_webm(const char *file_path, const char filename[stati
 								const char image_hash[static HASH_IMAGE_STR_SIZE], const char board[static MAX_BOARD_NAME_SIZE]) {
 	time_t modified_time = get_file_creation_date(file_path);
 	if (modified_time == 0) {
-		log_msg(LOG_ERR, "File does not exist.");
+		log_msg(LOG_ERR, "IAWMT: '%s' does not exist.", file_path);
 		return 0;
 	}
 
 	size_t size = get_file_size(file_path);
 	if (size == 0) {
-		log_msg(LOG_ERR, "File does not exist.");
+		log_msg(LOG_ERR, "IAWFS: '%s' does not exist.", file_path);
 		return 0;
 	}
 
