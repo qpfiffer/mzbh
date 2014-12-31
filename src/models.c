@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "db.h"
 #include "models.h"
 #include "parson.h"
 #include "utils.h"
@@ -53,6 +54,32 @@ char *serialize_webm(const webm *to_serialize) {
 	serialized_string = json_serialize_to_string(root_value);
 	json_value_free(root_value);
 	return serialized_string;
+}
+
+static const unsigned int x_count(const char prefix[static MAX_KEY_SIZE]) {
+	size_t dsize = 0;
+	unsigned char *data = fetch_matches_from_db(prefix, &dsize);
+	if (!data)
+		return 0;
+
+	unsigned int i, matches = 0;
+	for (i = 0; i < dsize; i++) {
+		if (data[i] == '\n')
+			matches++;
+	}
+
+	/* printf("All matches: \n%s\n", data); */
+	free(data);
+	return matches;
+}
+const unsigned int webm_count() {
+	char prefix[MAX_KEY_SIZE] = WEBM_NMSPC;
+	return x_count(prefix);
+}
+
+const unsigned int webm_alias_count() {
+	char prefix[MAX_KEY_SIZE] = ALIAS_NMSPC;
+	return x_count(prefix);
 }
 
 void create_alias_key(const char file_path[static MAX_IMAGE_FILENAME_SIZE], char outbuf[static MAX_KEY_SIZE]) {

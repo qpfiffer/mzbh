@@ -7,6 +7,7 @@
 
 #include "common_defs.h"
 #include "db.h"
+#include "models.h"
 #include "logging.h"
 #include "sha3api_ref.h"
 #include "utils.h"
@@ -81,33 +82,14 @@ static int full_scan() {
 	return total;
 }
 
-static int x_count(const char prefix[static MAX_KEY_SIZE]) {
-	size_t dsize = 0;
-
-	unsigned char *data = fetch_matches_from_db(prefix, &dsize);
-	if (!data)
-		return 0;
-
-	unsigned int i, matches = 0;
-	for (i = 0; i < dsize; i++) {
-		if (data[i] == '\n')
-			matches++;
-	}
-
-	log_msg(LOG_INFO, "Num-matches: %i\n", matches);
-	/* printf("All matches: \n%s\n", data); */
-	free(data);
+static int _webm_count() {
+	log_msg(LOG_INFO, "Num-matches: %i", webm_count());
 	return 1;
 }
 
-static int webm_count() {
-	char prefix[MAX_KEY_SIZE] = WEBM_NMSPC;
-	return x_count(prefix);
-}
-
-static int alias_count() {
-	char prefix[MAX_KEY_SIZE] = ALIAS_NMSPC;
-	return x_count(prefix);
+static int _alias_count() {
+	log_msg(LOG_INFO, "Num-matches: %i", webm_alias_count());
+	return 1;
 }
 
 typedef struct cmd {
@@ -118,8 +100,8 @@ typedef struct cmd {
 /* TODO: Add help text to these. */
 const cmd commands[] = {
 	{"full_scan", &full_scan},
-	{"webm_count", &webm_count},
-	{"alias_count", &alias_count},
+	{"webm_count", &_webm_count},
+	{"alias_count", &_alias_count},
 };
 
 int main(int argc, char *argv[]) {
