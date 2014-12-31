@@ -233,7 +233,8 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 			log_msg(LOG_WARN, "%s is already marked as an alias of %s.", file_path, _old_webm->filename);
 		}
 
-		unlink(file_path);
+		if (rc)
+			unlink(file_path);
 		free(_old_alias);
 		free(_old_webm);
 		return rc;
