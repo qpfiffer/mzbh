@@ -55,6 +55,7 @@ error:
 unsigned int fetch_num_matches_from_db(const char prefix[static MAX_KEY_SIZE]) {
 	size_t outdata = 0;
 	char *_data = NULL;
+	char *_value = NULL;
 
 	int sock = _fetch_matches_common(prefix);
 	if (!sock)
@@ -64,12 +65,18 @@ unsigned int fetch_num_matches_from_db(const char prefix[static MAX_KEY_SIZE]) {
 	if (!_data)
 		goto error;
 
-	printf("%s", _data);
+	_value = get_header_value(_data, outdata, "X-Olegdb-Num-Matches");
+	if (!_value)
+		goto error;
 
+	unsigned int to_return = strtol(_value, NULL, 10);
+
+	free(_value);
 	close(sock);
-	return 0;
+	return to_return;
 
 error:
+	free(_value);
 	free(_data);
 	close(sock);
 	return 0;
