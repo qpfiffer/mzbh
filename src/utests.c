@@ -4,7 +4,6 @@
 #include <string.h>
 
 #include "utils.h"
-#include "utests.h"
 #include "models.h"
 
 int webm_serialization() {
