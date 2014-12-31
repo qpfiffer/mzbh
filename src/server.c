@@ -129,8 +129,10 @@ static int index_handler(const http_request *request, http_response *response) {
 	/* Render that shit */
 	size_t new_size = 0;
 	greshunkel_ctext *ctext = gshkl_init_context();
-	gshkl_add_int(ctext, "webm_count", webm_count());
-	gshkl_add_int(ctext, "alias_count", webm_alias_count());
+	//gshkl_add_int(ctext, "webm_count", webm_count());
+	//gshkl_add_int(ctext, "alias_count", webm_alias_count());
+	gshkl_add_int(ctext, "webm_count", -1);
+	gshkl_add_int(ctext, "alias_count", -1);
 
 	greshunkel_var *boards = gshkl_add_array(ctext, "BOARDS");
 	_add_files_in_dir_to_arr(boards, webm_location(), NULL);
