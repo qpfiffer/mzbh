@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "http.h"
 #include "utils.h"
 #include "models.h"
 
@@ -63,10 +64,30 @@ int hash_stuff() {
 	return 1;
 }
 
+int can_get_header_values() {
+	const char header[] =
+		"HTTP/1.1 200 OK\r\n"
+		"Content-Length: 12281\r\n"
+		"X-Olegdb-Num-Matches: 178\r\n"
+		"Date: Wed, 31 Dec 2014 23:44:08 GMT\r\n"
+		"Content-Type: text/plain; charset=utf-8\r\n\r\n";
+
+	char *num_matches = get_header_value(header, strlen(header), "X-Olegdb-Num-Matches");
+	assert(num_matches != NULL);
+	free(num_matches);
+
+	char *clength = get_header_value(header, strlen(header), "Content-Length");
+	assert(clength != NULL);
+	free(clength);
+
+	return 1;
+}
+
 int run_tests() {
 	webm_serialization();
 	webm_alias_serialization();
 	hash_stuff();
+	can_get_header_values();
 	return 0;
 }
 

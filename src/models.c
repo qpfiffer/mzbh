@@ -57,20 +57,8 @@ char *serialize_webm(const webm *to_serialize) {
 }
 
 static const unsigned int x_count(const char prefix[static MAX_KEY_SIZE]) {
-	size_t dsize = 0;
-	unsigned char *data = fetch_matches_from_db(prefix, &dsize);
-	if (!data)
-		return 0;
-
-	unsigned int i, matches = 0;
-	for (i = 0; i < dsize; i++) {
-		if (data[i] == '\n')
-			matches++;
-	}
-
-	/* printf("All matches: \n%s\n", data); */
-	free(data);
-	return matches;
+	unsigned int num = fetch_num_matches_from_db(prefix);
+	return num;
 }
 const unsigned int webm_count() {
 	char prefix[MAX_KEY_SIZE] = WEBM_NMSPC;

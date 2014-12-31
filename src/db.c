@@ -30,9 +30,7 @@ static const char DB_MATCH[] =  "GET /%s/%s/_match HTTP/1.1\r\n"
 	"Accept-Encoding: identity\r\n"
 	"\r\n";
 
-unsigned char *fetch_matches_from_db(const char prefix[static MAX_KEY_SIZE], size_t *outdata) {
-	unsigned char *_data = NULL;
-
+static int _fetch_matches_common(const char prefix[static MAX_KEY_SIZE]) {
 	const size_t db_match_siz = strlen(WAIFU_NMSPC) + strlen(DB_MATCH) + strnlen(prefix, MAX_KEY_SIZE);
 	char new_db_request[db_match_siz];
 	memset(new_db_request, '\0', db_match_siz);
@@ -47,11 +45,46 @@ unsigned char *fetch_matches_from_db(const char prefix[static MAX_KEY_SIZE], siz
 	if (strlen(new_db_request) != rc)
 		goto error;
 
-	_data = receive_http(sock, outdata);
+	return sock;
+
+error:
+	close(sock);
+	return 0;
+}
+
+unsigned int fetch_num_matches_from_db(const char prefix[static MAX_KEY_SIZE]) {
+	size_t outdata = 0;
+	char *_data = NULL;
+
+	int sock = _fetch_matches_common(prefix);
+	if (!sock)
+		goto error;
+
+	_data = receieve_only_http_header(sock, SELECT_TIMEOUT, &outdata);
 	if (!_data)
 		goto error;
 
-	/* log_msg(LOG_INFO, "Received: %s", _data); */
+	printf("%s", _data);
+
+	close(sock);
+	return 0;
+
+error:
+	free(_data);
+	close(sock);
+	return 0;
+}
+
+unsigned char *fetch_matches_from_db(const char prefix[static MAX_KEY_SIZE], size_t *outdata) {
+	unsigned char *_data = NULL;
+
+	int sock = _fetch_matches_common(prefix);
+	if (!sock)
+		goto error;
+
+	_data = receive_http(sock, outdata);
+	if (!_data)
+		goto error;
 
 	close(sock);
 	return _data;

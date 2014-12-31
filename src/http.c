@@ -163,6 +163,94 @@ unsigned char *receive_http(const int request_fd, size_t *out) {
 	return receive_http_with_timeout(request_fd, SELECT_TIMEOUT, out);
 }
 
+char *get_header_value(const char *request, const size_t request_siz, const char header[static 1]) {
+	char *data = NULL;
+	const char *header_loc = strnstr(request, header, request_siz);
+	if (!header_loc)
+		return NULL;
+
+	const char *header_value_start = header_loc + strlen(header) + strlen(": ");
+	const char *header_value_end = strstr(header_loc, "\r\n");
+	if (!header_value_end)
+		return NULL;
+
+	const size_t header_value_size = header_value_end - header_value_start;
+	data = calloc(header_value_size, sizeof(char));
+	strncpy(data, header_value_start, header_value_size);
+
+	return data;
+}
+
+char *receieve_only_http_header(const int request_fd, const int timeout, size_t *out) {
+	unsigned char *raw_buf = NULL;
+	size_t buf_size = 0;
+	int times_read = 0;
+
+	fd_set chan_fds;
+	FD_ZERO(&chan_fds);
+	FD_SET(request_fd, &chan_fds);
+	const int maxfd = request_fd;
+
+	struct timeval tv = {
+		.tv_sec = timeout,
+		.tv_usec = 0
+	};
+	select(maxfd + 1, &chan_fds, NULL, NULL, &tv);
+
+	unsigned char *header_end = NULL;
+	size_t total_received = 0;
+	while (1) {
+		times_read++;
+
+		int count;
+		/* How many bytes should we read: */
+		ioctl(request_fd, FIONREAD, &count);
+		if (count <= 0)
+			break;
+		else if (count <= 0) /* Continue waiting. */
+			continue;
+		int old_offset = buf_size;
+		buf_size += count;
+		if (raw_buf != NULL) {
+			unsigned char *new_buf = realloc(raw_buf, buf_size);
+			if (new_buf != NULL) {
+				raw_buf = new_buf;
+			} else {
+				goto error;
+			}
+		} else {
+			raw_buf = calloc(1, buf_size);
+		}
+		/* printf("IOCTL: %i.\n", count); */
+
+		int received = recv(request_fd, raw_buf + old_offset, count, 0);
+		total_received += received;
+
+		/* Attempt to find the header length. */
+		if (header_end == NULL) {
+			header_end = (unsigned char *)strstr((char *)raw_buf, "\r\n\r\n");
+			if (header_end != NULL)
+				break;
+		}
+	}
+
+	if (raw_buf == NULL)
+		goto error;
+
+	const size_t header_size = header_end - raw_buf;
+	char *to_return = malloc(header_size);
+	memcpy(to_return, raw_buf, header_size);
+	*out = header_size;
+	free(raw_buf);
+
+	return to_return;
+
+error:
+	if (raw_buf != NULL)
+		free(raw_buf);
+	return NULL;
+}
+
 unsigned char *receive_http_with_timeout(const int request_fd, const int timeout, size_t *out) {
 	unsigned char *raw_buf = NULL;
 	size_t buf_size = 0;

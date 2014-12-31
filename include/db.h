@@ -11,6 +11,7 @@ int store_data_in_db(const char key[static MAX_KEY_SIZE], const unsigned char *v
 
 /* Does a prefix match for the passed in prefix. */
 unsigned char *fetch_matches_from_db(const char prefix[static MAX_KEY_SIZE], size_t *outdata);
+unsigned int fetch_num_matches_from_db(const char prefix[static MAX_KEY_SIZE]);
 
 /* Gets an aliased image from the DB. */
 struct webm_alias *get_aliased_image(const char filepath[static MAX_IMAGE_FILENAME_SIZE]);
