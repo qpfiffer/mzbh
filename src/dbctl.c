@@ -16,7 +16,8 @@ static const char *WEBMS_LOCATION = NULL;
 
 static void usage(const char *program_name) {
 	log_msg(LOG_ERR, "Usage: %s <command>", program_name);
-	log_msg(LOG_ERR, "full_scan		--	Scans the entire webm directory and makes sure everything is in the DB.", program_name);
+	log_msg(LOG_ERR, "full_scan		--	Scans the entire webm directory and makes sure everything is in the DB.");
+	log_msg(LOG_ERR, "delete_dupes	--	Deletes excess webms.");
 }
 
 static int _add_directory(const char *directory_to_open, const char board[MAX_BOARD_NAME_SIZE]) {
@@ -79,6 +80,20 @@ static int full_scan() {
 	return total;
 }
 
+static int delete_dupes() {
+	return 0;
+}
+
+typedef struct cmd {
+	const char *cmd;
+	int (*func_ptr)();
+} cmd;
+
+const cmd commands[] = {
+	{"full_scan", &full_scan},
+	{"delete_dupes", &delete_dupes}
+};
+
 int main(int argc, char *argv[]) {
 	if (argc == 1) {
 		usage(argv[0]);
@@ -93,9 +108,13 @@ int main(int argc, char *argv[]) {
 	for (;i < argc; i++) {
 		const char *current_arg = argv[i];
 
-		if (strncmp(current_arg, "full_scan", strlen("full_scan")) == 0) {
-			full_scan();
-			return 0;
+		int j;
+		for (j = 0; j < (sizeof(commands)/sizeof(commands[0])); j++) {
+			const cmd current_command = commands[j];
+			if (strncmp(current_arg, current_command.cmd, strlen(current_command.cmd)) == 0) {
+				current_command.func_ptr();
+				return 0;
+			}
 		}
 	}
 

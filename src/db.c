@@ -230,7 +230,7 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 			rc = _insert_aliased_webm(file_path, filename, image_hash, board);
 
 		/* Regardless, this webm is an alias and we don't care. Delete it. */
-		log_msg(LOG_WARN, "Deleting %s because it is a duplicate...", file_path);
+		log_msg(LOG_WARN, "%s is a duplicate.", file_path);
 		//unlink(file_path);
 
 		free(_old_alias);
