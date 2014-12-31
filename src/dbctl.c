@@ -89,6 +89,7 @@ typedef struct cmd {
 	int (*func_ptr)();
 } cmd;
 
+/* TODO: Add help text to these. */
 const cmd commands[] = {
 	{"full_scan", &full_scan},
 	{"delete_dupes", &delete_dupes}
