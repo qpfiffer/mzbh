@@ -216,7 +216,6 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 
 	/* Check to see if the one we're scanning is the exact match we got from the DB. */
 	if (strncmp(_old_webm->filename, filename, MAX_IMAGE_FILENAME_SIZE) != 0) {
-		free(_old_webm);
 		/* It's not the canonical original, so insert an alias. */
 
 		webm_alias *_old_alias = get_aliased_image(file_path);
@@ -228,14 +227,15 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 		 */
 		if (_old_alias == NULL) {
 			rc = _insert_aliased_webm(file_path, filename, image_hash, board);
-			log_msg(LOG_WARN, "%s is an alias.", file_path);
+			log_msg(LOG_FUN, "%s is a new alias.", file_path);
 		} else {
 			/* Regardless, this webm is an alias and we don't care. Delete it. */
-			log_msg(LOG_WARN, "%s is a useless duplicate! Deleting.", file_path);
+			log_msg(LOG_WARN, "%s is already marked as an alias or %s.", file_path, _old_webm->filename);
 			//unlink(file_path);
 		}
 
 		free(_old_alias);
+		free(_old_webm);
 		return rc;
 	}
 
