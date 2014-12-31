@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <stdint.h>
+#include <inttypes.h>
 #include <unistd.h>
 #include "logging.h"
 #include "models.h"
@@ -195,4 +197,25 @@ error:
 		munmap(data_ptr, st.st_size);
 	close(fd);
 	return 0;
+}
+
+int hash_string_fnv1a(const unsigned char *key, const size_t siz, char outbuf[static HASH_IMAGE_STR_SIZE]) {
+	/* https://en.wikipedia.org/wiki/Fowler_Noll_Vo_hash */
+	const uint64_t fnv_prime = 1099511628211ULL;
+	const uint64_t fnv_offset_bias = 14695981039346656037ULL;
+
+	const int iterations = siz;
+
+	uint8_t i;
+	uint64_t hash = fnv_offset_bias;
+
+	for(i = 0; i < iterations; i++) {
+		hash = hash ^ key[i];
+		hash = hash * fnv_prime;
+	}
+
+
+	sprintf(outbuf, "%"PRIX64, hash);
+
+	return 1;
 }

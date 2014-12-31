@@ -49,9 +49,24 @@ int webm_alias_serialization() {
 	return 1;
 }
 
+int hash_stuff() {
+	char outbuf[HASH_IMAGE_STR_SIZE] = {0};
+	char hash_key[MAX_KEY_SIZE] = "3000655_blitzbang2.webm";
+
+	char outbuf1[HASH_IMAGE_STR_SIZE] = {0};
+	char hash_key1[MAX_KEY_SIZE] = "3000655_blitzbang3.webm";
+
+	assert(hash_string_fnv1a((unsigned char *)hash_key, strlen(hash_key), outbuf));
+	assert(hash_string_fnv1a((unsigned char *)hash_key1, strlen(hash_key1), outbuf1));
+
+	assert(strcmp(outbuf, outbuf1) != 0);
+	return 1;
+}
+
 int run_tests() {
 	webm_serialization();
 	webm_alias_serialization();
+	hash_stuff();
 	return 0;
 }
 

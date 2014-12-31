@@ -30,3 +30,5 @@ void get_thumb_filename(char thumb_filename[static MAX_IMAGE_FILENAME_SIZE], con
 
 int hash_string(const unsigned char *string, const size_t siz, char outbuf[static HASH_IMAGE_STR_SIZE]);
 int hash_file(const char *filepath, char outbuf[static HASH_IMAGE_STR_SIZE]);
+
+int hash_string_fnv1a(const unsigned char *string, const size_t siz, char outbuf[static HASH_IMAGE_STR_SIZE]);
