@@ -231,9 +231,9 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 		} else {
 			/* Regardless, this webm is an alias and we don't care. Delete it. */
 			log_msg(LOG_WARN, "%s is already marked as an alias of %s.", file_path, _old_webm->filename);
-			//unlink(file_path);
 		}
 
+		unlink(file_path);
 		free(_old_alias);
 		free(_old_webm);
 		return rc;
