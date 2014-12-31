@@ -22,6 +22,46 @@ static const char DB_POST[] = "POST /%s/%s HTTP/1.1\r\n"
 	"\r\n"
 	"%s";
 
+/* We use 'Accept-Encoding: identity' here so we don't get back chunked
+ * transfer shit. I hate parsing that garbage.
+ */
+static const char DB_MATCH[] =  "GET /%s/%s/_match HTTP/1.1\r\n"
+	"Host: "DB_HOST":"DB_PORT"\r\n"
+	"Accept-Encoding: identity\r\n"
+	"\r\n";
+
+unsigned char *fetch_matches_from_db(const char prefix[static MAX_KEY_SIZE], size_t *outdata) {
+	unsigned char *_data = NULL;
+
+	const size_t db_match_siz = strlen(WAIFU_NMSPC) + strlen(DB_MATCH) + strnlen(prefix, MAX_KEY_SIZE);
+	char new_db_request[db_match_siz];
+	memset(new_db_request, '\0', db_match_siz);
+
+	int sock = 0;
+	sock = connect_to_host_with_port(DB_HOST, DB_PORT);
+	if (sock == 0)
+		goto error;
+
+	snprintf(new_db_request, db_match_siz, DB_MATCH, WAIFU_NMSPC, prefix);
+	int rc = send(sock, new_db_request, strlen(new_db_request), 0);
+	if (strlen(new_db_request) != rc)
+		goto error;
+
+	_data = receive_http(sock, outdata);
+	if (!_data)
+		goto error;
+
+	/* log_msg(LOG_INFO, "Received: %s", _data); */
+
+	close(sock);
+	return _data;
+
+error:
+	free(_data);
+	close(sock);
+	return NULL;
+}
+
 unsigned char *fetch_data_from_db(const char key[static MAX_KEY_SIZE], size_t *outdata) {
 	unsigned char *_data = NULL;
 
