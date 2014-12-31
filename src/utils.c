@@ -214,8 +214,6 @@ int hash_string_fnv1a(const unsigned char *key, const size_t siz, char outbuf[st
 		hash = hash * fnv_prime;
 	}
 
-
 	sprintf(outbuf, "%"PRIX64, hash);
-
 	return 1;
 }
