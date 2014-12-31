@@ -55,9 +55,9 @@ char *serialize_webm(const webm *to_serialize) {
 	return serialized_string;
 }
 
-void create_alias_key(const char filename[static MAX_IMAGE_FILENAME_SIZE], char outbuf[static MAX_KEY_SIZE]) {
+void create_alias_key(const char file_path[static MAX_IMAGE_FILENAME_SIZE], char outbuf[static MAX_KEY_SIZE]) {
 	char str_hash[HASH_IMAGE_STR_SIZE] = {0};
-	assert(hash_string((unsigned char *)filename, strnlen(filename, MAX_IMAGE_FILENAME_SIZE), str_hash));
+	assert(hash_string((unsigned char *)file_path, strnlen(file_path, MAX_IMAGE_FILENAME_SIZE), str_hash));
 	snprintf(outbuf, MAX_KEY_SIZE, "%s%s", ALIAS_NMSPC, str_hash);
 }
 

@@ -38,7 +38,7 @@ typedef struct webm_alias {
 	time_t created_at;
 } webm_alias;
 
-void create_alias_key(const char filename[static MAX_IMAGE_FILENAME_SIZE], char outbuf[static MAX_KEY_SIZE]);
+void create_alias_key(const char file_path[static MAX_IMAGE_FILENAME_SIZE], char outbuf[static MAX_KEY_SIZE]);
 char *serialize_alias(const webm_alias *to_serialize);
 webm_alias *deserialize_alias(const char *json);
 
