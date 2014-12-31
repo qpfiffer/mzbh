@@ -3,14 +3,18 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "utils.h"
 #include "utests.h"
 #include "models.h"
 
 int webm_serialization() {
 	webm to_test = {
 		.file_hash = "47C81F590352D9F95C4CDC4FC7985195D5BD45317728A61791F1D9D9EE530E15",
+		._null_term_hax_1 = 0,
 		.filename = "walrus_eating_cake.webm",
+		._null_term_hax_2 = 0,
 		.board = "b",
+		._null_term_hax_3 = 0,
 		.created_at = 1419626658,
 		.size = 123000
 	};
@@ -28,8 +32,11 @@ int webm_serialization() {
 int webm_alias_serialization() {
 	webm_alias to_test = {
 		.file_hash = "47C81F590352D9F95C4CDC4FC7985195D5BD45317728A61791F1D9D9EE530E15",
+		._null_term_hax_1 = 0,
 		.filename = "walrus_eating_cake.webm",
+		._null_term_hax_2 = 0,
 		.board = "b",
+		._null_term_hax_3 = 0,
 		.created_at = 1419626658,
 	};
 

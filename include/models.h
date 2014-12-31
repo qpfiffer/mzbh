@@ -18,7 +18,7 @@ typedef struct webm {
 
 	time_t created_at;
 	size_t size;
-} webm;
+} __attribute__((__packed__)) webm;
 
 void create_webm_key(const char file_hash[static HASH_IMAGE_STR_SIZE], char outbuf[static MAX_KEY_SIZE]);
 char *serialize_webm(const webm *to_serialize);
@@ -36,7 +36,7 @@ typedef struct webm_alias {
 	unsigned char _null_term_hax_3;
 
 	time_t created_at;
-} webm_alias;
+} __attribute__((__packed__)) webm_alias;
 
 void create_alias_key(const char file_path[static MAX_IMAGE_FILENAME_SIZE], char outbuf[static MAX_KEY_SIZE]);
 char *serialize_alias(const webm_alias *to_serialize);
