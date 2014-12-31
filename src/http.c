@@ -62,7 +62,7 @@ char *receive_chunked_http(const int request_fd) {
 	/* printf("Full message is %s\n.", raw_buf); */
 	/* Check for a 200: */
 	if (raw_buf == NULL || strstr(raw_buf, "200") == NULL) {
-		log_msg(LOG_WARN, "Could not find 200 return code in response.");
+		log_msg(LOG_WARN, "Chunked: Could not find 200 return code in response.");
 		goto error;
 	}
 
@@ -224,7 +224,7 @@ unsigned char *receive_http_with_timeout(const int request_fd, const int timeout
 				const char *first_line_end_c = strstr((char *)raw_buf, "\r\n");
 				const size_t first_line_end = first_line_end_c - (char *)raw_buf;
 				if (strnstr((char *)raw_buf, "200", first_line_end) == NULL && strnstr((char *)raw_buf, "201", first_line_end) == NULL) {
-					log_msg(LOG_WARN, "Could not find 200 return code in response.");
+					log_msg(LOG_WARN, "HTTP: Could not find 200 return code in response.");
 					goto error;
 				}
 

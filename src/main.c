@@ -9,6 +9,7 @@
 
 #include "db.h"
 #include "http.h"
+#include "models.h"
 #include "parse.h"
 #include "logging.h"
 #include "server.h"
@@ -129,6 +130,15 @@ static ol_stack *build_thread_index() {
 				/* We already have that file. */
 				if (should_skip) {
 					free(p_match);
+					continue;
+				}
+
+				/* Check if we have an existing alias for this file. */
+				webm_alias *existing = get_aliased_image(fname);
+				if (existing) {
+					log_msg(LOG_INFO, "Found alias for '%s', skipping.", fname);
+					free(p_match);
+					free(existing);
 					continue;
 				}
 
