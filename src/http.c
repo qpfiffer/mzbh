@@ -246,7 +246,7 @@ unsigned char *receive_http_with_timeout(const int request_fd, const int timeout
 					i++;
 				}
 				result_size = strtol(siz_buf, NULL, 10);
-				log_msg(LOG_INFO, "Content length is %lu bytes.", result_size);
+				/* log_msg(LOG_INFO, "Content length is %lu bytes.", result_size); */
 			}
 		}
 	}
