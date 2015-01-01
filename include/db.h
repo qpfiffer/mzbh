@@ -15,6 +15,7 @@ unsigned int fetch_num_matches_from_db(const char prefix[static MAX_KEY_SIZE]);
 
 /* Gets an aliased image from the DB. */
 struct webm_alias *get_aliased_image(const char filepath[static MAX_IMAGE_FILENAME_SIZE]);
+struct webm *get_image(const char image_hash[static HASH_ARRAY_SIZE]);
 
 /* Attempts to add an image to the database.
  * Returns 0 on success.
