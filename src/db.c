@@ -306,8 +306,11 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 		 * an alias is it's filename.
 		 */
 		if (_old_alias == NULL) {
-			rc = _insert_aliased_webm(file_path, filename, image_hash, board);
-			log_msg(LOG_FUN, "%s is a new alias of %s.", file_path, _old_webm->filename);
+			/* There are some bad values in the database. Skip them. */
+			if (endswith(_old_alias->filename, ".webm")) {
+				rc = _insert_aliased_webm(file_path, filename, image_hash, board);
+				log_msg(LOG_FUN, "%s is a new alias of %s.", file_path, _old_webm->filename);
+			}
 		} else {
 			/* Regardless, this webm is an alias and we don't care. Delete it. */
 			log_msg(LOG_WARN, "%s is already marked as an alias of %s.", file_path, _old_webm->filename);
