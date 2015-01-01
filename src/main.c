@@ -192,20 +192,20 @@ int download_images() {
 		goto error;
 	}
 
-	thumb_request_fd = connect_to_host(FOURCHAN_THUMBNAIL_HOST);
-	if (thumb_request_fd < 0) {
-		log_msg(LOG_ERR, "Could not connect to thumbnail host.");
-		goto error;
-	}
-
-	image_request_fd = connect_to_host(FOURCHAN_IMAGE_HOST);
-	if (image_request_fd < 0) {
-		log_msg(LOG_ERR, "Could not connect to image host.");
-		goto error;
-	}
-
 	/* Now actually download the images. */
 	while (images_to_download->next != NULL) {
+		thumb_request_fd = connect_to_host(FOURCHAN_THUMBNAIL_HOST);
+		if (thumb_request_fd < 0) {
+			log_msg(LOG_ERR, "Could not connect to thumbnail host.");
+			goto error;
+		}
+
+		image_request_fd = connect_to_host(FOURCHAN_IMAGE_HOST);
+		if (image_request_fd < 0) {
+			log_msg(LOG_ERR, "Could not connect to image host.");
+			goto error;
+		}
+
 		p_match = (post_match *)spop(&images_to_download);
 
 		char image_filename[MAX_IMAGE_FILENAME_SIZE] = {0};
@@ -250,12 +250,6 @@ int download_images() {
 			/* 4chan cut us off. This happens sometimes. Just sleep for a bit. */
 			log_msg(LOG_WARN, "Hit API cutoff or whatever. Sleeping.");
 			sleep(30);
-
-			close(thumb_request_fd);
-			close(image_request_fd);
-
-			thumb_request_fd = connect_to_host(FOURCHAN_THUMBNAIL_HOST);
-			image_request_fd = connect_to_host(FOURCHAN_IMAGE_HOST);
 			free(p_match);
 			continue;
 		}
@@ -318,10 +312,11 @@ int download_images() {
 		raw_image_resp = NULL;
 		free(raw_thumb_resp);
 		raw_thumb_resp = NULL;
+
+		close(thumb_request_fd);
+		close(image_request_fd);
 	}
 	free(images_to_download);
-	close(thumb_request_fd);
-	close(image_request_fd);
 	log_msg(LOG_INFO, "Downloaded all images.");
 
 	return 0;
