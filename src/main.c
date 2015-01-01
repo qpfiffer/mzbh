@@ -389,12 +389,34 @@ int main(int argc, char *argv[]) {
 	signal(SIGINT, term);
 	signal(SIGKILL, term);
 	signal(SIGCHLD, SIG_IGN);
-	if (argc < 2 || strncmp(argv[1], "--serve", strlen("--serve")) != 0) {
-		if (start_bg_worker(DEBUG) != 0)
-			return -1;
+
+	int num_threads = DEFAULT_NUM_THREADS;
+	int start_bg_worker_t = 1;
+	int i;
+	for (i = 1; i < argc; i++) {
+		const char *cur_arg = argv[i];
+		if (strncmp(cur_arg, "-t", strlen("-t")) == 0) {
+			if ((i + 1) < argc) {
+				num_threads = strtol(argv[++i], NULL, 10);
+				if (num_threads <= 0) {
+					log_msg(LOG_ERR, "Thread count must be at least 1.");
+					return -1;
+				}
+			} else {
+				log_msg(LOG_ERR, "Not enough arguments to -t.");
+				return -1;
+			}
+		}
+
+		if (strncmp(cur_arg, "--serve", strlen("--serve")) != 0)
+			start_bg_worker_t = 0;
 	}
+
+	if (start_bg_worker_t && start_bg_worker(DEBUG) != 0)
+		return -1;
+
 	int rc = 0;
-	if ((rc = http_serve(main_sock_fd)) != 0) {
+	if ((rc = http_serve(main_sock_fd, num_threads)) != 0) {
 		term(SIGTERM);
 		log_msg(LOG_ERR, "Could not start HTTP service.");
 		return rc;

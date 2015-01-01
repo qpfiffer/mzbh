@@ -20,6 +20,15 @@ not great but it'll get the job done. You can run just the webserver with:
 
 This runs the webserver by itself without starting the scraper component.
 
+The webserver also accepts a thread counter argument, `-t`. This specifies the
+number of threads in the acceptor pool.
+
+```
+./waifu.xyz -t 4
+```
+
+This runs the webserver with 4 threads. The default is 2.
+
 ## Scraper
 
 The scraper hits the 4chan API very slowly and fetches threads it thinks will

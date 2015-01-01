@@ -24,8 +24,6 @@
 #include "greshunkel.h"
 #include "models.h"
 
-#define NUM_THREADS 4
-
 static int _only_webms_filter(const char *file_name) {
 	return endswith(file_name, ".webm");
 }
@@ -274,7 +272,10 @@ static void *acceptor(void *arg) {
 	return NULL;
 }
 
-int http_serve(int main_sock_fd) {
+int http_serve(int main_sock_fd, const int num_threads) {
+	/* Our acceptor pool: */
+	pthread_t workers[num_threads];
+
 	int rc = -1;
 	main_sock_fd = socket(PF_INET, SOCK_STREAM, 0);
 	if (main_sock_fd <= 0) {
@@ -304,18 +305,15 @@ int http_serve(int main_sock_fd) {
 	}
 	log_msg(LOG_FUN, "Listening on http://localhost:%i/", port);
 
-	/* Our acceptor pool: */
-	pthread_t workers[NUM_THREADS];
-
 	int i;
-	for (i = 0; i < NUM_THREADS; i++) {
+	for (i = 0; i < num_threads; i++) {
 		if (pthread_create(&workers[i], NULL, acceptor, &main_sock_fd) != 0) {
 			goto error;
 		}
 		log_msg(LOG_INFO, "Thread %i started.", i);
 	}
 
-	for (i = 0; i < NUM_THREADS; i++) {
+	for (i = 0; i < num_threads; i++) {
 		pthread_join(workers[i], NULL);
 		log_msg(LOG_INFO, "Thread %i stopped.", i);
 	}
