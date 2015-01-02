@@ -408,7 +408,7 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
-		if (strncmp(cur_arg, "--serve", strlen("--serve")) != 0)
+		if (strncmp(cur_arg, "--serve", strlen("--serve")) == 0)
 			start_bg_worker_t = 0;
 	}
 
