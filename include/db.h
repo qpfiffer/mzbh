@@ -9,8 +9,13 @@
 unsigned char *fetch_data_from_db(const char key[static MAX_KEY_SIZE], size_t *outdata);
 int store_data_in_db(const char key[static MAX_KEY_SIZE], const unsigned char *val, const size_t vlen);
 
+typedef struct db_match {
+	char key[MAX_KEY_SIZE];
+	struct db_match *next;
+} db_match;
+
 /* Does a prefix match for the passed in prefix. */
-unsigned char *fetch_matches_from_db(const char prefix[static MAX_KEY_SIZE], size_t *outdata);
+db_match *fetch_matches_from_db(const char prefix[static MAX_KEY_SIZE]);
 unsigned int fetch_num_matches_from_db(const char prefix[static MAX_KEY_SIZE]);
 
 /* Gets an aliased image from the DB. */

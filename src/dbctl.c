@@ -92,6 +92,22 @@ static int _alias_count() {
 	return 1;
 }
 
+static int _print_alias_matches() {
+	char p[MAX_KEY_SIZE] = "alias";
+	db_match *matches = fetch_matches_from_db(p);
+
+	db_match *current = matches;
+	while (current) {
+		db_match *next = current->next;
+		log_msg(LOG_FUN, "%s", current->key);
+		free(current);
+		current = next;
+	}
+
+	//free(matches);
+	return 1;
+}
+
 typedef struct cmd {
 	const char *cmd;
 	int (*func_ptr)();
@@ -102,6 +118,7 @@ const cmd commands[] = {
 	{"full_scan", &full_scan},
 	{"webm_count", &_webm_count},
 	{"alias_count", &_alias_count},
+	{"print_alias_matches", &_print_alias_matches}
 };
 
 int main(int argc, char *argv[]) {

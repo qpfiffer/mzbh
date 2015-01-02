@@ -82,19 +82,39 @@ error:
 	return 0;
 }
 
-unsigned char *fetch_matches_from_db(const char prefix[static MAX_KEY_SIZE], size_t *outdata) {
+db_match *fetch_matches_from_db(const char prefix[static MAX_KEY_SIZE]) {
+	size_t dsize = 0;
 	unsigned char *_data = NULL;
 
 	int sock = _fetch_matches_common(prefix);
 	if (!sock)
 		goto error;
 
-	_data = receive_http(sock, outdata);
+	_data = receive_http(sock, &dsize);
 	if (!_data)
 		goto error;
 
+	db_match *to_return = NULL;
+	db_match *cur = to_return;
+	int i;
+	unsigned char *line_start = _data, *line_end = NULL;
+	for (i = 0; i < dsize; i++) {
+		if (_data[i] == '\n' && i + 1 < dsize) {
+			line_end = &_data[i];
+			const size_t line_size = line_end - line_start;
+
+			db_match *new = calloc(1, sizeof(db_match));
+			memcpy(new->key, line_start, line_size);
+
+			new->next = cur;
+			cur = new;
+			line_start = &_data[++i];
+		}
+	}
+
+	free(_data);
 	close(sock);
-	return _data;
+	return cur;
 
 error:
 	free(_data);
