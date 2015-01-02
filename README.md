@@ -48,7 +48,7 @@ There is no installation. this will just build a handful of binaries you can use
 
 * `waifu.xyz` - The main webserver/application and scraper. This is the meat of
   everything.
-* `dbctl` - Handy cli program to manage and inspect and manage the DB state.
+* `dbctl` - Handy cli program to manage and inspect the DB state.
 * `greshunkel_test` - Tests for the GRESHUNKEL templating language.
 * `unit_test` - Random unit tests. Not really organized, mostly to prevent
   regressions.
