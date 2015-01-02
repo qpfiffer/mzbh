@@ -201,8 +201,10 @@ static int webm_handler(const http_request *request, http_response *response) {
 		gshkl_add_int(ctext, "image_date", -1);
 	else {
 		gshkl_add_int(ctext, "image_date", _webm->created_at);
+		gshkl_add_string_to_loop(aliases, "None");
 
 		/* Add known aliases from DB. */
+		/* 
 		const char p[MAX_KEY_SIZE] = ALIAS_NMSPC;
 		db_match *matched_aliases = filter(p, _webm->file_hash, &hash_filter);
 		db_match *cur = matched_aliases;
@@ -217,6 +219,7 @@ static int webm_handler(const http_request *request, http_response *response) {
 			free((unsigned char *)to_free->data);
 			free(to_free);
 		}
+		*/
 	}
 
 	char *rendered = gshkl_render(ctext, mmapd_region, original_size, &new_size);
