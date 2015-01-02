@@ -82,7 +82,7 @@ error:
 	return 0;
 }
 
-db_match *fetch_matches_from_db(const char prefix[static MAX_KEY_SIZE]) {
+db_key_match *fetch_matches_from_db(const char prefix[static MAX_KEY_SIZE]) {
 	size_t dsize = 0;
 	unsigned char *_data = NULL;
 
@@ -94,8 +94,8 @@ db_match *fetch_matches_from_db(const char prefix[static MAX_KEY_SIZE]) {
 	if (!_data)
 		goto error;
 
-	db_match *to_return = NULL;
-	db_match *cur = to_return;
+	db_key_match *eol = NULL;
+	db_key_match *cur = eol;
 	int i;
 	unsigned char *line_start = _data, *line_end = NULL;
 	for (i = 0; i < dsize; i++) {
@@ -103,7 +103,7 @@ db_match *fetch_matches_from_db(const char prefix[static MAX_KEY_SIZE]) {
 			line_end = &_data[i];
 			const size_t line_size = line_end - line_start;
 
-			db_match *new = calloc(1, sizeof(db_match));
+			db_key_match *new = calloc(1, sizeof(db_key_match));
 			memcpy(new->key, line_start, line_size);
 
 			new->next = cur;
@@ -349,4 +349,26 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 	free(_old_webm);
 	return 1;
 
+}
+
+db_match *filter(const char prefix[static MAX_KEY_SIZE], int (*filter)(unsigned char *data)) {
+	db_match *eol = NULL;
+
+	db_key_match *prefix_matches = fetch_matches_from_db(prefix);
+	db_key_match *current = prefix_matches;
+	while (current) {
+		db_key_match *next = current->next;
+
+
+		/* 1. Fetch data for this key from DB.
+		 * 2. Apply filter predicate.
+		 * 3. If it returns true, add it to the list.
+		 * 4. Continue.
+		 */
+
+		free(current);
+		current = next;
+	}
+
+	return eol;
 }

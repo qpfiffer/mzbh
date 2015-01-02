@@ -94,17 +94,16 @@ static int _alias_count() {
 
 static int _print_alias_matches() {
 	char p[MAX_KEY_SIZE] = "alias";
-	db_match *matches = fetch_matches_from_db(p);
+	db_key_match *matches = fetch_matches_from_db(p);
 
-	db_match *current = matches;
+	db_key_match *current = matches;
 	while (current) {
-		db_match *next = current->next;
+		db_key_match *next = current->next;
 		log_msg(LOG_FUN, "%s", current->key);
 		free(current);
 		current = next;
 	}
 
-	//free(matches);
 	return 1;
 }
 
