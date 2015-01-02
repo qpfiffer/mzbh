@@ -147,6 +147,19 @@ static int index_handler(const http_request *request, http_response *response) {
 	return 200;
 }
 
+static int hash_filter(const unsigned char *data, const size_t dsize,
+		const void *extrainput, void **extradata) {
+	const char *hash = extrainput;
+	webm_alias *alias = deserialize_alias((char *)data);
+	(*extradata) = alias;
+
+	if (strncmp(hash, alias->file_hash, HASH_IMAGE_STR_SIZE) == 0)
+		return 1;
+
+	free(alias);
+	return 0;
+}
+
 static int webm_handler(const http_request *request, http_response *response) {
 	int rc = mmap_file("./templates/webm.html", response);
 	if (rc != 200)
@@ -180,13 +193,31 @@ static int webm_handler(const http_request *request, http_response *response) {
 	memset(full_path, '\0', full_path_size);
 	snprintf(full_path, full_path_size, "%s/%s/%s", webm_loc, current_board, file_name_decoded);
 
+	greshunkel_var *aliases = gshkl_add_array(ctext, "aliases");
 	char image_hash[HASH_IMAGE_STR_SIZE] = {0};
 	hash_file(full_path, image_hash);
 	webm *_webm = get_image(image_hash);
 	if (!_webm)
 		gshkl_add_int(ctext, "image_date", -1);
-	else
+	else {
 		gshkl_add_int(ctext, "image_date", _webm->created_at);
+
+		/* Add known aliases from DB. */
+		const char p[MAX_KEY_SIZE] = ALIAS_NMSPC;
+		db_match *matched_aliases = filter(p, _webm->file_hash, &hash_filter);
+		db_match *cur = matched_aliases;
+		while(cur) {
+			db_match *to_free = cur;
+
+			const webm_alias *_alias = cur->extradata;
+			gshkl_add_string_to_loop(aliases, _alias->filename);
+
+			cur = cur->next;
+			free((void *)to_free->extradata);
+			free((unsigned char *)to_free->data);
+			free(to_free);
+		}
+	}
 
 	char *rendered = gshkl_render(ctext, mmapd_region, original_size, &new_size);
 	gshkl_free_context(ctext);

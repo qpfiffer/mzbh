@@ -129,7 +129,6 @@ typedef struct cmd {
 	const char *help;
 } cmd;
 
-/* TODO: Add help text to these. */
 const cmd commands[] = {
 	{"full_scan", &full_scan, "Scans the entire webm directory and makes sure everything is in the DB."},
 	{"webm_count", &_webm_count, "Gets the number of webms in the database."},

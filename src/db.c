@@ -384,6 +384,8 @@ db_match *filter(const char prefix[static MAX_KEY_SIZE], const void *extrainput,
 				db_match *new = calloc(1, sizeof(db_match));
 				memcpy(new, &_new, sizeof(db_match));
 				cur = new;
+			} else {
+				free((unsigned char *)_data);
 			}
 		}
 		/* 4. Continue.*/
