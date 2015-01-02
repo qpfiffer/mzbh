@@ -100,7 +100,9 @@ static int _print_alias_matches() {
 }
 
 static inline int _f_ds_webms(const unsigned char *data, const size_t dsize, const void *e, void **extradata) {
-	(*extradata) = deserialize_webm((char *)data);
+	webm *_webm = deserialize_webm((char *)data);
+	log_msg(LOG_FUN, "%s", _webm->filename);
+	free(_webm);
 	return 1;
 }
 
@@ -111,12 +113,7 @@ static int _print_webm_filenames() {
 	db_match *cur = matches;
 	while (cur) {
 		db_match *to_free = cur;
-
-		const webm *_webm = cur->extradata;
-		log_msg(LOG_FUN, "%s", _webm->filename);
-
 		cur = cur->next;
-		free((void *)to_free->extradata);
 		free((unsigned char *)to_free->data);
 		free(to_free);
 	}
