@@ -26,9 +26,11 @@ typedef struct db_match {
 } db_match;
 
 /* Takes prefix and a predicate, and produces a list of db_match objects.
+ * extrainput can be used to pass in anything extra you might want to pass in. Like something to compare to.
  * Extradata will be taken and stored in the db_match object. This is good if you're doing some working
  * you want to be able to access later, like deserializing and object. */
-db_match *filter(const char prefix[static MAX_KEY_SIZE], int (*filter)(const unsigned char *data, const size_t dsize, void **extradata));
+db_match *filter(const char prefix[static MAX_KEY_SIZE], const void *extrainput,
+		int (*filter)(const unsigned char *data, const size_t dsize,  const void *extrainput, void **extradata));
 
 /* Gets an aliased image from the DB. */
 struct webm_alias *get_aliased_image(const char filepath[static MAX_IMAGE_FILENAME_SIZE]);

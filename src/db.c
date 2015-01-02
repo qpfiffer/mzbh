@@ -356,7 +356,8 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 
 }
 
-db_match *filter(const char prefix[static MAX_KEY_SIZE], int (*filter)(const unsigned char *data, const size_t dsize, void **extradata)) {
+db_match *filter(const char prefix[static MAX_KEY_SIZE], const void *extrainput,
+		int (*filter)(const unsigned char *data, const size_t dsize, const void *extrainput, void **extradata)) {
 	db_match *eol = NULL;
 	db_match *cur = eol;
 
@@ -372,7 +373,7 @@ db_match *filter(const char prefix[static MAX_KEY_SIZE], int (*filter)(const uns
 		if (_data) {
 			/* 3. If it returns true, add it to the list.*/
 			void *extradata = NULL;
-			if (filter(_data, dsize, &extradata)) {
+			if (filter(_data, dsize, extrainput, &extradata)) {
 				db_match _new = {
 					.data = _data,
 					.dsize = dsize,

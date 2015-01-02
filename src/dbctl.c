@@ -14,14 +14,6 @@
 
 static const char *WEBMS_LOCATION = NULL;
 
-
-static void usage(const char *program_name) {
-	log_msg(LOG_ERR, "Usage: %s <command>", program_name);
-	log_msg(LOG_ERR, "full_scan		--	Scans the entire webm directory and makes sure everything is in the DB.");
-	log_msg(LOG_ERR, "alias_count	--	Gets the number of aliases in the database.");
-	log_msg(LOG_ERR, "webm_count	--	Gets the number of webms in the database.");
-}
-
 static int _add_directory(const char *directory_to_open, const char board[MAX_BOARD_NAME_SIZE]) {
 	struct dirent dirent_thing = {0};
 
@@ -107,14 +99,14 @@ static int _print_alias_matches() {
 	return 1;
 }
 
-static inline int _f_ds_webms(const unsigned char *data, const size_t dsize, void **extradata) {
+static inline int _f_ds_webms(const unsigned char *data, const size_t dsize, const void *e, void **extradata) {
 	(*extradata) = deserialize_webm((char *)data);
 	return 1;
 }
 
 static int _print_webm_filenames() {
 	char p[MAX_KEY_SIZE] = WEBM_NMSPC;
-	db_match *matches = filter(p, &_f_ds_webms);
+	db_match *matches = filter(p, NULL, &_f_ds_webms);
 
 	db_match *cur = matches;
 	while (cur) {
@@ -134,16 +126,26 @@ static int _print_webm_filenames() {
 typedef struct cmd {
 	const char *cmd;
 	int (*func_ptr)();
+	const char *help;
 } cmd;
 
 /* TODO: Add help text to these. */
 const cmd commands[] = {
-	{"full_scan", &full_scan},
-	{"webm_count", &_webm_count},
-	{"alias_count", &_alias_count},
-	{"print_alias_matches", &_print_alias_matches},
-	{"print_webm_filenames", &_print_webm_filenames}
+	{"full_scan", &full_scan, "Scans the entire webm directory and makes sure everything is in the DB."},
+	{"webm_count", &_webm_count, "Gets the number of webms in the database."},
+	{"alias_count", &_alias_count, "Gets the number of aliases in the database."},
+	{"print_alias_matches", &_print_alias_matches, "Prints all alias keys in the database."},
+	{"print_webm_filenames", &_print_webm_filenames, "Prints filenames of all the webms."}
 };
+
+static void usage(const char *program_name) {
+	log_msg(LOG_ERR, "Usage: %s <command>", program_name);
+	int i;
+	for (i = 0; i < sizeof(commands)/sizeof(commands[0]); i++) {
+		log_msg(LOG_ERR, "%s	--	%s", commands[i].cmd, commands[i].help);
+	}
+}
+
 
 int main(int argc, char *argv[]) {
 	if (argc == 1) {
