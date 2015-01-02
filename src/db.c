@@ -367,7 +367,7 @@ db_match *filter(const char prefix[static MAX_KEY_SIZE], int (*filter)(const uns
 
 		/* 1. Fetch data for this key from DB. */
 		size_t dsize = 0;
-		unsigned char *_data = fetch_data_from_db(next->key, &dsize);
+		unsigned char *_data = fetch_data_from_db(cur_km->key, &dsize);
 		/* 2. Apply filter predicate. */
 		if (_data) {
 			/* 3. If it returns true, add it to the list.*/

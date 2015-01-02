@@ -107,6 +107,30 @@ static int _print_alias_matches() {
 	return 1;
 }
 
+static inline int _f_ds_webms(const unsigned char *data, const size_t dsize, void **extradata) {
+	(*extradata) = deserialize_webm((char *)data);
+	return 1;
+}
+
+static int _print_webm_filenames() {
+	char p[MAX_KEY_SIZE] = WEBM_NMSPC;
+	db_match *matches = filter(p, &_f_ds_webms);
+
+	db_match *cur = matches;
+	while (cur) {
+		db_match *to_free = cur;
+
+		const webm *_webm = cur->extradata;
+		log_msg(LOG_FUN, "%s", _webm->filename);
+
+		cur = cur->next;
+		free((void *)to_free->extradata);
+		free((unsigned char *)to_free->data);
+		free(to_free);
+	}
+	return 1;
+}
+
 typedef struct cmd {
 	const char *cmd;
 	int (*func_ptr)();
@@ -117,7 +141,8 @@ const cmd commands[] = {
 	{"full_scan", &full_scan},
 	{"webm_count", &_webm_count},
 	{"alias_count", &_alias_count},
-	{"print_alias_matches", &_print_alias_matches}
+	{"print_alias_matches", &_print_alias_matches},
+	{"print_webm_filenames", &_print_webm_filenames}
 };
 
 int main(int argc, char *argv[]) {
