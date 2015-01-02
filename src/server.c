@@ -147,6 +147,7 @@ static int index_handler(const http_request *request, http_response *response) {
 	return 200;
 }
 
+/*
 static int hash_filter(const unsigned char *data, const size_t dsize,
 		const void *extrainput, void **extradata) {
 	const char *hash = extrainput;
@@ -159,6 +160,7 @@ static int hash_filter(const unsigned char *data, const size_t dsize,
 	free(alias);
 	return 0;
 }
+*/
 
 static int webm_handler(const http_request *request, http_response *response) {
 	int rc = mmap_file("./templates/webm.html", response);
