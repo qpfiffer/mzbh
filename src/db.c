@@ -103,10 +103,15 @@ db_key_match *fetch_matches_from_db(const char prefix[static MAX_KEY_SIZE]) {
 			line_end = &_data[i];
 			const size_t line_size = line_end - line_start;
 
-			db_key_match *new = calloc(1, sizeof(db_key_match));
-			memcpy(new->key, line_start, line_size);
+			db_key_match _stack = {
+				.key = {0},
+				.next = cur
+			};
+			memcpy((char *)_stack.key, line_start, line_size);
 
-			new->next = cur;
+			db_key_match *new = calloc(1, sizeof(db_key_match));
+			memcpy(new, &_stack, sizeof(db_key_match));
+
 			cur = new;
 			line_start = &_data[++i];
 		}
@@ -351,24 +356,39 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 
 }
 
-db_match *filter(const char prefix[static MAX_KEY_SIZE], int (*filter)(unsigned char *data)) {
+db_match *filter(const char prefix[static MAX_KEY_SIZE], int (*filter)(const unsigned char *data, const size_t dsize, void **extradata)) {
 	db_match *eol = NULL;
+	db_match *cur = eol;
 
 	db_key_match *prefix_matches = fetch_matches_from_db(prefix);
-	db_key_match *current = prefix_matches;
-	while (current) {
-		db_key_match *next = current->next;
+	db_key_match *cur_km = prefix_matches;
+	while (cur_km) {
+		db_key_match *next = cur_km->next;
 
+		/* 1. Fetch data for this key from DB. */
+		size_t dsize = 0;
+		unsigned char *_data = fetch_data_from_db(next->key, &dsize);
+		/* 2. Apply filter predicate. */
+		if (_data) {
+			/* 3. If it returns true, add it to the list.*/
+			void *extradata = NULL;
+			if (filter(_data, dsize, &extradata)) {
+				db_match _new = {
+					.data = _data,
+					.dsize = dsize,
+					.extradata = extradata,
+					.next = cur
+				};
 
-		/* 1. Fetch data for this key from DB.
-		 * 2. Apply filter predicate.
-		 * 3. If it returns true, add it to the list.
-		 * 4. Continue.
-		 */
-
-		free(current);
-		current = next;
+				db_match *new = calloc(1, sizeof(db_match));
+				memcpy(new, &_new, sizeof(db_match));
+				cur = new;
+			}
+		}
+		/* 4. Continue.*/
+		free(cur_km);
+		cur_km = next;
 	}
 
-	return eol;
+	return cur;
 }
