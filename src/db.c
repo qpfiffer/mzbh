@@ -353,7 +353,6 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 			log_msg(LOG_ERR, "Something went wrong when adding image to db.");
 		free(_old_alias);
 		free(_old_webm);
-		log_msg(LOG_WARN, "RC: %i", rc);
 		return rc;
 	}
 
