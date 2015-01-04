@@ -299,7 +299,7 @@ int download_images() {
 
 		char fname_plus_extension[MAX_IMAGE_FILENAME_SIZE] = {0};
 		memcpy(fname_plus_extension, p_match->filename, strlen(p_match->filename));
-		strncat(fname_plus_extension, p_match->file_ext, MAX_IMAGE_FILENAME_SIZE);
+		strncat(fname_plus_extension, p_match->file_ext, MAX_IMAGE_FILENAME_SIZE - 1);
 		int added = add_image_to_db(image_filename, fname_plus_extension, p_match->board);
 		if (!added) {
 			log_msg(LOG_WARN, "Could not add image to database. Continuing...");

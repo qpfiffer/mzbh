@@ -1,4 +1,5 @@
 // vim: noet ts=4 sw=4
+#include <ctype.h>
 #include <fcntl.h>
 #include <string.h>
 #include <stdlib.h>
@@ -8,6 +9,7 @@
 #include <stdint.h>
 #include <inttypes.h>
 #include <unistd.h>
+
 #include "logging.h"
 #include "models.h"
 #include "parse.h"
@@ -118,28 +120,21 @@ char *strnstr(const char *haystack, const char *needle, size_t len) {
 
 void url_decode(const char *src, const size_t src_siz, char *dest) {
 	int srcIter = 0, destIter = 0;
+	char to_conv[] = "00";
+
 	while (srcIter < src_siz) {
-		if (src[srcIter] == '%' && srcIter + 2 < src_siz) {
+		if (src[srcIter] == '%' && srcIter + 2 < src_siz
+				&& isxdigit(src[srcIter + 1]) && isxdigit(src[srcIter + 2])) {
 			/* Theres definitely a better way to do this but I don't care
 			 * right now. */
-			const char it_one = src[srcIter + 1];
-			const char it_two = src[srcIter + 2];
-#define GGGG(arg) dest[destIter] = arg;\
-			srcIter += 3;\
-			destIter++;
+			to_conv[0] = src[srcIter + 1];
+			to_conv[1] = src[srcIter + 2];
 
-			if (it_one == '2' && it_two == '0') {
-				GGGG(' ');
-			}
-			if (it_one == '3' && it_two == 'E') {
-				GGGG('>');
-			}
-			if (it_one == '5' && it_two == 'B') {
-				GGGG('[');
-			}
-			if (it_one == '5' && it_two == 'D') {
-				GGGG(']');
-			}
+			long int converted = strtol(to_conv, NULL, 16);
+			dest[destIter] = converted;
+
+			srcIter += 3;
+			destIter++;
 		}
 
 		dest[destIter] = src[srcIter];
