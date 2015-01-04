@@ -187,13 +187,7 @@ static int webm_handler(const http_request *request, http_response *response) {
 	gshkl_add_string(ctext, "image", file_name_decoded);
 
 	/* Full path, needed for the image hash */
-	const char *webm_loc = webm_location();
-	const size_t full_path_size = strlen(webm_loc) + strlen("/") +
-								  strlen(current_board) + strlen("/") +
-								  strlen(file_name_decoded) + 1;
-	char full_path[full_path_size];
-	memset(full_path, '\0', full_path_size);
-	snprintf(full_path, full_path_size, "%s/%s/%s", webm_loc, current_board, file_name_decoded);
+	char *full_path = get_full_path_for_webm(current_board, file_name_decoded);
 
 	greshunkel_var *aliases = gshkl_add_array(ctext, "aliases");
 	char image_hash[HASH_IMAGE_STR_SIZE] = {0};
@@ -230,6 +224,7 @@ static int webm_handler(const http_request *request, http_response *response) {
 	/* Clean up the stuff we're no longer using. */
 	munmap(response->out, original_size);
 	free(response->extra_data);
+	free(full_path);
 
 	/* Make sure the response is kept up to date: */
 	response->outsize = new_size;

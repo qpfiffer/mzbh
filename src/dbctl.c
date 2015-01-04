@@ -25,12 +25,13 @@ static int _add_directory(const char *directory_to_open, const char board[MAX_BO
 		if (!result)
 			break;
 		if (result->d_name[0] != '.' && endswith(result->d_name, ".webm")) {
-			const size_t full_path_siz = strlen(directory_to_open) + strlen(result->d_name);
+			const size_t full_path_siz = strlen(directory_to_open) + strlen("/") + strlen(result->d_name) + 1;
 			char full_path[full_path_siz];
 			memset(full_path, '\0', full_path_siz);
 			sprintf(full_path, "%s/%s", directory_to_open, result->d_name);
 
-			assert(add_image_to_db(full_path, result->d_name, board));
+			int rc = add_image_to_db(full_path, result->d_name, board);
+			assert(rc);
 			total++;
 		}
 	}
@@ -106,9 +107,35 @@ static inline int _f_ds_webms(const unsigned char *data, const size_t dsize, con
 	return 1;
 }
 
+static inline int _dead_webms(const unsigned char *data, const size_t dsize, const void *e, void **extradata) {
+	webm *_webm = deserialize_webm((char *)data);
+
+	char *file_path = get_full_path_for_webm(_webm->board, _webm->filename);
+	struct stat st = {0};
+	if (stat(file_path, &st) == -1)
+		log_msg(LOG_FUN, "'%s' does not exist.", file_path);
+	free(file_path);
+	free(_webm);
+	return 1;
+}
+
 static int _print_webm_filenames() {
 	char p[MAX_KEY_SIZE] = WEBM_NMSPC;
 	db_match *matches = filter(p, NULL, &_f_ds_webms);
+
+	db_match *cur = matches;
+	while (cur) {
+		db_match *to_free = cur;
+		cur = cur->next;
+		free((unsigned char *)to_free->data);
+		free(to_free);
+	}
+	return 1;
+}
+
+static int _dead_files() {
+	char p[MAX_KEY_SIZE] = WEBM_NMSPC;
+	db_match *matches = filter(p, NULL, &_dead_webms);
 
 	db_match *cur = matches;
 	while (cur) {
@@ -131,7 +158,8 @@ const cmd commands[] = {
 	{"webm_count", &_webm_count, "Gets the number of webms in the database."},
 	{"alias_count", &_alias_count, "Gets the number of aliases in the database."},
 	{"print_alias_matches", &_print_alias_matches, "Prints all alias keys in the database."},
-	{"print_webm_filenames", &_print_webm_filenames, "Prints filenames of all the webms."}
+	{"print_webm_filenames", &_print_webm_filenames, "Prints filenames of all the webms."},
+	{"dead_webms", &_dead_files, "Prints webms that are in the db but not on the FS."}
 };
 
 static void usage(const char *program_name) {

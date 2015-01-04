@@ -311,13 +311,19 @@ static int _insert_aliased_webm(const char *file_path, const char filename[stati
 
 int add_image_to_db(const char *file_path, const char *filename, const char board[MAX_BOARD_NAME_SIZE]) {
 	char image_hash[HASH_IMAGE_STR_SIZE] = {0};
-	if (!hash_file(file_path, image_hash))
+	if (!hash_file(file_path, image_hash)) {
+		log_msg(LOG_ERR, "Could not hash '%s'.", file_path);
 		return 0;
+	}
 
 	webm *_old_webm = get_image(image_hash);
 
-	if (!_old_webm)
-		return _insert_webm(file_path, filename, image_hash, board);
+	if (!_old_webm) {
+		int rc = _insert_webm(file_path, filename, image_hash, board);
+		if (!rc)
+			log_msg(LOG_ERR, "Something went wrong inserting webm.");
+		return rc;
+	}
 
 	/* Check to see if the one we're scanning is the exact match we got from the DB. */
 	if (strncmp(_old_webm->filename, filename, MAX_IMAGE_FILENAME_SIZE) != 0) {
@@ -343,8 +349,11 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 
 		if (rc)
 			unlink(file_path);
+		else
+			log_msg(LOG_ERR, "Something went wrong when adding image to db.");
 		free(_old_alias);
 		free(_old_webm);
+		log_msg(LOG_WARN, "RC: %i", rc);
 		return rc;
 	}
 

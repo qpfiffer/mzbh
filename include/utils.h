@@ -32,3 +32,4 @@ int hash_string(const unsigned char *string, const size_t siz, char outbuf[stati
 int hash_file(const char *filepath, char outbuf[static HASH_IMAGE_STR_SIZE]);
 
 int hash_string_fnv1a(const unsigned char *string, const size_t siz, char outbuf[static HASH_IMAGE_STR_SIZE]);
+char *get_full_path_for_webm(const char current_board[MAX_BOARD_NAME_SIZE], const char file_name_decoded[MAX_IMAGE_FILENAME_SIZE]);

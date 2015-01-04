@@ -212,3 +212,17 @@ int hash_string_fnv1a(const unsigned char *key, const size_t siz, char outbuf[st
 	sprintf(outbuf, "%"PRIX64, hash);
 	return 1;
 }
+
+char *get_full_path_for_webm(const char current_board[MAX_BOARD_NAME_SIZE],
+							 const char file_name_decoded[MAX_IMAGE_FILENAME_SIZE]) {
+	const char *webm_loc = webm_location();
+	const size_t full_path_size = strlen(webm_loc) + strlen("/") +
+								  strlen(current_board) + strlen("/") +
+								  strlen(file_name_decoded) + 1;
+
+	char *full_path = calloc(1, full_path_size);
+	memset(full_path, '\0', full_path_size);
+	snprintf(full_path, full_path_size, "%s/%s/%s", webm_loc, current_board, file_name_decoded);
+
+	return full_path;
+}
