@@ -55,11 +55,17 @@ void ensure_directory_for_board(const char *board) {
 }
 
 
-int get_non_colliding_image_filename(char fname[static MAX_IMAGE_FILENAME_SIZE], const post_match *p_match) {
-	snprintf(fname, MAX_IMAGE_FILENAME_SIZE, "%s/%s/%zu_%s%.*s",
-			webm_location(), p_match->board, p_match->size,
-			p_match->filename, (int)sizeof(p_match->file_ext),
+inline void get_non_colliding_image_filename(char fname[static MAX_IMAGE_FILENAME_SIZE], const post_match *p_match) {
+	snprintf(fname, MAX_IMAGE_FILENAME_SIZE, "%zu_%s%.*s",
+			p_match->size, p_match->filename, (int)sizeof(p_match->file_ext),
 			p_match->file_ext);
+}
+
+int get_non_colliding_image_file_path(char fname[static MAX_IMAGE_FILENAME_SIZE], const post_match *p_match) {
+	char _real_fname[MAX_IMAGE_FILENAME_SIZE] = {0};
+	get_non_colliding_image_filename(_real_fname, p_match);
+
+	snprintf(fname, MAX_IMAGE_FILENAME_SIZE, "%s/%s/%s", webm_location(), p_match->board, _real_fname);
 
 	size_t fsize = get_file_size(fname);
 	if (fsize == 0) {
