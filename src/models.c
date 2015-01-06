@@ -120,3 +120,27 @@ webm_alias *deserialize_alias(const char *json) {
 	json_value_free(serialized);
 	return to_return;
 }
+
+void create_webm_to_alias_key(const char file_hash[static HASH_IMAGE_STR_SIZE], char outbuf[static MAX_KEY_SIZE]) {
+	snprintf(outbuf, MAX_KEY_SIZE, "%s%s", WEBMTOALIAS_NMSPC, file_hash);
+}
+
+char *serialize_webm_to_alias(const webm_to_alias *w2a) {
+	if (!w2a)
+		return NULL;
+
+	JSON_Value *root_value = json_value_init_array();
+	JSON_Array *root_array = json_value_get_array(root_value);
+
+	char *serialized_string = NULL;
+
+	int i;
+	for (i = 0; i < w2a->count; i++) {
+		json_array_append_string(root_array, w2a->aliases[i]);
+	}
+
+	serialized_string = json_serialize_to_string(root_value);
+
+	json_value_free(root_value);
+	return serialized_string;
+}

@@ -5,6 +5,7 @@
 
 #include "http.h"
 #include "utils.h"
+#include "logging.h"
 #include "models.h"
 
 int webm_serialization() {
@@ -83,11 +84,25 @@ int can_get_header_values() {
 	return 1;
 }
 
+int can_serialize_w2a() {
+	webm_to_alias _test = {
+		.aliases = {"test1", "test2", "test3, rabbit"},
+		.count = 3
+	};
+
+	char *json = serialize_webm_to_alias(&_test);
+	log_msg(LOG_FUN, "json: %s", json);
+	assert(json);
+	free(json);
+	return 1;
+}
+
 int run_tests() {
 	webm_serialization();
 	webm_alias_serialization();
 	hash_stuff();
 	can_get_header_values();
+	can_serialize_w2a();
 	return 0;
 }
 
