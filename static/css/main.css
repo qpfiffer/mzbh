@@ -3,6 +3,11 @@ body {
 	font-family: 'Open Sans', Helvetica, Arial, sans-serif;
 }
 .title {
+	display: inline-block;
+}
+.beta {
+	display: inline-block;
+	vertical-align: sub;
 }
 #landing {
 	padding-bottom: 2em;
