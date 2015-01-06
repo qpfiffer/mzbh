@@ -1,6 +1,7 @@
 CFLAGS=-Werror -Wall -O2 -g3
 INCLUDES=-pthread -I./include/
 NAME=waifu.xyz
+COMMON_OBJ=blue_midnight_wish.o http.o models.o db.o parson.o utils.o vector.o logging.o
 
 
 all: ctl bin test $(NAME)
@@ -16,16 +17,16 @@ test: greshunkel_test unit_test
 greshunkel_test: greshunkel_test.o greshunkel.o stack.o
 	$(CC) $(CLAGS) $(LIB_INCLUDES) $(INCLUDES) -o greshunkel_test $^ -lm
 
-unit_test: blue_midnight_wish.o models.o grengine.o greshunkel.o db.o utils.o logging.o server.o stack.o parse.o http.o utests.o parson.o
+unit_test: $(COMMON_OBJ) grengine.o greshunkel.o server.o stack.o parse.o utests.o
 	$(CC) $(CLAGS) $(LIB_INCLUDES) $(INCLUDES) -o unit_test $^ -lm $(LIBS)
 
 %.o: ./src/%.c
 	$(CC) $(CFLAGS) $(LIB_INCLUDES) $(INCLUDES) -c $<
 
 ctl: dbctl
-dbctl: models.o http.o blue_midnight_wish.o parson.o utils.o dbctl.o db.o logging.o
+dbctl: $(COMMON_OBJ) dbctl.o
 	$(CC) $(CLAGS) $(LIB_INCLUDES) $(INCLUDES) -o dbctl $^ -lm $(LIBS)
 
 bin: $(NAME)
-$(NAME): blue_midnight_wish.o models.o grengine.o greshunkel.o db.o utils.o logging.o server.o stack.o parse.o http.o main.o parson.o
+$(NAME): $(COMMON_OBJ) grengine.o greshunkel.o server.o stack.o parse.o main.o parson.o
 	$(CC) $(CLAGS) $(LIB_INCLUDES) $(INCLUDES) -o $(NAME) $^ -lm $(LIBS)

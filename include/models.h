@@ -1,6 +1,7 @@
 // vim: noet ts=4 sw=4
 #pragma once
 #include <time.h>
+#include "vector.h"
 #include "common_defs.h"
 
 /* The unsigned chars in the struct are used to null terminate the
@@ -47,8 +48,7 @@ const unsigned int webm_alias_count();
 /* This is a one-to-many from webm objects to alias objects. The struct is
  * something akin to a vector. Probably. */
 typedef struct webm_to_alias {
-	char *aliases[MAX_KEY_SIZE];
-	size_t count;
+	vector *aliases;
 } webm_to_alias;
 
 void create_webm_to_alias_key(const char file_hash[static HASH_IMAGE_STR_SIZE], char outbuf[static MAX_KEY_SIZE]);
