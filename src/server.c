@@ -205,8 +205,13 @@ static int webm_handler(const http_request *request, http_response *response) {
 			for (i = 0; i < w2a->aliases->count; i++) {
 				const char *alias = vector_get(w2a->aliases, i);
 				webm_alias *walias = get_aliased_image_with_key(alias);
-				gshkl_add_string_to_loop(aliases, walias->filename);
-				free(walias);
+				if (walias) {
+					gshkl_add_string_to_loop(aliases, walias->filename);
+					free(walias);
+				} else {
+					log_msg(LOG_WRN, "Bad alias string: %s", alias);
+					gshkl_add_string_to_loop(aliases, alias);
+				}
 			}
 			vector_free(w2a->aliases);
 			free(w2a);
