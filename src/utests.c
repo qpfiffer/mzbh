@@ -98,6 +98,9 @@ int can_serialize_w2a() {
 	log_msg(LOG_FUN, "json: %s", json);
 	assert(json);
 
+	webm_to_alias *deserialized = deserialize_webm_to_alias(json);
+	assert(deserialized);
+
 	free(json);
 	vector_free(new_vec);
 	return 1;

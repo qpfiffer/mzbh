@@ -47,4 +47,3 @@ void vector_free(vector *vec) {
 	free(vec);
 }
 
-

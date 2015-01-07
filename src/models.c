@@ -144,3 +144,7 @@ char *serialize_webm_to_alias(const webm_to_alias *w2a) {
 	json_value_free(root_value);
 	return serialized_string;
 }
+
+webm_to_alias *deserialize_webm_to_alias(const char *json) {
+	return NULL;
+}
