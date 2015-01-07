@@ -146,5 +146,24 @@ char *serialize_webm_to_alias(const webm_to_alias *w2a) {
 }
 
 webm_to_alias *deserialize_webm_to_alias(const char *json) {
-	return NULL;
+	if (!json)
+		return NULL;
+
+	webm_to_alias *to_return = calloc(1, sizeof(webm_to_alias));
+
+	JSON_Value *serialized = json_parse_string(json);
+	JSON_Array *webm_to_alias_object = json_value_get_array(serialized);
+
+	const size_t num_aliases  = json_array_get_count(webm_to_alias_object);
+
+	to_return->aliases = vector_new(MAX_KEY_SIZE, num_aliases);
+
+	int i;
+	for (i = 0; i < num_aliases; i++) {
+		const char *alias = json_array_get_string(webm_to_alias_object, i);
+		vector_append(to_return->aliases, alias, strlen(alias) + 1);
+	}
+
+	json_value_free(serialized);
+	return to_return;
 }
