@@ -71,6 +71,7 @@ unsigned int fetch_num_matches_from_db(const char prefix[static MAX_KEY_SIZE]) {
 
 	unsigned int to_return = strtol(_value, NULL, 10);
 
+	free(_data);
 	free(_value);
 	close(sock);
 	return to_return;

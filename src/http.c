@@ -174,7 +174,7 @@ char *get_header_value(const char *request, const size_t request_siz, const char
 	if (!header_value_end)
 		return NULL;
 
-	const size_t header_value_size = header_value_end - header_value_start;
+	const size_t header_value_size = header_value_end - header_value_start + 1;
 	data = calloc(header_value_size, sizeof(char));
 	strncpy(data, header_value_start, header_value_size);
 
