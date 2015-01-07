@@ -210,7 +210,9 @@ webm *get_image(const char image_hash[static HASH_ARRAY_SIZE]) {
 	if (json == NULL)
 		return NULL;
 
-	return deserialize_webm(json);
+	webm *deserialized = deserialize_webm(json);
+	free(json);
+	return deserialized;
 }
 
 int set_image(const webm *webm) {
@@ -236,7 +238,9 @@ webm_alias *get_aliased_image(const char filepath[static MAX_IMAGE_FILENAME_SIZE
 	if (json == NULL)
 		return NULL;
 
-	return deserialize_alias(json);
+	webm_alias *alias = deserialize_alias(json);
+	free(json);
+	return alias;
 }
 
 /* Alias get/set stuff */
@@ -347,6 +351,11 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 			log_msg(LOG_WARN, "%s is already marked as an alias of %s. Old alias is: '%s'",
 					file_path, _old_webm->filename, _old_alias->filename);
 		}
+
+		char alias_key[MAX_KEY_SIZE] = {0};
+		create_alias_key(file_path, alias_key);
+		/* Create or update the many2many between these two: */
+		associate_alias_with_webm(_old_webm, alias_key);
 
 		if (rc) {
 			log_msg(LOG_WARN, "Unlinking '%s'.", file_path);
