@@ -54,4 +54,3 @@ typedef struct webm_to_alias {
 void create_webm_to_alias_key(const char file_hash[static HASH_IMAGE_STR_SIZE], char outbuf[static MAX_KEY_SIZE]);
 char *serialize_webm_to_alias(const webm_to_alias *w2a);
 webm_to_alias *deserialize_webm_to_alias(const char *json);
-int associate_alias_with_webm(const webm *webm, const webm_alias *alias);

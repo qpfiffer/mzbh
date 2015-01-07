@@ -40,3 +40,8 @@ struct webm *get_image(const char image_hash[static HASH_ARRAY_SIZE]);
  * Returns 0 on success.
  */
 int add_image_to_db(const char *file_path, const char *filename, const char board[MAX_BOARD_NAME_SIZE]);
+
+/* Associates a webm with an alias.
+ * Returns 1 on success.
+ */
+int associate_alias_with_webm(const struct webm *webm, const char alias_key[static MAX_KEY_SIZE]);

@@ -405,3 +405,83 @@ db_match *filter(const char prefix[static MAX_KEY_SIZE], const void *extrainput,
 
 	return cur;
 }
+
+int associate_alias_with_webm(const webm *webm, const char alias_key[static MAX_KEY_SIZE]) {
+	if (!webm || strlen(alias_key) == 0)
+		return 0;
+
+	char key[MAX_KEY_SIZE] = {0};
+	create_webm_to_alias_key(webm->file_hash, key);
+
+	size_t json_size = 0;
+	char *w2a_json = (char *)fetch_data_from_db(key, &json_size);
+	if (!w2a_json) {
+		/* No existing m2m relation. */
+		vector *aliases = vector_new(MAX_KEY_SIZE, 1);
+		vector_append(aliases, alias_key, strlen(alias_key));
+
+		webm_to_alias _new_m2m = {
+			.aliases = aliases
+		};
+
+		const char *serialized = serialize_webm_to_alias(&_new_m2m);
+		if (!serialized) {
+			log_msg(LOG_ERR, "Could not serialize new webm_to_alias.");
+			vector_free(aliases);
+			return 0;
+		}
+
+		if (!store_data_in_db(key, (unsigned char *)serialized, strlen(serialized))) {
+			log_msg(LOG_ERR, "Could not store new webm_to_alias.");
+			vector_free(aliases);
+			return 0;
+		}
+
+		return 1;
+
+	}
+
+	/* TODO: Quickly scan through the list of aliases to determine if that
+	 * aliases is already in there.
+	 */
+	webm_to_alias *deserialized = deserialize_webm_to_alias(w2a_json);
+	free(w2a_json);
+
+	if (!deserialized) {
+		log_msg(LOG_ERR, "Could not deserialize webm_to_alias.");
+		return 0;
+	}
+
+	int i, found = 0;
+	for (i = 0; i < deserialized->aliases->count; i++) {
+		const char *existing = vector_get(deserialized->aliases, i);
+		if (strncmp(existing, alias_key, MAX_KEY_SIZE) == 0) {
+			found = 1;
+			break;
+		}
+	}
+
+	/* We found this alias key in the list of them. Skip it. */
+	if (found) {
+		vector_free(deserialized->aliases);
+		free(deserialized);
+		return 1;
+	}
+
+	vector_append(deserialized->aliases, alias_key, strlen(alias_key));
+	char *new_serialized = serialize_webm_to_alias(deserialized);
+	vector_free(deserialized->aliases);
+	free(deserialized);
+
+	if (!new_serialized) {
+		log_msg(LOG_ERR, "Could not serialize webm_to_alias.");
+		return 0;
+	}
+
+	if (!store_data_in_db(key, (unsigned char *)new_serialized, strlen(new_serialized))) {
+		log_msg(LOG_ERR, "Could not store updated webm_to_alias.");
+		return 0;
+	}
+
+	return 1;
+}

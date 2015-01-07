@@ -8,6 +8,7 @@
 #include "models.h"
 #include "parson.h"
 #include "utils.h"
+#include "logging.h"
 
 void create_webm_key(const char file_hash[static HASH_IMAGE_STR_SIZE], char outbuf[static MAX_KEY_SIZE]) {
 	snprintf(outbuf, MAX_KEY_SIZE, "%s%s", WEBM_NMSPC, file_hash);
