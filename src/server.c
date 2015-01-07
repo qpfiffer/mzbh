@@ -209,7 +209,7 @@ static int webm_handler(const http_request *request, http_response *response) {
 					gshkl_add_string_to_loop(aliases, walias->filename);
 					free(walias);
 				} else {
-					log_msg(LOG_WRN, "Bad alias string: %s", alias);
+					log_msg(LOG_WARN, "Bad alias string: %s", alias);
 					gshkl_add_string_to_loop(aliases, alias);
 				}
 			}
