@@ -276,8 +276,13 @@ static int favicon_handler(const http_request *request, http_response *response)
 	return mmap_file("./static/favicon.ico", response);
 }
 
+static int robots_handler(const http_request *request, http_response *response) {
+	return mmap_file("./static/robots.txt", response);
+}
+
 /* All other routes: */
 static const route all_routes[] = {
+	{"GET", "^/robots.txt$", 0, &robots_handler, &mmap_cleanup},
 	{"GET", "^/favicon.ico$", 0, &favicon_handler, &mmap_cleanup},
 	{"GET", "^/static/[a-zA-Z0-9/_-]*\\.[a-zA-Z]*$", 0, &static_handler, &mmap_cleanup},
 	{"GET", "^/chug/([a-zA-Z]*)$", 1, &board_handler, &heap_cleanup},

@@ -54,14 +54,18 @@ void guess_mimetype(const char *ending, const size_t ending_siz, http_response *
 		strncpy(response->mimetype, "text/css", sizeof(response->mimetype));
 	} else if (strncasecmp(ending, ".jpg", ending_siz) == 0) {
 		strncpy(response->mimetype, "image/jpeg", sizeof(response->mimetype));
+	} else if (strncasecmp(ending, ".txt", ending_siz) == 0) {
+		strncpy(response->mimetype, "text/plain", sizeof(response->mimetype));
+	} else if (strncasecmp(ending, ".html", ending_siz) == 0) {
+		strncpy(response->mimetype, "text/html", sizeof(response->mimetype));
+	} else if (strncasecmp(ending, ".ico", ending_siz) == 0) {
+		strncpy(response->mimetype, "image/x-icon", sizeof(response->mimetype));
+	} else if (strncasecmp(ending, ".webm", ending_siz) == 0) {
+		strncpy(response->mimetype, "video/webm", sizeof(response->mimetype));
 	} else if (strncasecmp(ending, ".gif", ending_siz) == 0) {
 		strncpy(response->mimetype, "image/gif", sizeof(response->mimetype));
 	} else if (strncasecmp(ending, ".js", ending_siz) == 0) {
 		strncpy(response->mimetype, "text/javascript", sizeof(response->mimetype));
-	} else if (strncasecmp(ending, ".webm", ending_siz) == 0) {
-		strncpy(response->mimetype, "video/webm", sizeof(response->mimetype));
-	} else if (strncasecmp(ending, ".html", ending_siz) == 0) {
-		strncpy(response->mimetype, "text/html", sizeof(response->mimetype));
 	} else {
 		strncpy(response->mimetype, "application/octet-stream", sizeof(response->mimetype));
 	}
