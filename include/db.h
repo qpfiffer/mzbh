@@ -35,6 +35,7 @@ db_match *filter(const char prefix[static MAX_KEY_SIZE], const void *extrainput,
 /* Gets an aliased image from the DB. */
 struct webm_alias *get_aliased_image(const char filepath[static MAX_IMAGE_FILENAME_SIZE]);
 struct webm *get_image(const char image_hash[static HASH_ARRAY_SIZE]);
+struct webm_to_alias *get_webm_to_alias(const char image_hash[static HASH_ARRAY_SIZE]);
 
 /* Attempts to add an image to the database.
  * Returns 0 on success.

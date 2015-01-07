@@ -243,6 +243,21 @@ webm_alias *get_aliased_image(const char filepath[static MAX_IMAGE_FILENAME_SIZE
 	return alias;
 }
 
+webm_to_alias *get_webm_to_alias(const char image_hash[static HASH_ARRAY_SIZE]) {
+	char key[MAX_KEY_SIZE] = {0};
+	create_webm_to_alias_key(image_hash, key);
+
+	size_t json_size = 0;
+	char *json = (char *)fetch_data_from_db(key, &json_size);
+
+	if (json == NULL)
+		return NULL;
+
+	webm_to_alias *w2a = deserialize_webm_to_alias(json);
+	free(json);
+	return w2a;
+}
+
 /* Alias get/set stuff */
 int set_aliased_image(const webm_alias *alias) {
 	char key[MAX_KEY_SIZE] = {0};

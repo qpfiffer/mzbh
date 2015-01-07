@@ -197,25 +197,20 @@ static int webm_handler(const http_request *request, http_response *response) {
 		gshkl_add_int(ctext, "image_date", -1);
 	else {
 		gshkl_add_int(ctext, "image_date", _webm->created_at);
-		gshkl_add_string_to_loop(aliases, "None");
 
 		/* Add known aliases from DB. */
-		/* 
-		const char p[MAX_KEY_SIZE] = ALIAS_NMSPC;
-		db_match *matched_aliases = filter(p, _webm->file_hash, &hash_filter);
-		db_match *cur = matched_aliases;
-		while(cur) {
-			db_match *to_free = cur;
-
-			const webm_alias *_alias = cur->extradata;
-			gshkl_add_string_to_loop(aliases, _alias->filename);
-
-			cur = cur->next;
-			free((void *)to_free->extradata);
-			free((unsigned char *)to_free->data);
-			free(to_free);
+		webm_to_alias *w2a = get_webm_to_alias(image_hash);
+		if (w2a != NULL && w2a->aliases->count > 0) {
+			int i;
+			for (i = 0; i < w2a->aliases->count; i++) {
+				const char *alias = vector_get(w2a->aliases, i);
+				gshkl_add_string_to_loop(aliases, alias);
+			}
+			vector_free(w2a->aliases);
+			free(w2a);
+		} else {
+			gshkl_add_string_to_loop(aliases, "None");
 		}
-		*/
 	}
 
 	char *rendered = gshkl_render(ctext, mmapd_region, original_size, &new_size);
