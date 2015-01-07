@@ -136,7 +136,7 @@ char *serialize_webm_to_alias(const webm_to_alias *w2a) {
 
 	int i;
 	for (i = 0; i < w2a->aliases->count; i++) {
-		json_array_append_string(root_array, w2a->aliases->items[i]);
+		json_array_append_string(root_array, vector_get(w2a->aliases, i));
 	}
 
 	serialized_string = json_serialize_to_string(root_value);

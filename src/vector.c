@@ -20,6 +20,12 @@ int vector_append(vector *vec, const void *item, const size_t item_size) {
 	return 1;
 }
 
+inline const void *vector_get(const vector *vec, const unsigned int i) {
+	if (i > vec->max_size)
+		return NULL;
+	return NULL;
+}
+
 void vector_free(vector *to_free) {
 	int i;
 	for (i = 0; i < to_free->count; i++) {
