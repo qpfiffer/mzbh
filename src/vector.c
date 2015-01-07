@@ -1,6 +1,9 @@
 // vim: noet ts=4 sw=4
+#include <assert.h>
 #include <string.h>
 #include "vector.h"
+
+#define nth(I) (void *)(vec->items + (I * vec->item_size))
 
 vector *vector_new(const size_t item_size, const size_t initial_element_count) {
 	vector _vec = {
@@ -17,22 +20,31 @@ vector *vector_new(const size_t item_size, const size_t initial_element_count) {
 }
 
 int vector_append(vector *vec, const void *item, const size_t item_size) {
+	if (item_size > vec->item_size)
+		return 0;
+
+	if (vec->count == vec->max_size) {
+		vec->max_size *= 2;
+		void *array = realloc(vec->items, (vec->max_size * vec->item_size));
+		if (!array)
+			return 0;
+		vec->items = array;
+	}
+
+	memcpy(nth(vec->count), item, item_size);
+	vec->count++;
 	return 1;
 }
 
 inline const void *vector_get(const vector *vec, const unsigned int i) {
 	if (i > vec->max_size)
 		return NULL;
-	return NULL;
+	return nth(i);
 }
 
-void vector_free(vector *to_free) {
-	int i;
-	for (i = 0; i < to_free->count; i++) {
-		free(to_free->items[i]);
-	}
-	free(to_free->items);
-	free(to_free);
+void vector_free(vector *vec) {
+	free(vec->items);
+	free(vec);
 }
 
 

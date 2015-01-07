@@ -6,7 +6,7 @@ typedef struct vector {
 	const size_t item_size;
 	size_t max_size;
 	size_t count;
-	void **items;
+	void *items;
 } vector;
 
 /* Create a new vector. */

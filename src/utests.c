@@ -86,9 +86,9 @@ int can_get_header_values() {
 
 int can_serialize_w2a() {
 	vector *new_vec = vector_new(sizeof(char) * MAX_KEY_SIZE, 2);
-	vector_append(new_vec, "test1", strlen("test1"));
-	vector_append(new_vec, "test2", strlen("test2"));
-	vector_append(new_vec, "test3, rabbit", strlen("test3"));
+	vector_append(new_vec, "test1", strlen("test1") + 1);
+	vector_append(new_vec, "test2", strlen("test2") + 1);
+	vector_append(new_vec, "test3, rabbit", strlen("test3, rabbit") + 1);
 
 	webm_to_alias _test = {
 		.aliases = new_vec
