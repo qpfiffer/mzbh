@@ -204,7 +204,9 @@ static int webm_handler(const http_request *request, http_response *response) {
 			int i;
 			for (i = 0; i < w2a->aliases->count; i++) {
 				const char *alias = vector_get(w2a->aliases, i);
-				gshkl_add_string_to_loop(aliases, alias);
+				webm_alias *walias = get_aliased_image_with_key(alias);
+				gshkl_add_string_to_loop(aliases, walias->filename);
+				free(walias);
 			}
 			vector_free(w2a->aliases);
 			free(w2a);

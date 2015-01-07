@@ -229,10 +229,7 @@ int set_image(const webm *webm) {
 	return ret;
 }
 
-webm_alias *get_aliased_image(const char filepath[static MAX_IMAGE_FILENAME_SIZE]) {
-	char key[MAX_KEY_SIZE] = {0};
-	create_alias_key(filepath, key);
-
+webm_alias *get_aliased_image_with_key(const char key[static MAX_KEY_SIZE]) {
 	size_t json_size = 0;
 	char *json = (char *)fetch_data_from_db(key, &json_size);
 
@@ -242,6 +239,13 @@ webm_alias *get_aliased_image(const char filepath[static MAX_IMAGE_FILENAME_SIZE
 	webm_alias *alias = deserialize_alias(json);
 	free(json);
 	return alias;
+}
+
+webm_alias *get_aliased_image(const char filepath[static MAX_IMAGE_FILENAME_SIZE]) {
+	char key[MAX_KEY_SIZE] = {0};
+	create_alias_key(filepath, key);
+
+	return get_aliased_image_with_key(key);
 }
 
 webm_to_alias *get_webm_to_alias(const char image_hash[static HASH_ARRAY_SIZE]) {
