@@ -147,21 +147,6 @@ static int index_handler(const http_request *request, http_response *response) {
 	return 200;
 }
 
-/*
-static int hash_filter(const unsigned char *data, const size_t dsize,
-		const void *extrainput, void **extradata) {
-	const char *hash = extrainput;
-	webm_alias *alias = deserialize_alias((char *)data);
-	(*extradata) = alias;
-
-	if (strncmp(hash, alias->file_hash, HASH_IMAGE_STR_SIZE) == 0)
-		return 1;
-
-	free(alias);
-	return 0;
-}
-*/
-
 static int webm_handler(const http_request *request, http_response *response) {
 	int rc = mmap_file("./templates/webm.html", response);
 	if (rc != 200)
@@ -198,7 +183,8 @@ static int webm_handler(const http_request *request, http_response *response) {
 	else {
 		gshkl_add_int(ctext, "image_date", _webm->created_at);
 
-		/* Add known aliases from DB. */
+		/* Add known aliases from DB. We fetch every alias from the M2M,
+		 * and then fetch that key. Or try to, anyway. */
 		webm_to_alias *w2a = get_webm_to_alias(image_hash);
 		if (w2a != NULL && w2a->aliases->count > 0) {
 			int i;
