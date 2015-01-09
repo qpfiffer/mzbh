@@ -153,6 +153,7 @@ int parse_request(const char to_read[MAX_READ_LEN], http_request *out) {
 
 	const size_t resource_size = resource_end - res_offset >= sizeof(out->resource) ? sizeof(out->resource) : resource_end - res_offset;
 	strncpy(out->resource, res_offset, resource_size);
+
 	return 0;
 
 error:
@@ -174,7 +175,8 @@ int respond(const int accept_fd, const route *all_routes, const size_t route_num
 	http_request request = {
 		.verb = {0},
 		.resource = {0},
-		.matches = {{0}}
+		.matches = {{0}},
+		.full_header = to_read
 	};
 	rc = parse_request(to_read, &request);
 	if (rc != 0) {

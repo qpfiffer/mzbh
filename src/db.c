@@ -470,9 +470,6 @@ int associate_alias_with_webm(const webm *webm, const char alias_key[static MAX_
 
 	}
 
-	/* TODO: Quickly scan through the list of aliases to determine if that
-	 * aliases is already in there.
-	 */
 	webm_to_alias *deserialized = deserialize_webm_to_alias(w2a_json);
 	free(w2a_json);
 

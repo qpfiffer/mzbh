@@ -18,6 +18,7 @@
 #include <unistd.h>
 
 #include "db.h"
+#include "http.h"
 #include "logging.h"
 #include "server.h"
 #include "grengine.h"
@@ -101,18 +102,27 @@ static void get_webm_from_board(char file_name_decoded[static MAX_IMAGE_FILENAME
 static int board_static_handler(const http_request *request, http_response *response) {
 	const char *webm_loc = webm_location();
 
+	/* Current board */
 	char current_board[MAX_BOARD_NAME_SIZE] = {0};
 	get_current_board(current_board, request);
 
+	/* Filename after url decoding. */
 	char file_name_decoded[MAX_IMAGE_FILENAME_SIZE] = {0};
 	get_webm_from_board(file_name_decoded, request);
 
+	/* Open and mmap() the file. */
 	const size_t full_path_size = strlen(webm_loc) + strlen("/") +
 								  strlen(current_board) + strlen("/") +
 								  strlen(file_name_decoded) + 1;
 	char full_path[full_path_size];
 	memset(full_path, '\0', full_path_size);
 	snprintf(full_path, full_path_size, "%s/%s/%s", webm_loc, current_board, file_name_decoded);
+
+	char *range_header = get_header_value(request->full_header, strlen(request->full_header), "Range");
+	if (range_header) {
+		log_msg(LOG_INFO, "Range header value: %s", range_header);
+		free(range_header);
+	}
 
 	return mmap_file(full_path, response);
 }
