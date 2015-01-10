@@ -72,6 +72,10 @@ void guess_mimetype(const char *ending, const size_t ending_siz, http_response *
 }
 
 int mmap_file(const char *file_path, http_response *response) {
+	return mmap_file_ol(file_path, response, NULL, NULL);
+}
+
+int mmap_file_ol(const char *file_path, http_response *response, const size_t *offset, const size_t *limit) {
 	response->extra_data = calloc(1, sizeof(struct stat));
 
 	if (stat(file_path, response->extra_data) == -1) {
@@ -91,9 +95,14 @@ int mmap_file(const char *file_path, http_response *response) {
 		return 404;
 	}
 
+
 	const struct stat st = *(struct stat *)response->extra_data;
-	response->out = mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-	response->outsize = st.st_size;
+
+	const size_t c_offset = offset != NULL ? *offset : 0;
+	const size_t c_limit = limit != NULL ? *limit : st.st_size;
+
+	response->out = mmap(NULL, c_limit, PROT_READ, MAP_PRIVATE, fd, c_offset);
+	response->outsize = c_limit - c_offset;
 
 	if (response->out == MAP_FAILED) {
 		response->out = (unsigned char *)"<html><body><p>Could not open file.</p></body></html>";
@@ -126,8 +135,7 @@ void heap_cleanup(const int status_code, http_response *response) {
 
 void mmap_cleanup(const int status_code, http_response *response) {
 	if (status_code == 200) {
-		const struct stat *st = (struct stat *)response->extra_data;
-		munmap(response->out, st->st_size);
+		munmap(response->out, response->outsize);
 		free(response->extra_data);
 	}
 }

@@ -5,6 +5,7 @@
 
 #include "http.h"
 #include "utils.h"
+#include "parse.h"
 #include "logging.h"
 #include "models.h"
 
@@ -130,6 +131,23 @@ int vectors_are_zeroed() {
 	return 1;
 }
 
+int can_parse_range_query() {
+	const char a[] = "bytes=0-";
+	const char b[] = "bytes=0-1234567";
+	const char c[] = "bytes=12345-586868";
+
+	range_header a_p = parse_range_header(a);
+	assert(a_p.limit == 0 && a_p.offset == 0);
+
+	range_header b_p = parse_range_header(b);
+	assert(b_p.limit == 1234567 && b_p.offset == 0);
+
+	range_header c_p = parse_range_header(c);
+	assert(c_p.limit == 586868 && c_p.offset == 12345);
+
+	return 1;
+}
+
 int run_tests() {
 	webm_serialization();
 	webm_alias_serialization();
@@ -137,6 +155,8 @@ int run_tests() {
 	can_get_header_values();
 	can_serialize_w2a();
 	vectors_are_zeroed();
+	can_parse_range_query();
+
 	return 0;
 }
 

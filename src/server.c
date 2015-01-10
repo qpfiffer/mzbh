@@ -20,6 +20,7 @@
 #include "db.h"
 #include "http.h"
 #include "logging.h"
+#include "parse.h"
 #include "server.h"
 #include "grengine.h"
 #include "greshunkel.h"
@@ -118,10 +119,12 @@ static int board_static_handler(const http_request *request, http_response *resp
 	memset(full_path, '\0', full_path_size);
 	snprintf(full_path, full_path_size, "%s/%s/%s", webm_loc, current_board, file_name_decoded);
 
-	char *range_header = get_header_value(request->full_header, strlen(request->full_header), "Range");
-	if (range_header) {
-		log_msg(LOG_INFO, "Range header value: %s", range_header);
-		free(range_header);
+	char *range_header_value = get_header_value(request->full_header, strlen(request->full_header), "Range");
+	if (range_header_value) {
+		log_msg(LOG_INFO, "Range header value: %s", range_header_value);
+		range_header range = parse_range_header(range_header_value);
+		free(range_header_value);
+		log_msg(LOG_INFO, "Range header parsed: Limit: %zu Offset: %zu", range.limit, range.offset);
 	}
 
 	return mmap_file(full_path, response);
