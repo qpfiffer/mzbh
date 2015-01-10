@@ -121,10 +121,15 @@ static int board_static_handler(const http_request *request, http_response *resp
 
 	char *range_header_value = get_header_value(request->full_header, strlen(request->full_header), "Range");
 	if (range_header_value) {
-		log_msg(LOG_INFO, "Range header value: %s", range_header_value);
 		range_header range = parse_range_header(range_header_value);
 		free(range_header_value);
+
 		log_msg(LOG_INFO, "Range header parsed: Limit: %zu Offset: %zu", range.limit, range.offset);
+		const size_t *c_limit = range.limit == 0 ? NULL : &range.limit;
+		const size_t *c_offset = range.offset == 0 ? NULL : &range.offset;
+
+		return mmap_file_ol(full_path, response, c_offset, c_limit);
+
 	}
 
 	return mmap_file(full_path, response);
