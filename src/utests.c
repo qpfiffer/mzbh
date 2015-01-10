@@ -106,12 +106,37 @@ int can_serialize_w2a() {
 	return 1;
 }
 
+int vectors_are_zeroed() {
+	char k1[] = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+	vector *new_vec = vector_new(MAX_KEY_SIZE, 2);
+	vector_append(new_vec, k1, strlen(k1));
+	vector_append(new_vec, k1, strlen(k1));
+	vector_append(new_vec, k1, strlen(k1));
+	vector_append(new_vec, k1, strlen(k1));
+	vector_free(new_vec);
+
+	char k2[] = "12345678901234567890";
+	new_vec = vector_new(MAX_KEY_SIZE, 2);
+	vector_append(new_vec, k2, strlen(k2));
+	vector_append(new_vec, k2, strlen(k2));
+	vector_append(new_vec, k2, strlen(k2));
+	vector_append(new_vec, k2, strlen(k2));
+
+	int i;
+	for (i = 0; i < new_vec->count; i++) {
+		assert(strncmp(k2, vector_get(new_vec, i), strlen(k2)) == 0);
+	}
+
+	return 1;
+}
+
 int run_tests() {
 	webm_serialization();
 	webm_alias_serialization();
 	hash_stuff();
 	can_get_header_values();
 	can_serialize_w2a();
+	vectors_are_zeroed();
 	return 0;
 }
 

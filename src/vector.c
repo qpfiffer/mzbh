@@ -32,6 +32,7 @@ int vector_append(vector *vec, const void *item, const size_t item_size) {
 	}
 
 	memcpy(nth(vec->count), item, item_size);
+	memset(nth(vec->count) + item_size, '\0', sizeof(char));
 	vec->count++;
 	return 1;
 }
