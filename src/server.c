@@ -206,6 +206,7 @@ static int webm_handler(const http_request *request, http_response *response) {
 					free(walias);
 				} else {
 					log_msg(LOG_WARN, "Bad alias string: %s", alias);
+					log_msg(LOG_WARN, "Bad alias on: %s%s", WEBM_NMSPC, image_hash);
 					gshkl_add_string_to_loop(aliases, alias);
 				}
 			}
