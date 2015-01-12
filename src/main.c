@@ -368,6 +368,8 @@ start:
 	if (bg_worker == 0) {
 		log_msg(LOG_INFO, "BGWorker started.");
 		goto start;
+	} else if (bg_worker == -1) {
+		log_msg(LOG_ERR, "Fork failed. Wtf?");
 	}
 	log_msg(LOG_INFO, "BGWorker exiting.");
 	exit(0);
