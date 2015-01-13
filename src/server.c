@@ -26,7 +26,7 @@
 #include "greshunkel.h"
 #include "models.h"
 
-#define RESULTS_PER_PAGE 40
+#define RESULTS_PER_PAGE 80
 #define OFFSET_FOR_PAGE(x) x * RESULTS_PER_PAGE
 
 static int _only_webms_filter(const char *file_name) {
@@ -325,7 +325,7 @@ static const route all_routes[] = {
 	{"GET", "^/favicon.ico$", 0, &favicon_handler, &mmap_cleanup},
 	{"GET", "^/static/[a-zA-Z0-9/_-]*\\.[a-zA-Z]*$", 0, &static_handler, &mmap_cleanup},
 	{"GET", "^/chug/([a-zA-Z]*)$", 1, &board_handler, &heap_cleanup},
-	{"GET", "^/chug/([a-zA-Z]*)/([0-9])$", 2, &paged_board_handler, &heap_cleanup},
+	{"GET", "^/chug/([a-zA-Z]*)/([0-9]*)$", 2, &paged_board_handler, &heap_cleanup},
 	{"GET", "^/slurp/([a-zA-Z]*)/((.*)(.webm|.jpg))$", 2, &webm_handler, &heap_cleanup},
 	{"GET", "^/chug/([a-zA-Z]*)/((.*)(.webm|.jpg))$", 2, &board_static_handler, &mmap_cleanup},
 	{"GET", "^/$", 0, &index_handler, &heap_cleanup},
