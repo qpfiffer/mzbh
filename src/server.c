@@ -26,6 +26,9 @@
 #include "greshunkel.h"
 #include "models.h"
 
+#define RESULTS_PER_PAGE 40
+#define OFFSET_FOR_PAGE(x) x * RESULTS_PER_PAGE
+
 static int _only_webms_filter(const char *file_name) {
 	return endswith(file_name, ".webm");
 }
@@ -45,7 +48,9 @@ static char *thumbnail_for_image(const char *argument) {
 	return to_return;
 }
 
-static int _add_files_in_dir_to_arr(greshunkel_var *loop, const char *dir, int (*filter_func)(const char *file_name)) {
+static int _add_files_in_dir_to_arr(greshunkel_var *loop, const char *dir,
+		const unsigned int offset, const unsigned int limit,
+		int (*filter_func)(const char *file_name)) {
 	/* Apparently readdir_r can be stack-smashed so we do it on the heap
 	 * instead.
 	 */
@@ -54,20 +59,32 @@ static int _add_files_in_dir_to_arr(greshunkel_var *loop, const char *dir, int (
 	struct dirent *dirent_thing = calloc(1, dirent_siz);
 
 	DIR *dirstream = opendir(dir);
-	int total = 0;
+	unsigned int total = 0;
 	while (1) {
 		struct dirent *result = NULL;
 		readdir_r(dirstream, dirent_thing, &result);
 		if (!result)
 			break;
+
+		/* Wow there is some dumb fucking logic in this function. */
 		if (result->d_name[0] != '.') {
+			int success = 0;
 			if (filter_func != NULL) {
 				if (filter_func(result->d_name)) {
-					gshkl_add_string_to_loop(loop, result->d_name);
-					total++;
+					success = 1;
 				}
 			} else {
-				gshkl_add_string_to_loop(loop, result->d_name);
+				success = 1;
+			}
+
+			if (success) {
+				if (!offset && !limit) {
+					gshkl_add_string_to_loop(loop, result->d_name);
+				} else {
+					if (total >= offset && total < (offset + limit)) {
+						gshkl_add_string_to_loop(loop, result->d_name);
+					}
+				}
 				total++;
 			}
 		}
@@ -150,7 +167,7 @@ static int index_handler(const http_request *request, http_response *response) {
 	gshkl_add_int(ctext, "alias_count", webm_alias_count());
 
 	greshunkel_var *boards = gshkl_add_array(ctext, "BOARDS");
-	_add_files_in_dir_to_arr(boards, webm_location(), NULL);
+	_add_files_in_dir_to_arr(boards, webm_location(), 0, 0, NULL);
 
 	char *rendered = gshkl_render(ctext, mmapd_region, original_size, &new_size);
 	gshkl_free_context(ctext);
@@ -182,7 +199,7 @@ static int webm_handler(const http_request *request, http_response *response) {
 
 	/* All boards */
 	greshunkel_var *boards = gshkl_add_array(ctext, "BOARDS");
-	_add_files_in_dir_to_arr(boards, webm_location(), NULL);
+	_add_files_in_dir_to_arr(boards, webm_location(), 0, 0, NULL);
 
 	/* Decode the url-encoded filename. */
 	char file_name_decoded[MAX_IMAGE_FILENAME_SIZE] = {0};
@@ -238,7 +255,8 @@ static int webm_handler(const http_request *request, http_response *response) {
 	response->out = (unsigned char *)rendered;
 	return 200;
 }
-static int board_handler(const http_request *request, http_response *response) {
+
+static int _board_handler(const http_request *request, http_response *response, const unsigned int page) {
 	int rc = mmap_file("./templates/board.html", response);
 	if (rc != 200)
 		return rc;
@@ -257,10 +275,11 @@ static int board_handler(const http_request *request, http_response *response) {
 
 	char images_dir[256] = {0};
 	snprintf(images_dir, sizeof(images_dir), "%s/%s", webm_location(), current_board);
-	int total = _add_files_in_dir_to_arr(images, images_dir, &_only_webms_filter);
+	int total = _add_files_in_dir_to_arr(images, images_dir,
+			OFFSET_FOR_PAGE(1), RESULTS_PER_PAGE, &_only_webms_filter);
 
 	greshunkel_var *boards = gshkl_add_array(ctext, "BOARDS");
-	_add_files_in_dir_to_arr(boards, webm_location(), NULL);
+	_add_files_in_dir_to_arr(boards, webm_location(), 0, 0, NULL);
 
 	gshkl_add_int(ctext, "total", total);
 	char *rendered = gshkl_render(ctext, mmapd_region, original_size, &new_size);
@@ -274,6 +293,14 @@ static int board_handler(const http_request *request, http_response *response) {
 	response->outsize = new_size;
 	response->out = (unsigned char *)rendered;
 	return 200;
+}
+
+static int board_handler(const http_request *request, http_response *response) {
+	return _board_handler(request, response, 0);
+}
+
+static int paged_board_handler(const http_request *request, http_response *response) {
+	return _board_handler(request, response, 0);
 }
 
 static int favicon_handler(const http_request *request, http_response *response) {
@@ -291,6 +318,7 @@ static const route all_routes[] = {
 	{"GET", "^/favicon.ico$", 0, &favicon_handler, &mmap_cleanup},
 	{"GET", "^/static/[a-zA-Z0-9/_-]*\\.[a-zA-Z]*$", 0, &static_handler, &mmap_cleanup},
 	{"GET", "^/chug/([a-zA-Z]*)$", 1, &board_handler, &heap_cleanup},
+	{"GET", "^/chug/([a-zA-Z]*)/([0-9])$", 2, &paged_board_handler, &heap_cleanup},
 	{"GET", "^/slurp/([a-zA-Z]*)/((.*)(.webm|.jpg))$", 2, &webm_handler, &heap_cleanup},
 	{"GET", "^/chug/([a-zA-Z]*)/((.*)(.webm|.jpg))$", 2, &board_static_handler, &mmap_cleanup},
 	{"GET", "^/$", 0, &index_handler, &heap_cleanup},
