@@ -284,6 +284,18 @@ static int _board_handler(const http_request *request, http_response *response, 
 	for (i = max; i >= 0; i--)
 		gshkl_add_int_to_loop(pages, i);
 
+	if (page > 0) {
+		gshkl_add_int(ctext, "prev_page", page - 1);
+	} else {
+		gshkl_add_string(ctext, "prev_page", "");
+	}
+
+	if (page < max) {
+		gshkl_add_int(ctext, "next_page", page + 1);
+	} else {
+		gshkl_add_string(ctext, "next_page", "");
+	}
+
 	greshunkel_var *boards = gshkl_add_array(ctext, "BOARDS");
 	_add_files_in_dir_to_arr(boards, webm_location(), 0, 0, NULL);
 
