@@ -276,7 +276,13 @@ static int _board_handler(const http_request *request, http_response *response, 
 	char images_dir[256] = {0};
 	snprintf(images_dir, sizeof(images_dir), "%s/%s", webm_location(), current_board);
 	int total = _add_files_in_dir_to_arr(images, images_dir,
-			OFFSET_FOR_PAGE(1), RESULTS_PER_PAGE, &_only_webms_filter);
+			OFFSET_FOR_PAGE(page), RESULTS_PER_PAGE, &_only_webms_filter);
+
+	greshunkel_var *pages = gshkl_add_array(ctext, "PAGES");
+	int i;
+	const unsigned int max = total/RESULTS_PER_PAGE;
+	for (i = max; i >= 0; i--)
+		gshkl_add_int_to_loop(pages, i);
 
 	greshunkel_var *boards = gshkl_add_array(ctext, "BOARDS");
 	_add_files_in_dir_to_arr(boards, webm_location(), 0, 0, NULL);
@@ -300,7 +306,8 @@ static int board_handler(const http_request *request, http_response *response) {
 }
 
 static int paged_board_handler(const http_request *request, http_response *response) {
-	return _board_handler(request, response, 0);
+	const unsigned int page = strtol(request->resource + request->matches[2].rm_so, NULL, 10);
+	return _board_handler(request, response, page);
 }
 
 static int favicon_handler(const http_request *request, http_response *response) {
