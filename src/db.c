@@ -13,6 +13,7 @@
 
 static const char DB_REQUEST[] = "GET /%s/%s HTTP/1.1\r\n"
 	"Host: "DB_HOST":"DB_PORT"\r\n"
+	"Accept-Encoding: identity\r\n"
 	"\r\n";
 
 static const char DB_POST[] = "POST /%s/%s HTTP/1.1\r\n"
