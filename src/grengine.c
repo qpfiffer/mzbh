@@ -114,6 +114,8 @@ int mmap_file_ol(const char *file_path, http_response *response, const size_t *o
 	}
 	close(fd);
 
+	madvise(response->out, c_limit, MADV_SEQUENTIAL | MADV_WILLNEED);
+
 	/* Figure out the mimetype for this resource: */
 	char ending[16] = {0};
 	int i = sizeof(ending);
