@@ -62,7 +62,7 @@ unsigned int fetch_num_matches_from_db(const char prefix[static MAX_KEY_SIZE]) {
 	if (!sock)
 		goto error;
 
-	_data = receieve_only_http_header(sock, SELECT_TIMEOUT, &outdata);
+	_data = receive_only_http_header(sock, SELECT_TIMEOUT, &outdata);
 	if (!_data)
 		goto error;
 

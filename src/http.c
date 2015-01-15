@@ -181,7 +181,7 @@ char *get_header_value(const char *request, const size_t request_siz, const char
 	return data;
 }
 
-char *receieve_only_http_header(const int request_fd, const int timeout, size_t *out) {
+char *receive_only_http_header(const int request_fd, const int timeout, size_t *out) {
 	unsigned char *raw_buf = NULL;
 	size_t buf_size = 0;
 	int times_read = 0;
