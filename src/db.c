@@ -6,6 +6,7 @@
 #include <unistd.h>
 
 #include "db.h"
+#include "benchmark.h"
 #include "http.h"
 #include "logging.h"
 #include "models.h"
@@ -58,6 +59,7 @@ unsigned int fetch_num_matches_from_db(const char prefix[static MAX_KEY_SIZE]) {
 	char *_data = NULL;
 	char *_value = NULL;
 
+	const struct bmark x = begin_benchmark("fetch_num_matches_from_db");
 	int sock = _fetch_matches_common(prefix);
 	if (!sock)
 		goto error;
@@ -70,6 +72,7 @@ unsigned int fetch_num_matches_from_db(const char prefix[static MAX_KEY_SIZE]) {
 	if (!_value)
 		goto error;
 
+	end_benchmark(x);
 	unsigned int to_return = strtol(_value, NULL, 10);
 
 	free(_data);
@@ -136,6 +139,8 @@ unsigned char *fetch_data_from_db(const char key[static MAX_KEY_SIZE], size_t *o
 	char new_db_request[db_request_siz];
 	memset(new_db_request, '\0', db_request_siz);
 
+
+	const struct bmark x = begin_benchmark("fetch_data_from_db");
 	int sock = 0;
 	sock = connect_to_host_with_port(DB_HOST, DB_PORT);
 	if (sock == 0)
@@ -147,6 +152,7 @@ unsigned char *fetch_data_from_db(const char key[static MAX_KEY_SIZE], size_t *o
 		goto error;
 
 	_data = receive_http(sock, outdata);
+	end_benchmark(x);
 	if (!_data)
 		goto error;
 
@@ -171,6 +177,7 @@ int store_data_in_db(const char key[static MAX_KEY_SIZE], const unsigned char *v
 	memset(new_db_post, '\0', db_post_siz + 1);
 
 	int sock = 0;
+	const struct bmark x = begin_benchmark("store_data_in_db");
 	sock = connect_to_host_with_port(DB_HOST, DB_PORT);
 	if (sock == 0)
 		goto error;
@@ -185,6 +192,7 @@ int store_data_in_db(const char key[static MAX_KEY_SIZE], const unsigned char *v
 	/* I don't really care about the reply, but I probably should. */
 	size_t out;
 	_data = receive_http(sock, &out);
+	end_benchmark(x);
 	if (!_data) {
 		log_msg(LOG_ERR, "No reply from DB.");
 		goto error;
