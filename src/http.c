@@ -349,9 +349,10 @@ unsigned char *receive_http_with_timeout(const int request_fd, const int timeout
 		cursor_pos = header_end  + (sizeof(char) * 4);
 	}
 
-	unsigned char *to_return = malloc(result_size);
+	unsigned char *to_return = malloc(result_size + 1);
 	memcpy(to_return, cursor_pos, result_size);
 	*out = result_size;
+	to_return[result_size] = '\0';
 	free(raw_buf);
 
 	return to_return;
