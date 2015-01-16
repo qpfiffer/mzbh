@@ -168,12 +168,12 @@ error:
 }
 
 int store_data_in_db(const char key[static MAX_KEY_SIZE], const unsigned char *val, const size_t vlen) {
-	int attempts = 0;
+	int attempts = 1;
 	unsigned char *_data = NULL;
 	int sock = 0;
 
 	const int max_attempts = 3;
-	while (attempts < max_attempts) {
+	while (attempts <= max_attempts) {
 		const size_t vlen_len = UINT_LEN(vlen);
 		/* See DB_POST for why we need all this. */
 		const size_t db_post_siz = strlen(WAIFU_NMSPC) + strlen(key) + strlen(DB_POST) + vlen_len + vlen;
