@@ -9,7 +9,7 @@
 inline const struct bmark begin_benchmark(const char *name) {
 	long ms;
 	struct timespec spec;
-	clock_gettime(CLOCK_REALTIME, &spec);
+	clock_gettime(CLOCK_MONOTONIC, &spec);
 	ms = round(spec.tv_nsec / 1.0e6);
 
 	struct bmark x = {
