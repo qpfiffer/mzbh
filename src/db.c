@@ -168,43 +168,55 @@ error:
 }
 
 int store_data_in_db(const char key[static MAX_KEY_SIZE], const unsigned char *val, const size_t vlen) {
+	int attempts = 0;
 	unsigned char *_data = NULL;
-
-	const size_t vlen_len = UINT_LEN(vlen);
-	/* See DB_POST for why we need all this. */
-	const size_t db_post_siz = strlen(WAIFU_NMSPC) + strlen(key) + strlen(DB_POST) + vlen_len + vlen;
-	char new_db_post[db_post_siz + 1];
-	memset(new_db_post, '\0', db_post_siz + 1);
-
 	int sock = 0;
-	const struct bmark x = begin_benchmark("store_data_in_db");
-	sock = connect_to_host_with_port(DB_HOST, DB_PORT);
-	if (sock == 0)
-		goto error;
 
-	sprintf(new_db_post, DB_POST, WAIFU_NMSPC, key, vlen, val);
-	int rc = send(sock, new_db_post, strlen(new_db_post), 0);
-	if (strlen(new_db_post) != rc) {
-		log_msg(LOG_ERR, "Could not send stuff to DB.");
-		goto error;
-	}
+	const int max_attempts = 3;
+	while (attempts < max_attempts) {
+		const size_t vlen_len = UINT_LEN(vlen);
+		/* See DB_POST for why we need all this. */
+		const size_t db_post_siz = strlen(WAIFU_NMSPC) + strlen(key) + strlen(DB_POST) + vlen_len + vlen;
+		char new_db_post[db_post_siz + 1];
+		memset(new_db_post, '\0', db_post_siz + 1);
 
-	/* I don't really care about the reply, but I probably should. */
-	size_t out;
-	_data = receive_http(sock, &out);
-	end_benchmark(x);
-	if (!_data) {
-		log_msg(LOG_ERR, "No reply from DB.");
-		goto error;
+		const struct bmark x = begin_benchmark("store_data_in_db");
+		sock = 0;
+		sock = connect_to_host_with_port(DB_HOST, DB_PORT);
+		if (sock == 0) {
+			log_msg(LOG_ERR, "(%i/%i): Could not connect to host.", attempts, max_attempts);
+			attempts++;
+			continue;
+		}
+
+		sprintf(new_db_post, DB_POST, WAIFU_NMSPC, key, vlen, val);
+		int rc = send(sock, new_db_post, strlen(new_db_post), 0);
+		if (strlen(new_db_post) != rc) {
+			log_msg(LOG_ERR, "(%i/%i): Could not send stuff to DB.", attempts, max_attempts);
+			attempts++;
+			close(sock);
+			continue;
+		}
+
+		/* I don't really care about the reply, but I probably should. */
+		size_t out;
+		_data = receive_http(sock, &out);
+		end_benchmark(x);
+		if (!_data) {
+			log_msg(LOG_ERR, "(%i/%i): Store data: No reply from DB.", attempts, max_attempts);
+			attempts++;
+			close(sock);
+			continue;
+		}
+
+		free(_data);
+		close(sock);
+		return 1;
 	}
 
 	free(_data);
 	close(sock);
-	return 1;
-
-error:
-	free(_data);
-	close(sock);
+	log_msg(LOG_ERR, "Could not store data in DB.");
 	return 0;
 }
 
