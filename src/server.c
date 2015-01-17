@@ -87,9 +87,6 @@ static int _add_files_in_dir_to_arr(greshunkel_var *loop, const char *dir,
 				}
 				total++;
 			}
-
-			if (limit && total > (offset + limit))
-				break;
 		}
 	}
 	closedir(dirstream);
