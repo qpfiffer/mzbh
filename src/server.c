@@ -90,8 +90,8 @@ static int _add_webms_in_dir_by_date(greshunkel_var *loop, const char *dir,
 	free(dirent_thing);
 
 	qsort(webm_vec->items, webm_vec->count, webm_vec->item_size, &compare_dates);
-	unsigned int i;
-	for (i = 0; i < webm_vec->count; i++) {
+	int64_t i;
+	for (i = webm_vec->count - 1; i >= 0; i--) {
 		int8_t can_add = 0;
 		const struct file_and_time *x = vector_get(webm_vec, i);
 		if (!limit && !offset)
