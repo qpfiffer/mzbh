@@ -49,7 +49,7 @@ static inline int compare_dates(const void *a, const void *b) {
 	const struct file_and_time *_a = a;
 	const struct file_and_time *_b = b;
 
-	return _a->ctime - _b->ctime;
+	return _b->ctime - _a->ctime;
 }
 
 static int _add_webms_in_dir_by_date(greshunkel_var *loop, const char *dir,
