@@ -68,7 +68,7 @@ static int _add_webms_in_dir_by_date(greshunkel_var *loop, const char *dir,
 		if (!result)
 			break;
 
-		if (result->d_name[0] != '.' && !endswith(result->d_name, ".webm")) {
+		if (result->d_name[0] != '.' && endswith(result->d_name, ".webm")) {
 			struct stat st = {0};
 			char *full_path = get_full_path_for_file(dir, result->d_name);
 			if (stat(full_path, &st) == -1) {
@@ -96,11 +96,10 @@ static int _add_webms_in_dir_by_date(greshunkel_var *loop, const char *dir,
 		const struct file_and_time *x = vector_get(webm_vec, i);
 		if (!limit && !offset)
 			can_add = 1;
-		else if (total >= offset && total < (offset + limit))
+		else if (i >= offset && i < (offset + limit))
 			can_add = 1;
 		if (can_add) {
 			gshkl_add_string_to_loop(loop, x->fname);
-		free((char *)x->fname);
 		}
 	}
 
