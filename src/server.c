@@ -4,6 +4,7 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <netdb.h>
+#include <netinet/in.h>
 #include <pthread.h>
 #include <regex.h>
 #include <sys/ioctl.h>
@@ -83,6 +84,7 @@ static int _add_webms_in_dir_by_date(greshunkel_var *loop, const char *dir,
 			};
 			strncpy(new.fname, result->d_name, sizeof(new.fname));
 			vector_append(webm_vec, &new, sizeof(struct file_and_time));
+			free(full_path);
 			total++;
 		}
 	}
