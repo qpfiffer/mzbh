@@ -219,6 +219,15 @@ int hash_string_fnv1a(const unsigned char *key, const size_t siz, char outbuf[st
 	return 1;
 }
 
+inline char *get_full_path_for_file(const char *dir, const char file_name[static MAX_IMAGE_FILENAME_SIZE]) {
+	const size_t siz = strlen(dir) + strlen("/") + strlen(file_name) + 1;
+	char *fpath = malloc(siz);
+
+	snprintf(fpath, siz, "%s/%s", dir, file_name);
+
+	return fpath;
+}
+
 char *get_full_path_for_webm(const char current_board[MAX_BOARD_NAME_SIZE],
 							 const char file_name_decoded[MAX_IMAGE_FILENAME_SIZE]) {
 	const char *webm_loc = webm_location();
@@ -226,7 +235,7 @@ char *get_full_path_for_webm(const char current_board[MAX_BOARD_NAME_SIZE],
 								  strlen(current_board) + strlen("/") +
 								  strlen(file_name_decoded) + 1;
 
-	char *full_path = calloc(1, full_path_size);
+	char *full_path = malloc(full_path_size);
 	memset(full_path, '\0', full_path_size);
 	snprintf(full_path, full_path_size, "%s/%s/%s", webm_loc, current_board, file_name_decoded);
 

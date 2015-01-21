@@ -16,6 +16,7 @@
 #include <string.h>
 #include <strings.h>
 #include <unistd.h>
+#include <time.h>
 
 #include "db.h"
 #include "http.h"
@@ -28,10 +29,6 @@
 
 #define RESULTS_PER_PAGE 80
 #define OFFSET_FOR_PAGE(x) x * RESULTS_PER_PAGE
-
-static int _only_webms_filter(const char *file_name) {
-	return endswith(file_name, ".webm");
-}
 
 static char *thumbnail_for_image(const char *argument) {
 	const size_t arg_len = strlen(argument);
@@ -46,6 +43,69 @@ static char *thumbnail_for_image(const char *argument) {
 	strncat(to_return, "jpg", strlen("jpg"));
 	strncpy(to_return + prefix_siz + stop_at, "jpg", strlen("jpg"));
 	return to_return;
+}
+
+static inline int compare_dates(const void *a, const void *b) {
+	const struct file_and_time *_a = a;
+	const struct file_and_time *_b = b;
+
+	return _a->ctime - _b->ctime;
+}
+
+static int _add_webms_in_dir_by_date(greshunkel_var *loop, const char *dir,
+		const unsigned int offset, const unsigned int limit) {
+	size_t dirent_siz = offsetof(struct dirent, d_name) +
+							  pathconf(dir, _PC_NAME_MAX) + 1;
+	struct dirent *dirent_thing = calloc(1, dirent_siz);
+
+	DIR *dirstream = opendir(dir);
+	unsigned int total = 0;
+	vector *webm_vec = vector_new(sizeof(struct file_and_time), 2048);
+
+	while (1) {
+		struct dirent *result = NULL;
+		readdir_r(dirstream, dirent_thing, &result);
+		if (!result)
+			break;
+
+		if (result->d_name[0] != '.' && !endswith(result->d_name, ".webm")) {
+			struct stat st = {0};
+			char *full_path = get_full_path_for_file(dir, result->d_name);
+			if (stat(full_path, &st) == -1) {
+				log_msg(LOG_ERR, "Could not stat file: %s", result->d_name);
+				free(full_path);
+				continue;
+			}
+
+			struct file_and_time new = {
+				.fname = {0},
+				.ctime = st.st_mtime
+			};
+			strncpy(new.fname, result->d_name, sizeof(new.fname));
+			vector_append(webm_vec, &new, sizeof(struct file_and_time));
+			total++;
+		}
+	}
+	closedir(dirstream);
+	free(dirent_thing);
+
+	qsort(webm_vec->items, webm_vec->count, webm_vec->item_size, &compare_dates);
+	unsigned int i;
+	for (i = 0; i < webm_vec->count; i++) {
+		int8_t can_add = 0;
+		const struct file_and_time *x = vector_get(webm_vec, i);
+		if (!limit && !offset)
+			can_add = 1;
+		else if (total >= offset && total < (offset + limit))
+			can_add = 1;
+		if (can_add) {
+			gshkl_add_string_to_loop(loop, x->fname);
+		free((char *)x->fname);
+		}
+	}
+
+	vector_free(webm_vec);
+	return total;
 }
 
 static int _add_files_in_dir_to_arr(greshunkel_var *loop, const char *dir,
@@ -275,8 +335,8 @@ static int _board_handler(const http_request *request, http_response *response, 
 
 	char images_dir[256] = {0};
 	snprintf(images_dir, sizeof(images_dir), "%s/%s", webm_location(), current_board);
-	int total = _add_files_in_dir_to_arr(images, images_dir,
-			OFFSET_FOR_PAGE(page), RESULTS_PER_PAGE, &_only_webms_filter);
+	int total = _add_webms_in_dir_by_date(images, images_dir,
+			OFFSET_FOR_PAGE(page), RESULTS_PER_PAGE);
 
 	greshunkel_var *pages = gshkl_add_array(ctext, "PAGES");
 	int i;
