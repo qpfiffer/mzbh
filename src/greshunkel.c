@@ -269,7 +269,6 @@ _filter_line(const greshunkel_ctext *ctext, const line *operating_line, const re
 						operating_line->data + function_name.rm_so,
 						strlen(filter->name));
 				if (strncmp_res == 0) {
-					matched_at_least_once = 1;
 					/* Pass it to the filter function. */
 					char *filter_result = filter->filter_func(rendered_argument);
 					const size_t result_size = strlen(filter_result);

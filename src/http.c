@@ -339,6 +339,9 @@ unsigned char *receive_http_with_timeout(const int request_fd, const int timeout
 		}
 	}
 
+	if (!result_size)
+		goto error;
+
 	if (raw_buf == NULL)
 		goto error;
 

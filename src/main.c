@@ -327,9 +327,6 @@ error:
 	if (image_request_fd)
 		close(image_request_fd);
 
-	if (p_match)
-		free(p_match);
-
 	if (images_to_download != NULL) {
 		while (images_to_download->next != NULL) {
 			post_match *_match = (post_match *)spop(&images_to_download);
