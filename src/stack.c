@@ -4,25 +4,24 @@
 
 inline void spush(ol_stack **stack, const void *data) {
 	if (stack == NULL || data == NULL)
-		goto error;
+		return;
 
 	ol_stack *to_push = NULL;
 	to_push = malloc(sizeof(ol_stack));
 	if (to_push == NULL)
-		goto error;
+		return;
 
 	to_push->data = data;
 	to_push->next = *stack;
 
 	*stack = to_push;
 
-error:
 	return;
 }
 
 inline const void *spop(ol_stack **stack) {
 	if (stack == NULL)
-		goto error;
+		return NULL;
 
 	ol_stack *top = *stack;
 	*stack = top->next;
@@ -30,7 +29,4 @@ inline const void *spop(ol_stack **stack) {
 
 	free(top);
 	return data;
-
-error:
-	return NULL;
 }

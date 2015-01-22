@@ -181,7 +181,7 @@ char *get_header_value(const char *request, const size_t request_siz, const char
 	return data;
 }
 
-char *receieve_only_http_header(const int request_fd, const int timeout, size_t *out) {
+char *receive_only_http_header(const int request_fd, const int timeout, size_t *out) {
 	unsigned char *raw_buf = NULL;
 	size_t buf_size = 0;
 	int times_read = 0;
@@ -352,9 +352,10 @@ unsigned char *receive_http_with_timeout(const int request_fd, const int timeout
 		cursor_pos = header_end  + (sizeof(char) * 4);
 	}
 
-	unsigned char *to_return = malloc(result_size);
+	unsigned char *to_return = malloc(result_size + 1);
 	memcpy(to_return, cursor_pos, result_size);
 	*out = result_size;
+	to_return[result_size] = '\0';
 	free(raw_buf);
 
 	return to_return;

@@ -10,7 +10,7 @@ int connect_to_host_with_port(const char *host, const char *port);
 
 unsigned char *receive_http(const int request_fd, size_t *out);
 unsigned char *receive_http_with_timeout(const int request_fd, const int timeout, size_t *out);
-char *receieve_only_http_header(const int request_fd, const int timeout, size_t *out);
+char *receive_only_http_header(const int request_fd, const int timeout, size_t *out);
 
 char *receive_chunked_http(const int request_fd);
 

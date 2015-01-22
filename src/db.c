@@ -6,6 +6,7 @@
 #include <unistd.h>
 
 #include "db.h"
+#include "benchmark.h"
 #include "http.h"
 #include "logging.h"
 #include "models.h"
@@ -13,6 +14,7 @@
 
 static const char DB_REQUEST[] = "GET /%s/%s HTTP/1.1\r\n"
 	"Host: "DB_HOST":"DB_PORT"\r\n"
+	"Accept-Encoding: identity\r\n"
 	"\r\n";
 
 static const char DB_POST[] = "POST /%s/%s HTTP/1.1\r\n"
@@ -57,11 +59,12 @@ unsigned int fetch_num_matches_from_db(const char prefix[static MAX_KEY_SIZE]) {
 	char *_data = NULL;
 	char *_value = NULL;
 
+	const struct bmark x = begin_benchmark("fetch_num_matches_from_db");
 	int sock = _fetch_matches_common(prefix);
 	if (!sock)
 		goto error;
 
-	_data = receieve_only_http_header(sock, SELECT_TIMEOUT, &outdata);
+	_data = receive_only_http_header(sock, SELECT_TIMEOUT, &outdata);
 	if (!_data)
 		goto error;
 
@@ -69,6 +72,7 @@ unsigned int fetch_num_matches_from_db(const char prefix[static MAX_KEY_SIZE]) {
 	if (!_value)
 		goto error;
 
+	end_benchmark(x);
 	unsigned int to_return = strtol(_value, NULL, 10);
 
 	free(_data);
@@ -135,6 +139,8 @@ unsigned char *fetch_data_from_db(const char key[static MAX_KEY_SIZE], size_t *o
 	char new_db_request[db_request_siz];
 	memset(new_db_request, '\0', db_request_siz);
 
+
+	const struct bmark x = begin_benchmark("fetch_data_from_db");
 	int sock = 0;
 	sock = connect_to_host_with_port(DB_HOST, DB_PORT);
 	if (sock == 0)
@@ -146,6 +152,7 @@ unsigned char *fetch_data_from_db(const char key[static MAX_KEY_SIZE], size_t *o
 		goto error;
 
 	_data = receive_http(sock, outdata);
+	end_benchmark(x);
 	if (!_data)
 		goto error;
 
@@ -161,41 +168,55 @@ error:
 }
 
 int store_data_in_db(const char key[static MAX_KEY_SIZE], const unsigned char *val, const size_t vlen) {
+	int attempts = 1;
 	unsigned char *_data = NULL;
-
-	const size_t vlen_len = UINT_LEN(vlen);
-	/* See DB_POST for why we need all this. */
-	const size_t db_post_siz = strlen(WAIFU_NMSPC) + strlen(key) + strlen(DB_POST) + vlen_len + vlen;
-	char new_db_post[db_post_siz + 1];
-	memset(new_db_post, '\0', db_post_siz + 1);
-
 	int sock = 0;
-	sock = connect_to_host_with_port(DB_HOST, DB_PORT);
-	if (sock == 0)
-		goto error;
 
-	sprintf(new_db_post, DB_POST, WAIFU_NMSPC, key, vlen, val);
-	int rc = send(sock, new_db_post, strlen(new_db_post), 0);
-	if (strlen(new_db_post) != rc) {
-		log_msg(LOG_ERR, "Could not send stuff to DB.");
-		goto error;
-	}
+	const int max_attempts = 3;
+	while (attempts <= max_attempts) {
+		const size_t vlen_len = UINT_LEN(vlen);
+		/* See DB_POST for why we need all this. */
+		const size_t db_post_siz = strlen(WAIFU_NMSPC) + strlen(key) + strlen(DB_POST) + vlen_len + vlen;
+		char new_db_post[db_post_siz + 1];
+		memset(new_db_post, '\0', db_post_siz + 1);
 
-	/* I don't really care about the reply, but I probably should. */
-	size_t out;
-	_data = receive_http(sock, &out);
-	if (!_data) {
-		log_msg(LOG_ERR, "No reply from DB.");
-		goto error;
+		const struct bmark x = begin_benchmark("store_data_in_db");
+		sock = 0;
+		sock = connect_to_host_with_port(DB_HOST, DB_PORT);
+		if (sock == 0) {
+			log_msg(LOG_ERR, "(%i/%i): Could not connect to host.", attempts, max_attempts);
+			attempts++;
+			continue;
+		}
+
+		sprintf(new_db_post, DB_POST, WAIFU_NMSPC, key, vlen, val);
+		int rc = send(sock, new_db_post, strlen(new_db_post), 0);
+		if (strlen(new_db_post) != rc) {
+			log_msg(LOG_ERR, "(%i/%i): Could not send stuff to DB.", attempts, max_attempts);
+			attempts++;
+			close(sock);
+			continue;
+		}
+
+		/* I don't really care about the reply, but I probably should. */
+		size_t out;
+		_data = receive_http(sock, &out);
+		end_benchmark(x);
+		if (!_data) {
+			log_msg(LOG_ERR, "(%i/%i): Store data: No reply from DB.", attempts, max_attempts);
+			attempts++;
+			close(sock);
+			continue;
+		}
+
+		free(_data);
+		close(sock);
+		return 1;
 	}
 
 	free(_data);
 	close(sock);
-	return 1;
-
-error:
-	free(_data);
-	close(sock);
+	log_msg(LOG_ERR, "Could not store data in DB.");
 	return 0;
 }
 
@@ -470,9 +491,6 @@ int associate_alias_with_webm(const webm *webm, const char alias_key[static MAX_
 
 	}
 
-	/* TODO: Quickly scan through the list of aliases to determine if that
-	 * aliases is already in there.
-	 */
 	webm_to_alias *deserialized = deserialize_webm_to_alias(w2a_json);
 	free(w2a_json);
 

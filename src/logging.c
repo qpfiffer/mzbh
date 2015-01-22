@@ -16,7 +16,8 @@ void log_msg(log_level level, const char *fmsg, ...) {
 	const char inf[] = "[%c[%dm-%c[%dm]"; /* Blue [-] */
 	const char wrn[] = "[%c[%dm!%c[%dm]"; /* Yellow [!] */
 	const char err[] = "[%c[%dmx%c[%dm]"; /* Red [x] */
-	const char fun[] = "[%c[%dm~%c[%dm]";
+	const char fun[] = "[%c[%dm~%c[%dm]"; /* Teal [~] */
+	const char dbc[] = "[%c[%dm~%c[%dm]"; /* Purple [&] */
 	char sym_buf[15] = {0};
 
 
@@ -44,6 +45,9 @@ void log_msg(log_level level, const char *fmsg, ...) {
 			break;
 		case LOG_FUN:
 			snprintf(sym_buf, strlen(fun), fun, 0x1B, 36, 0x1B, 0);
+			break;
+		case LOG_DB:
+			snprintf(sym_buf, strlen(dbc), dbc, 0x1B, 35, 0x1B, 0);
 			break;
 	}
 

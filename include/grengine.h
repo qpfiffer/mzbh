@@ -19,6 +19,7 @@ typedef struct {
 	char verb[VERB_SIZE];
 	char resource[128];
 	regmatch_t matches[MAX_MATCHES];
+	char *full_header;
 } http_request;
 
 /* Fill this out and return it, signed by your parents. */
@@ -56,6 +57,8 @@ static const route r_404_route = {
  * to be handled later by mmap_cleanup.
  */
 int mmap_file(const char *file_path, http_response *response);
+/* If you only want to return a chunk of the file, then use this call. Pass NULL if you just want [0 -> filesize]*/
+int mmap_file_ol(const char *file_path, http_response *response, const size_t *offset, const size_t *limit);
 /* Helper function that blindly guesses the mimetype based on the file extension. */
 void guess_mimetype(const char *ending, const size_t ending_siz, http_response *response);
 

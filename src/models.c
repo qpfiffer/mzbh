@@ -162,7 +162,7 @@ webm_to_alias *deserialize_webm_to_alias(const char *json) {
 	int i;
 	for (i = 0; i < num_aliases; i++) {
 		const char *alias = json_array_get_string(webm_to_alias_object, i);
-		vector_append(to_return->aliases, alias, strlen(alias) + 1);
+		vector_append(to_return->aliases, alias, strlen(alias));
 	}
 
 	json_value_free(serialized);

@@ -19,7 +19,7 @@ vector *vector_new(const size_t item_size, const size_t initial_element_count) {
 	return to_return;
 }
 
-int vector_append(vector *vec, const void *item, const size_t item_size) {
+inline int vector_append(vector *vec, const void *item, const size_t item_size) {
 	if (item_size > vec->item_size)
 		return 0;
 
@@ -32,6 +32,7 @@ int vector_append(vector *vec, const void *item, const size_t item_size) {
 	}
 
 	memcpy(nth(vec->count), item, item_size);
+	memset(nth(vec->count) + item_size, '\0', sizeof(char));
 	vec->count++;
 	return 1;
 }

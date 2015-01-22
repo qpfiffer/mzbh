@@ -3,6 +3,14 @@
 #include "stack.h"
 #include "models.h"
 
+/* Used for answering range queries on static files. */
+typedef struct range_header {
+	const size_t limit;
+	const size_t offset;
+} range_header;
+
+range_header parse_range_header(const char *range_query);
+
 typedef struct thread_match {
 	char board[MAX_BOARD_NAME_SIZE];
 	int thread_num;

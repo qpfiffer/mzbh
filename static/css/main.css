@@ -24,3 +24,7 @@ body {
 	width: 100%;
 	max-height: 200px;
 }
+.pages {
+	padding-bottom: 2em;
+	font-size: 18px;
+}
