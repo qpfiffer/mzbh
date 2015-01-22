@@ -250,6 +250,8 @@ int download_images() {
 			log_msg(LOG_WARN, "Hit API cutoff or whatever. Sleeping.");
 			sleep(30);
 			free(p_match);
+			free(raw_thumb_resp);
+			free(raw_image_resp);
 			continue;
 		}
 
@@ -320,6 +322,8 @@ int download_images() {
 	return 0;
 
 error:
+	free(raw_thumb_resp);
+	free(raw_image_resp);
 	if (thumb_request_fd)
 		close(thumb_request_fd);
 
@@ -334,10 +338,6 @@ error:
 		free(images_to_download);
 	}
 
-	if (raw_thumb_resp)
-		free(raw_thumb_resp);
-	if (raw_image_resp)
-		free(raw_image_resp);
 	if (thumb_file != NULL)
 		fclose(thumb_file);
 	if (image_file != NULL)

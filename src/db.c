@@ -483,10 +483,13 @@ int associate_alias_with_webm(const webm *webm, const char alias_key[static MAX_
 
 		if (!store_data_in_db(key, (unsigned char *)serialized, strlen(serialized))) {
 			log_msg(LOG_ERR, "Could not store new webm_to_alias.");
+			free((char *)serialized);
 			vector_free(aliases);
 			return 0;
 		}
 
+		vector_free(aliases);
+		free((char *)serialized);
 		return 1;
 
 	}
@@ -527,8 +530,10 @@ int associate_alias_with_webm(const webm *webm, const char alias_key[static MAX_
 
 	if (!store_data_in_db(key, (unsigned char *)new_serialized, strlen(new_serialized))) {
 		log_msg(LOG_ERR, "Could not store updated webm_to_alias.");
+		free(new_serialized);
 		return 0;
 	}
 
+	free(new_serialized);
 	return 1;
 }
