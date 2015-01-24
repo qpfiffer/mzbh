@@ -145,12 +145,12 @@ int mmap_file_ol(const char *file_path, http_response *response, const size_t *o
 }
 
 void heap_cleanup(const int status_code, http_response *response) {
-	if (status_code == 200)
+	if (status_code == 200 || status_code == 206)
 		free(response->out);
 }
 
 void mmap_cleanup(const int status_code, http_response *response) {
-	if (status_code == 200) {
+	if (status_code == 200 || status_code == 206) {
 		munmap(response->out, response->outsize);
 		free(response->extra_data);
 	}
