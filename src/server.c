@@ -203,7 +203,7 @@ static int board_static_handler(const http_request *request, http_response *resp
 		free(range_header_value);
 
 		log_msg(LOG_INFO, "Range header parsed: Limit: %zu Offset: %zu", range.limit, range.offset);
-		response->byte_range = range;
+		memcpy(&response->byte_range, &range, sizeof(response->byte_range));
 
 		int rc = mmap_file(full_path, response);
 		if (rc != 200)
