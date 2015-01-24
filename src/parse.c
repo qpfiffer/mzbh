@@ -141,7 +141,7 @@ range_header parse_range_header(const char *range_query) {
 	}
 
 	const size_t first_num = strtol(actual_value, NULL, 10);
-	if (i == strlen(actual_value)) {
+	if (i == (strlen(actual_value) - 1)) {
 		/* No second number, just return 0. */
 		range_header rng = {
 			.limit = 0,
