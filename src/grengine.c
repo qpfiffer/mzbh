@@ -268,10 +268,11 @@ int respond(const int accept_fd, const route *all_routes, const size_t route_num
 	assert(matched_response != NULL);
 
 	/* Embed the handler's text into the header: */
-	const size_t integer_length = UINT_LEN(response.outsize);
 	size_t header_size = 0;
 	size_t actual_response_siz = 0;
+
 	if (response_code == 200 || response_code == 404) {
+		const size_t integer_length = UINT_LEN(response.outsize);
 		header_size = strlen(response.mimetype) + strlen(matched_response->message)
 			+ integer_length - strlen("%s") - strlen("%zu");
 		actual_response_siz = response.outsize + header_size;
@@ -282,19 +283,26 @@ int respond(const int accept_fd, const route *all_routes, const size_t route_num
 		memcpy(actual_response + header_size, response.out, response.outsize);
 	} else if (response_code == 206) {
 		/* Byte range queries have some extra shit. */
-		const size_t minb_len = UINT_LEN(response.byte_range.offset);
-		const size_t maxb_len = UINT_LEN(response.byte_range.limit);
+		const size_t c_offset = response.byte_range.offset;
+		const size_t c_limit = response.byte_range.limit == 0 ?
+			(response.outsize - c_offset) - 1 : (response.byte_range.limit - c_offset) - 1;
+		const size_t full_size = c_limit + 1;
+		const size_t integer_length = UINT_LEN(full_size);
+
+		const size_t minb_len = c_offset == 0 ? 1 : UINT_LEN(c_offset);
+		const size_t maxb_len = c_limit == 0 ? 1 : UINT_LEN(c_limit);
 		header_size = strlen(response.mimetype) + strlen(matched_response->message)
 			+ integer_length + minb_len + maxb_len + integer_length
 			- strlen("%s") - (strlen("%zu") * 4);
-		actual_response_siz = response.outsize + header_size;
+		actual_response_siz = full_size + header_size;
 		actual_response = calloc(1, actual_response_siz + 1);
+
 		/* snprintf the header because it's just a string: */
 		snprintf(actual_response, actual_response_siz, matched_response->message,
-			response.mimetype, response.outsize,
-			response.byte_range.offset, response.byte_range.limit, response.outsize);
+			response.mimetype, full_size,
+			c_offset, c_limit, full_size);
 		/* memcpy the rest because it could be anything: */
-		memcpy(actual_response + header_size, response.out, response.outsize);
+		memcpy(actual_response + header_size, response.out + c_offset, full_size);
 	}
 
 	/* Send that shit over the wire: */
