@@ -1,5 +1,6 @@
 // vim: noet ts=4 sw=4
 #pragma once
+#include "parse.h"
 
 #define MAX_READ_LEN 1024
 #define VERB_SIZE 16
@@ -27,6 +28,7 @@ typedef struct {
 	unsigned char *out;
 	size_t outsize;
 	char mimetype[32];
+	range_header byte_range;
 	void *extra_data;
 } http_response;
 

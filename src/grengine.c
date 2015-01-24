@@ -28,9 +28,19 @@ static const char r_404[] =
 	"Connection: close\r\n"
 	"Server: waifu.xyz/bitch\r\n\r\n";
 
+static const char r_206[] =
+	"HTTP/1.1 206 Partial Content\r\n"
+	"Content-Type: %s\r\n"
+	"Content-Length: %zu\r\n"
+	"Accept-Ranges: bytes\r\n"
+	"Content-Range: bytes %zu-%zu/%zu\r\n"
+	"Connection: close\r\n"
+	"Server: waifu.xyz/bitch\r\n\r\n";
+
 /* This is used to map between the return codes of responses to their headers: */
 static const code_to_message response_headers[] = {
 	{200, r_200},
+	{206, r_206},
 	{404, r_404}
 };
 
@@ -99,12 +109,16 @@ int mmap_file_ol(const char *file_path, http_response *response, const size_t *o
 	const struct stat st = *(struct stat *)response->extra_data;
 
 	const size_t c_offset = offset != NULL ? *offset : 0;
-	const size_t c_limit = limit != NULL ? *limit : st.st_size;
+	const size_t c_limit = limit != NULL ? (*limit - c_offset) : (st.st_size - c_offset);
 
 	response->out = mmap(NULL, c_limit, PROT_READ, MAP_PRIVATE, fd, c_offset);
 	response->outsize = c_limit - c_offset;
 
 	if (response->out == MAP_FAILED) {
+		char buf[128] = {0};
+		perror(buf);
+		log_msg(LOG_ERR, "Could not mmap file: %s", buf);
+
 		response->out = (unsigned char *)"<html><body><p>Could not open file.</p></body></html>";
 		response->outsize= strlen("<html><body><p>could not open file.</p></body></html>");
 		close(fd);
@@ -173,7 +187,11 @@ error:
 int respond(const int accept_fd, const route *all_routes, const size_t route_num_elements) {
 	char to_read[MAX_READ_LEN] = {0};
 	char *actual_response = NULL;
-	http_response response = {.mimetype = "text/html", 0};
+	http_response response = {
+		.mimetype = "text/html",
+		.byte_range = {0},
+		0
+	};
 	const route *matching_route = NULL;
 
 	int rc = recv(accept_fd, to_read, MAX_READ_LEN, 0);
@@ -251,13 +269,33 @@ int respond(const int accept_fd, const route *all_routes, const size_t route_num
 
 	/* Embed the handler's text into the header: */
 	const size_t integer_length = UINT_LEN(response.outsize);
-	const size_t header_size = strlen(response.mimetype) + strlen(matched_response->message) + integer_length - strlen("%s") - strlen("%zu");
-	const size_t actual_response_siz = response.outsize + header_size;
-	actual_response = calloc(1, actual_response_siz + 1);
-	/* snprintf the header because it's just a string: */
-	snprintf(actual_response, actual_response_siz, matched_response->message, response.mimetype, response.outsize);
-	/* memcpy the rest because it could be anything: */
-	memcpy(actual_response + header_size, response.out, response.outsize);
+	size_t header_size = 0;
+	size_t actual_response_siz = 0;
+	if (response_code == 200 || response_code == 404) {
+		header_size = strlen(response.mimetype) + strlen(matched_response->message)
+			+ integer_length - strlen("%s") - strlen("%zu");
+		actual_response_siz = response.outsize + header_size;
+		actual_response = calloc(1, actual_response_siz + 1);
+		/* snprintf the header because it's just a string: */
+		snprintf(actual_response, actual_response_siz, matched_response->message, response.mimetype, response.outsize);
+		/* memcpy the rest because it could be anything: */
+		memcpy(actual_response + header_size, response.out, response.outsize);
+	} else if (response_code == 206) {
+		/* Byte range queries have some extra shit. */
+		const size_t minb_len = UINT_LEN(response.byte_range.offset);
+		const size_t maxb_len = UINT_LEN(response.byte_range.limit);
+		header_size = strlen(response.mimetype) + strlen(matched_response->message)
+			+ integer_length + minb_len + maxb_len + integer_length
+			- strlen("%s") - (strlen("%zu") * 4);
+		actual_response_siz = response.outsize + header_size;
+		actual_response = calloc(1, actual_response_siz + 1);
+		/* snprintf the header because it's just a string: */
+		snprintf(actual_response, actual_response_siz, matched_response->message,
+			response.mimetype, response.outsize,
+			response.byte_range.offset, response.byte_range.limit, response.outsize);
+		/* memcpy the rest because it could be anything: */
+		memcpy(actual_response + header_size, response.out, response.outsize);
+	}
 
 	/* Send that shit over the wire: */
 	const size_t bytes_siz = actual_response_siz;

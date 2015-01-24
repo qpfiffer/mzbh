@@ -206,8 +206,13 @@ static int board_static_handler(const http_request *request, http_response *resp
 		const size_t *c_limit = range.limit == 0 ? NULL : &range.limit;
 		const size_t *c_offset = range.offset == 0 ? NULL : &range.offset;
 
-		return mmap_file_ol(full_path, response, c_offset, c_limit);
+		response->byte_range = range;
 
+		int rc = mmap_file_ol(full_path, response, c_offset, c_limit);
+		if (rc != 200)
+			return rc;
+
+		return 206;
 	}
 
 	return mmap_file(full_path, response);
