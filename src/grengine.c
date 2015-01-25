@@ -10,6 +10,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "http.h"
 #include "grengine.h"
 #include "utils.h"
 #include "logging.h"
@@ -81,11 +82,12 @@ void guess_mimetype(const char *ending, const size_t ending_siz, http_response *
 	}
 }
 
-int mmap_file(const char *file_path, http_response *response) {
-	return mmap_file_ol(file_path, response, NULL, NULL);
+int mmap_file(const char *file_path, const http_request *request, http_response *response) {
+	return mmap_file_ol(file_path, request, response, NULL, NULL);
 }
 
-int mmap_file_ol(const char *file_path, http_response *response, const size_t *offset, const size_t *limit) {
+int mmap_file_ol(const char *file_path, const http_request *request, http_response *response,
+				 const size_t *offset, const size_t *limit) {
 	response->extra_data = calloc(1, sizeof(struct stat));
 
 	if (stat(file_path, response->extra_data) == -1) {
@@ -141,16 +143,27 @@ int mmap_file_ol(const char *file_path, http_response *response, const size_t *o
 	strncpy(ending, file_path + i, sizeof(ending));
 	guess_mimetype(ending, sizeof(ending), response);
 
+	char *range_header_value = get_header_value(request->full_header, strlen(request->full_header), "Range");
+	if (range_header_value) {
+		range_header range = parse_range_header(range_header_value);
+		free(range_header_value);
+
+		log_msg(LOG_INFO, "Range header parsed: Limit: %zu Offset: %zu", range.limit, range.offset);
+		memcpy(&response->byte_range, &range, sizeof(response->byte_range));
+
+		return 206;
+	}
+
 	return 200;
 }
 
 void heap_cleanup(const int status_code, http_response *response) {
-	if (status_code == 200 || status_code == 206)
+	if (status_code > 200 && status_code < 400)
 		free(response->out);
 }
 
 void mmap_cleanup(const int status_code, http_response *response) {
-	if (status_code == 200 || status_code == 206) {
+	if (status_code > 200 && status_code < 400) {
 		munmap(response->out, response->outsize);
 		free(response->extra_data);
 	}

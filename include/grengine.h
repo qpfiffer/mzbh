@@ -58,9 +58,10 @@ static const route r_404_route = {
  * the response object with a struct st. This needs to be present
  * to be handled later by mmap_cleanup.
  */
-int mmap_file(const char *file_path, http_response *response);
+int mmap_file(const char *file_path, const http_request *request, http_response *response);
 /* If you only want to return a chunk of the file, then use this call. Pass NULL if you just want [0 -> filesize]*/
-int mmap_file_ol(const char *file_path, http_response *response, const size_t *offset, const size_t *limit);
+int mmap_file_ol(const char *file_path, const http_request *request, http_response *response,
+				 const size_t *offset, const size_t *limit);
 /* Helper function that blindly guesses the mimetype based on the file extension. */
 void guess_mimetype(const char *ending, const size_t ending_siz, http_response *response);
 
