@@ -17,7 +17,7 @@
 
 int main_sock_fd = 0;
 pid_t bg_worker = 0;
-const char *BOARDS[] = {"a", "b", "g", "gif", "e", "h", "sci", "v", "wsg"};
+const char *BOARDS[] = {"a", "b", "g", "gif", "e", "h", "r", "sci", "v", "wsg"};
 
 const char FOURCHAN_API_HOST[] = "a.4cdn.org";
 const char FOURCHAN_THUMBNAIL_HOST[] = "t.4cdn.org";
