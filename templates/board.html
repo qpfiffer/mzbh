@@ -21,7 +21,7 @@
 					</ul>
 					<span>Special:</span>
 					<ul>
-						<li><a href="/by/alias">Sort by Aliases</a></li>
+						<li><a href="/by/alias/0">Sort by Aliases Count</a></li>
 					</ul>
 				</div>
 				<div class="col-6">
@@ -50,12 +50,7 @@
 		<script src="/static/js/echo.js"></script>
 		<script>
 			echo.init({
-				offset: 100,
-				throttle: 250,
 				unload: false,
-				callback: function (element, op) {
-					console.log(element, 'has been', op + 'ed')
-				}
 			});
 		</script>
 	</body>

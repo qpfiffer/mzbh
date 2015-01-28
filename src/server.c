@@ -354,6 +354,58 @@ static int _board_handler(const http_request *request, http_response *response, 
 	return 200;
 }
 
+static int by_alias_handler(const http_request *request, http_response *response) {
+	int rc = mmap_file("./templates/sorted_by_aliases.html", request, response);
+	if (rc != 200)
+		return rc;
+	const char *mmapd_region = (char *)response->out;
+	const size_t original_size = response->outsize;
+
+	const unsigned int page = strtol(request->resource + request->matches[1].rm_so, NULL, 10);
+
+	size_t new_size = 0;
+	greshunkel_ctext *ctext = gshkl_init_context();
+	gshkl_add_filter(ctext, "thumbnail_for_image", thumbnail_for_image, filter_cleanup);
+	greshunkel_var *images = gshkl_add_array(ctext, "IMAGES");
+	gshkl_add_string_to_loop(images, "None");
+
+	int total = webm_count();
+
+	greshunkel_var *pages = gshkl_add_array(ctext, "PAGES");
+	int i;
+	const unsigned int max = total/RESULTS_PER_PAGE;
+	for (i = max; i >= 0; i--)
+		gshkl_add_int_to_loop(pages, i);
+
+	if (page > 0) {
+		gshkl_add_int(ctext, "prev_page", page - 1);
+	} else {
+		gshkl_add_string(ctext, "prev_page", "");
+	}
+
+	if (page < max) {
+		gshkl_add_int(ctext, "next_page", page + 1);
+	} else {
+		gshkl_add_string(ctext, "next_page", "");
+	}
+
+	greshunkel_var *boards = gshkl_add_array(ctext, "BOARDS");
+	_add_files_in_dir_to_arr(boards, webm_location());
+
+	gshkl_add_int(ctext, "total", total);
+	char *rendered = gshkl_render(ctext, mmapd_region, original_size, &new_size);
+	gshkl_free_context(ctext);
+
+	/* Clean up the stuff we're no longer using. */
+	munmap(response->out, original_size);
+	free(response->extra_data);
+
+	/* Make sure the response is kept up to date: */
+	response->outsize = new_size;
+	response->out = (unsigned char *)rendered;
+	return 200;
+}
+
 static int board_handler(const http_request *request, http_response *response) {
 	return _board_handler(request, response, 0);
 }
@@ -381,6 +433,7 @@ static const route all_routes[] = {
 	{"GET", "^/chug/([a-zA-Z]*)/([0-9]*)$", 2, &paged_board_handler, &heap_cleanup},
 	{"GET", "^/slurp/([a-zA-Z]*)/((.*)(.webm|.jpg))$", 2, &webm_handler, &heap_cleanup},
 	{"GET", "^/chug/([a-zA-Z]*)/((.*)(.webm|.jpg))$", 2, &board_static_handler, &mmap_cleanup},
+	{"GET", "^/by/alias/([0-9]*)$", 1, &by_alias_handler, &mmap_cleanup},
 	{"GET", "^/$", 0, &index_handler, &heap_cleanup},
 };
 
