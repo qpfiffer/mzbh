@@ -46,6 +46,10 @@ static char *thumbnail_for_image(const char *argument) {
 	return to_return;
 }
 
+static inline int alphabetical_cmp(const void *a, const void *b) {
+	return strncmp((char *)a, (char *)b, MAX_IMAGE_FILENAME_SIZE);
+}
+
 static inline int compare_dates(const void *a, const void *b) {
 	const struct file_and_time *_a = a;
 	const struct file_and_time *_b = b;
@@ -109,15 +113,14 @@ static int _add_webms_in_dir_by_date(greshunkel_var *loop, const char *dir,
 	return total;
 }
 
-static int _add_files_in_dir_to_arr(greshunkel_var *loop, const char *dir,
-		const unsigned int offset, const unsigned int limit,
-		int (*filter_func)(const char *file_name)) {
+static int _add_files_in_dir_to_arr(greshunkel_var *loop, const char *dir) {
 	/* Apparently readdir_r can be stack-smashed so we do it on the heap
 	 * instead.
 	 */
 	size_t dirent_siz = offsetof(struct dirent, d_name) +
 							  pathconf(dir, _PC_NAME_MAX) + 1;
 	struct dirent *dirent_thing = calloc(1, dirent_siz);
+	vector *alphabetical_vec = vector_new(MAX_IMAGE_FILENAME_SIZE, 16);
 
 	DIR *dirstream = opendir(dir);
 	unsigned int total = 0;
@@ -127,32 +130,22 @@ static int _add_files_in_dir_to_arr(greshunkel_var *loop, const char *dir,
 		if (!result)
 			break;
 
-		/* Wow there is some dumb fucking logic in this function. */
 		if (result->d_name[0] != '.') {
-			int success = 0;
-			if (filter_func != NULL) {
-				if (filter_func(result->d_name)) {
-					success = 1;
-				}
-			} else {
-				success = 1;
-			}
-
-			if (success) {
-				if (!offset && !limit) {
-					gshkl_add_string_to_loop(loop, result->d_name);
-				} else {
-					if (total >= offset && total < (offset + limit)) {
-						gshkl_add_string_to_loop(loop, result->d_name);
-					}
-				}
-				total++;
-			}
+			vector_append(alphabetical_vec, result->d_name, strnlen(result->d_name, MAX_IMAGE_FILENAME_SIZE));
+			total++;
 		}
 	}
 	closedir(dirstream);
 	free(dirent_thing);
 
+	qsort(alphabetical_vec->items, alphabetical_vec->count, alphabetical_vec->item_size, &alphabetical_cmp);
+	int64_t i;
+	for (i = alphabetical_vec->count - 1; i >= 0; i--) {
+		const char *name = vector_get(alphabetical_vec, i);
+		gshkl_add_string_to_loop(loop, name);
+	}
+
+	vector_free(alphabetical_vec);
 	return total;
 }
 
@@ -215,7 +208,7 @@ static int index_handler(const http_request *request, http_response *response) {
 	gshkl_add_int(ctext, "alias_count", webm_alias_count());
 
 	greshunkel_var *boards = gshkl_add_array(ctext, "BOARDS");
-	_add_files_in_dir_to_arr(boards, webm_location(), 0, 0, NULL);
+	_add_files_in_dir_to_arr(boards, webm_location());
 
 	char *rendered = gshkl_render(ctext, mmapd_region, original_size, &new_size);
 	gshkl_free_context(ctext);
@@ -247,7 +240,7 @@ static int webm_handler(const http_request *request, http_response *response) {
 
 	/* All boards */
 	greshunkel_var *boards = gshkl_add_array(ctext, "BOARDS");
-	_add_files_in_dir_to_arr(boards, webm_location(), 0, 0, NULL);
+	_add_files_in_dir_to_arr(boards, webm_location());
 
 	/* Decode the url-encoded filename. */
 	char file_name_decoded[MAX_IMAGE_FILENAME_SIZE] = {0};
@@ -345,7 +338,7 @@ static int _board_handler(const http_request *request, http_response *response, 
 	}
 
 	greshunkel_var *boards = gshkl_add_array(ctext, "BOARDS");
-	_add_files_in_dir_to_arr(boards, webm_location(), 0, 0, NULL);
+	_add_files_in_dir_to_arr(boards, webm_location());
 
 	gshkl_add_int(ctext, "total", total);
 	char *rendered = gshkl_render(ctext, mmapd_region, original_size, &new_size);
