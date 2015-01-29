@@ -1,5 +1,4 @@
 // vim: noet ts=4 sw=4
-#include <arpa/inet.h>
 #include <assert.h>
 #include <fcntl.h>
 #include <regex.h>
@@ -214,16 +213,6 @@ int respond(const int accept_fd, const route *all_routes, const size_t route_num
 		goto error;
 	}
 
-	/* Thanks, beej! */
-	struct sockaddr_storage peer_addr = {0};
-	socklen_t peer_addr_siz = sizeof(peer_addr);
-	char ipstr[INET6_ADDRSTRLEN] = {0};
-	getpeername(accept_fd, (struct sockaddr *)&peer_addr, &peer_addr_siz);
-
-	struct sockaddr_in *s = (struct sockaddr_in *)&peer_addr;
-	inet_ntop(AF_INET, &s->sin_addr, ipstr, sizeof(ipstr));
-	log_msg(LOG_FUN, "IP Address: %s", ipstr);
-
 	http_request request = {
 		.verb = {0},
 		.resource = {0},
@@ -273,8 +262,24 @@ int respond(const int accept_fd, const route *all_routes, const size_t route_num
 	assert(response.outsize > 0);
 	assert(response.out != NULL);
 
-	log_msg(LOG_FUN, "\"%s %s\" %i %i", request.verb, request.resource,
-			response_code, response.outsize);
+	char *visitor_ip_addr = get_header_value(request.full_header, strlen(request.full_header), "X-Real-Ip");
+	char *user_agent = get_header_value(request.full_header, strlen(request.full_header), "User-Agent");
+
+	if (!visitor_ip_addr)
+		visitor_ip_addr = "NOIP";
+
+	if (!user_agent)
+		user_agent = "NOUSERAGENT";
+
+	log_msg(LOG_FUN, "%s \"%s %s\" %i %i \"%s\"",
+		visitor_ip_addr, request.verb, request.resource,
+		response_code, response.outsize, user_agent);
+
+	if (strncmp(visitor_ip_addr, "NOIP", strlen("NOIP") != 0))
+		free(visitor_ip_addr);
+
+	if (strncmp(user_agent, "NOUSERAGENT", strlen("NOUSERAGENT") != 0))
+		free(user_agent);
 
 	/* Figure out what header we need to use: */
 	const code_to_message *matched_response = NULL;
