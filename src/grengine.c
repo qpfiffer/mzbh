@@ -262,7 +262,7 @@ int respond(const int accept_fd, const route *all_routes, const size_t route_num
 	assert(response.outsize > 0);
 	assert(response.out != NULL);
 
-	char *visitor_ip_addr = get_header_value(request.full_header, strlen(request.full_header), "X-Real-Ip");
+	char *visitor_ip_addr = get_header_value(request.full_header, strlen(request.full_header), "X-Real-IP");
 	char *user_agent = get_header_value(request.full_header, strlen(request.full_header), "User-Agent");
 
 	if (!visitor_ip_addr)
