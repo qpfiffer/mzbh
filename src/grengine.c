@@ -1,4 +1,5 @@
 // vim: noet ts=4 sw=4
+#include <arpa/inet.h>
 #include <assert.h>
 #include <fcntl.h>
 #include <regex.h>
@@ -212,6 +213,16 @@ int respond(const int accept_fd, const route *all_routes, const size_t route_num
 		log_msg(LOG_ERR, "Did not receive any information from accepted connection.");
 		goto error;
 	}
+
+	/* Thanks, beej! */
+	struct sockaddr_storage peer_addr = {0};
+	socklen_t peer_addr_siz = sizeof(peer_addr);
+	char ipstr[INET6_ADDRSTRLEN] = {0};
+	getpeername(accept_fd, (struct sockaddr *)&peer_addr, &peer_addr_siz);
+
+	struct sockaddr_in *s = (struct sockaddr_in *)&peer_addr;
+	inet_ntop(AF_INET, &s->sin_addr, ipstr, sizeof(ipstr));
+	log_msg(LOG_FUN, "IP Address: %s", ipstr);
 
 	http_request request = {
 		.verb = {0},
