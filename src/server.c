@@ -257,7 +257,7 @@ static int webm_handler(const http_request *request, http_response *response) {
 	if (!_webm)
 		gshkl_add_int(ctext, "image_date", -1);
 	else {
-		gshkl_add_int(ctext, "image_date", _webm->created_at);
+		time_t earliest_date = _webm->created_at;
 
 		/* Add known aliases from DB. We fetch every alias from the M2M,
 		 * and then fetch that key. Or try to, anyway. */
@@ -268,6 +268,8 @@ static int webm_handler(const http_request *request, http_response *response) {
 				const char *alias = vector_get(w2a->aliases, i);
 				webm_alias *walias = get_aliased_image_with_key(alias);
 				if (walias) {
+					if (walias->created_at < earliest_date)
+						earliest_date = walias->created_at;
 					gshkl_add_string_to_loop(aliases, walias->filename);
 					free(walias);
 				} else {
@@ -281,6 +283,8 @@ static int webm_handler(const http_request *request, http_response *response) {
 		} else {
 			gshkl_add_string_to_loop(aliases, "None");
 		}
+
+		gshkl_add_int(ctext, "image_date", earliest_date);
 	}
 
 	char *rendered = gshkl_render(ctext, mmapd_region, original_size, &new_size);
