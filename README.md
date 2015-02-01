@@ -1,3 +1,5 @@
+[![Build Status](https://drone.io/github.com/qpfiffer/waifu.xyz/status.png)](https://drone.io/github.com/qpfiffer/waifu.xyz/latest)
+
 # Introduction
 
 This is a web-app built from the ground up with no external dependencies, aside
