@@ -1,5 +1,7 @@
 // vim: noet ts=4 sw=4
-#pragma clang diagnostic ignored "-Wmissing-field-initializers"
+#ifdef __clang__
+	#pragma clang diagnostic ignored "-Wmissing-field-initializers"
+#endif
 #include <signal.h>
 #include <stdlib.h>
 #include <stdio.h>
