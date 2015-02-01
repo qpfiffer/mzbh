@@ -71,7 +71,7 @@ void mmap_cleanup(const int status_code, http_response *response);
 
 /* Get the global code to message mapping. */
 const code_to_message *get_response_headers();
-const size_t get_response_headers_num_elements();
+size_t get_response_headers_num_elements();
 
 /* Parses a raw bytestream into an http_request object. */
 int parse_request(const char to_read[MAX_READ_LEN], http_request *out);

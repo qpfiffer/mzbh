@@ -1,4 +1,5 @@
 // vim: noet ts=4 sw=4
+#pragma clang diagnostic ignored "-Wmissing-field-initializers"
 #include <assert.h>
 #include <dirent.h>
 #include <string.h>
@@ -101,6 +102,9 @@ static int _print_alias_matches() {
 }
 
 static inline int _f_ds_webms(const unsigned char *data, const size_t dsize, const void *e, void **extradata) {
+	UNUSED(dsize);
+	UNUSED(e);
+	UNUSED(*extradata);
 	webm *_webm = deserialize_webm((char *)data);
 	log_msg(LOG_FUN, "%s", _webm->filename);
 	free(_webm);
@@ -108,6 +112,9 @@ static inline int _f_ds_webms(const unsigned char *data, const size_t dsize, con
 }
 
 static inline int _dead_webms(const unsigned char *data, const size_t dsize, const void *e, void **extradata) {
+	UNUSED(dsize);
+	UNUSED(e);
+	UNUSED(*extradata);
 	webm *_webm = deserialize_webm((char *)data);
 
 	char *file_path = get_full_path_for_webm(_webm->board, _webm->filename);
@@ -164,7 +171,7 @@ const cmd commands[] = {
 
 static void usage(const char *program_name) {
 	log_msg(LOG_ERR, "Usage: %s <command>", program_name);
-	int i;
+	unsigned int i;
 	for (i = 0; i < sizeof(commands)/sizeof(commands[0]); i++) {
 		log_msg(LOG_ERR, "%s	--	%s", commands[i].cmd, commands[i].help);
 	}
@@ -185,7 +192,7 @@ int main(int argc, char *argv[]) {
 	for (;i < argc; i++) {
 		const char *current_arg = argv[i];
 
-		int j;
+		unsigned int j;
 		for (j = 0; j < (sizeof(commands)/sizeof(commands[0])); j++) {
 			const cmd current_command = commands[j];
 			if (strncmp(current_arg, current_command.cmd, strlen(current_command.cmd)) == 0) {

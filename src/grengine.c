@@ -1,4 +1,5 @@
 // vim: noet ts=4 sw=4
+#pragma clang diagnostic ignored "-Wmissing-field-initializers"
 #include <assert.h>
 #include <fcntl.h>
 #include <regex.h>
@@ -49,11 +50,12 @@ const code_to_message *get_response_headers() {
 	return response_headers;
 }
 
-const size_t get_response_headers_num_elements() {
+size_t get_response_headers_num_elements() {
 	return sizeof(response_headers)/sizeof(response_headers[0]);
 }
 
 int r_404_handler(const http_request *request, http_response *response) {
+	UNUSED(request);
 	response->out = (unsigned char *)"<h1>\"Welcome to Die|</h1>";
 	response->outsize = strlen("<h1>\"Welcome to Die|</h1>");
 	return 404;
@@ -134,7 +136,7 @@ int mmap_file_ol(const char *file_path, const http_request *request, http_respon
 
 	/* Figure out the mimetype for this resource: */
 	char ending[16] = {0};
-	int i = sizeof(ending);
+	unsigned int i = sizeof(ending);
 	const size_t res_len = strlen(file_path);
 	for (i = res_len; i > (res_len - sizeof(ending)); i--) {
 		if (file_path[i] == '.')
@@ -175,7 +177,8 @@ int parse_request(const char to_read[MAX_READ_LEN], http_request *out) {
 	if (verb_end == NULL)
 		goto error;
 
-	const size_t verb_size = verb_end - to_read >= sizeof(out->verb) ? sizeof(out->verb) - 1: verb_end - to_read;
+	const size_t c_verb_size = verb_end - to_read;
+	const size_t verb_size = c_verb_size >= sizeof(out->verb) ? sizeof(out->verb) - 1: c_verb_size;
 	strncpy(out->verb, to_read, verb_size);
 
 	if (strncmp(out->verb, "GET", verb_size) != 0) {
@@ -188,7 +191,8 @@ int parse_request(const char to_read[MAX_READ_LEN], http_request *out) {
 	if (resource_end == NULL)
 		goto error;
 
-	const size_t resource_size = resource_end - res_offset >= sizeof(out->resource) ? sizeof(out->resource) : resource_end - res_offset;
+	const size_t c_resource_size = resource_end - res_offset;
+	const size_t resource_size = c_resource_size >= sizeof(out->resource) ? sizeof(out->resource) : c_resource_size;
 	strncpy(out->resource, res_offset, resource_size);
 
 	return 0;
@@ -226,7 +230,7 @@ int respond(const int accept_fd, const route *all_routes, const size_t route_num
 	}
 
 	/* Find our matching route: */
-	int i;
+	unsigned int i;
 	for (i = 0; i < route_num_elements; i++) {
 		const route *cur_route = &all_routes[i];
 		if (strcmp(cur_route->verb, request.verb) != 0)
@@ -242,7 +246,7 @@ int respond(const int accept_fd, const route *all_routes, const size_t route_num
 			assert(reti == 0);
 		}
 
-		if (request.matches > 0)
+		if (cur_route->expected_matches > 0)
 			reti = regexec(&regex, request.resource, cur_route->expected_matches + 1, request.matches, 0);
 		else
 			reti = regexec(&regex, request.resource, 0, NULL, 0);

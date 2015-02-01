@@ -1,4 +1,5 @@
 // vim: noet ts=4 sw=4
+#pragma clang diagnostic ignored "-Wmissing-field-initializers"
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <stdlib.h>
@@ -82,14 +83,14 @@ char *receive_chunked_http(const int request_fd) {
 		/* We cheat a little and set the first \r to a \0 so strtol will
 		 * do the right thing. */
 		chunk_size_start[chunk_size_end_oft] = '\0';
-		const int chunk_size = strtol(chunk_size_start, NULL, 16);
+		const unsigned int chunk_size = strtol(chunk_size_start, NULL, 16);
 
 		/* printf("Chunk size is %i. Thing is: %s.\n", chunk_size, chunk_size_start); */
 		/* The chunk string, the \r\n after it, the chunk itself and then another \r\n: */
 		cursor_pos += chunk_size + chunk_size_end_oft + 4;
 
 		/* Copy the json into a pure buffer: */
-		int old_offset = json_total;
+		unsigned int old_offset = json_total;
 		json_total += chunk_size;
 		if (json_total >= old_offset) {
 			if (json_buf != NULL) {
@@ -106,7 +107,7 @@ char *receive_chunked_http(const int request_fd) {
 		/* Copy it from after the <chunk_size>\r\n to the end of the chunk. */
 		memcpy(json_buf + old_offset, chunk_size_end + 2, chunk_size);
 		/* Stop reading if we am play gods: */
-		if ((cursor_pos - raw_buf) > buf_size || chunk_size <= 0)
+		if ((unsigned int)(cursor_pos - raw_buf) > buf_size || chunk_size <= 0)
 			break;
 	}
 	/* printf("The total json size is %zu.\n", json_total); */
@@ -327,7 +328,7 @@ unsigned char *receive_http_with_timeout(const int request_fd, const int timeout
 				}
 
 				char siz_buf[128] = {0};
-				int i = 0;
+				unsigned int i = 0;
 
 				const unsigned char *to_read = offset_for_clength + strlen("Content-Length: ");
 				while (to_read[i] != '\r' && to_read[i + 1] != '\n' && i < sizeof(siz_buf)) {

@@ -27,7 +27,7 @@ ol_stack *parse_catalog_json(const char *all_json, const char board[MAX_BOARD_NA
 		log_msg(LOG_INFO, "/%s/ - Checking Page: %lu/%i", board, (long)json_object_get_number(obj, "page"), page_count);
 
 		JSON_Array *threads = json_object_get_array(obj, "threads");
-		int j;
+		unsigned int j;
 		for (j = 0; j < json_array_get_count(threads); j++) {
 			JSON_Object *thread = json_array_get_object(threads, j);
 			JSON_Array *thread_replies = json_object_get_array(thread, "last_replies");
@@ -37,7 +37,7 @@ ol_stack *parse_catalog_json(const char *all_json, const char board[MAX_BOARD_NA
 
 
 			int found_webm_in_reply = 0;
-			int k;
+			unsigned int k;
 			for (k = 0; k < json_array_get_count(thread_replies); k++) {
 				JSON_Object *thread_reply = json_array_get_object(thread_replies, k);
 				const char *file_ext_reply = json_object_get_string(thread_reply, "ext");
@@ -76,7 +76,7 @@ ol_stack *parse_thread_json(const char *all_json, const thread_match *match) {
 	memset(matches, 0, sizeof(ol_stack));
 
 	JSON_Array *posts = json_object_get_array(root, "posts");
-	int i;
+	unsigned int i;
 	for (i = 0; i < json_array_get_count(posts); i++) {
 		JSON_Object *post = json_array_get_object(posts, i);
 		const char *file_ext = json_object_get_string(post, "ext");

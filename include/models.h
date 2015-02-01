@@ -24,7 +24,7 @@ typedef struct webm {
 void create_webm_key(const char file_hash[static HASH_IMAGE_STR_SIZE], char outbuf[static MAX_KEY_SIZE]);
 char *serialize_webm(const webm *to_serialize);
 webm *deserialize_webm(const char *json);
-const unsigned int webm_count();
+unsigned int webm_count();
 
 /* Aliases of webms have the same file hash but different names, boards, etc. Mostly metadata. */
 typedef struct webm_alias {
@@ -43,7 +43,7 @@ typedef struct webm_alias {
 void create_alias_key(const char file_path[static MAX_IMAGE_FILENAME_SIZE], char outbuf[static MAX_KEY_SIZE]);
 char *serialize_alias(const webm_alias *to_serialize);
 webm_alias *deserialize_alias(const char *json);
-const unsigned int webm_alias_count();
+unsigned int webm_alias_count();
 
 /* This is a one-to-many from webm objects to alias objects. The struct is
  * something akin to a vector. Probably. */

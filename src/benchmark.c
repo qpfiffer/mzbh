@@ -6,7 +6,7 @@
 #include "benchmark.h"
 #include "logging.h"
 
-inline const struct bmark begin_benchmark(const char *name) {
+inline struct bmark begin_benchmark(const char *name) {
 	long ms;
 	struct timespec spec;
 	clock_gettime(CLOCK_MONOTONIC, &spec);

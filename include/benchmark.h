@@ -6,5 +6,5 @@ struct bmark {
 	const char *name;
 };
 
-const struct bmark begin_benchmark(const char *name);
+struct bmark begin_benchmark(const char *name);
 void end_benchmark(const struct bmark x);

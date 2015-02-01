@@ -7,6 +7,7 @@
 
 #define INT_LEN(x) floor(log10(abs(x))) + 1
 #define UINT_LEN(x) floor(log10(x)) + 1
+#define UNUSED(x) (void)x
 
 /* Doesn't actually fully decode URLs at this point. */
 void url_decode(const char *src, const size_t src_siz, char *dest);

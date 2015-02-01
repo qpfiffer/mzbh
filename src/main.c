@@ -1,4 +1,5 @@
 // vim: noet ts=4 sw=4
+#pragma clang diagnostic ignored "-Wmissing-field-initializers"
 #include <signal.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -62,7 +63,7 @@ static ol_stack *build_thread_index() {
 	images_to_download->next = NULL;
 	images_to_download->data = NULL;
 
-	int i;
+	unsigned int i;
 	for (i = 0; i < (sizeof(BOARDS)/sizeof(BOARDS[0])); i++) {
 		const char *current_board = BOARDS[i];
 
@@ -71,7 +72,7 @@ static ol_stack *build_thread_index() {
 		memset(new_api_request, '\0', api_request_siz);
 
 		snprintf(new_api_request, api_request_siz, CATALOG_REQUEST, current_board);
-		int rc = send(request_fd, new_api_request, strlen(new_api_request), 0);
+		unsigned int rc = send(request_fd, new_api_request, strlen(new_api_request), 0);
 		if (strlen(new_api_request) != rc)
 			goto error;
 
@@ -169,7 +170,7 @@ error:
 	return NULL;
 }
 
-const int download_image(const post_match *p_match) {
+int download_image(const post_match *p_match) {
 	int thumb_request_fd = 0;
 	int image_request_fd = 0;
 	unsigned char *raw_thumb_resp = NULL;
@@ -206,7 +207,7 @@ const int download_image(const post_match *p_match) {
 	char thumb_request[256] = {0};
 	snprintf(thumb_request, sizeof(thumb_request), THUMB_REQUEST,
 			p_match->board, p_match->post_number);
-	int rc = send(thumb_request_fd, thumb_request, strlen(thumb_request), 0);
+	unsigned int rc = send(thumb_request_fd, thumb_request, strlen(thumb_request), 0);
 	if (rc != strlen(thumb_request)) {
 		log_msg(LOG_ERR, "Could not send all bytes to host while requesting thumbnail.");
 		goto error;

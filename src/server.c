@@ -1,4 +1,5 @@
 // vim: noet ts=4 sw=4
+#pragma clang diagnostic ignored "-Wmissing-field-initializers"
 #include <arpa/inet.h>
 #include <assert.h>
 #include <dirent.h>
@@ -263,7 +264,7 @@ static int webm_handler(const http_request *request, http_response *response) {
 		 * and then fetch that key. Or try to, anyway. */
 		webm_to_alias *w2a = get_webm_to_alias(image_hash);
 		if (w2a != NULL && w2a->aliases->count > 0) {
-			int i;
+			unsigned int i;
 			for (i = 0; i < w2a->aliases->count; i++) {
 				const char *alias = vector_get(w2a->aliases, i);
 				webm_alias *walias = get_aliased_image_with_key(alias);

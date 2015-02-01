@@ -1,4 +1,5 @@
 // vim: noet ts=4 sw=4
+#pragma clang diagnostic ignored "-Wmissing-field-initializers"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -393,7 +394,7 @@ _interpolate_loop(const greshunkel_ctext *ctext, const regex_t *lr, const regex_
 		const char *closest_BBL = NULL;
 		closest_BBL = strstr(buf + loop_meat.rm_so, "xXx BBL xXx");
 		possible_dif = closest_BBL - buf;
-		if (possible_dif != loop_meat.rm_so) {
+		if (possible_dif != (unsigned int)loop_meat.rm_so) {
 			loop_meat.rm_eo = possible_dif;
 		}
 

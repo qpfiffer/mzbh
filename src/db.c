@@ -43,7 +43,7 @@ static int _fetch_matches_common(const char prefix[static MAX_KEY_SIZE]) {
 		goto error;
 
 	snprintf(new_db_request, db_match_siz, DB_MATCH, WAIFU_NMSPC, prefix);
-	int rc = send(sock, new_db_request, strlen(new_db_request), 0);
+	unsigned int rc = send(sock, new_db_request, strlen(new_db_request), 0);
 	if (strlen(new_db_request) != rc)
 		goto error;
 
@@ -101,7 +101,7 @@ db_key_match *fetch_matches_from_db(const char prefix[static MAX_KEY_SIZE]) {
 
 	db_key_match *eol = NULL;
 	db_key_match *cur = eol;
-	int i;
+	unsigned int i;
 	unsigned char *line_start = _data, *line_end = NULL;
 	for (i = 0; i < dsize; i++) {
 		if (_data[i] == '\n' && i + 1 < dsize) {
@@ -147,7 +147,7 @@ unsigned char *fetch_data_from_db(const char key[static MAX_KEY_SIZE], size_t *o
 		goto error;
 
 	snprintf(new_db_request, db_request_siz, DB_REQUEST, WAIFU_NMSPC, key);
-	int rc = send(sock, new_db_request, strlen(new_db_request), 0);
+	unsigned int rc = send(sock, new_db_request, strlen(new_db_request), 0);
 	if (strlen(new_db_request) != rc)
 		goto error;
 
@@ -190,7 +190,7 @@ int store_data_in_db(const char key[static MAX_KEY_SIZE], const unsigned char *v
 		}
 
 		sprintf(new_db_post, DB_POST, WAIFU_NMSPC, key, vlen, val);
-		int rc = send(sock, new_db_post, strlen(new_db_post), 0);
+		unsigned int rc = send(sock, new_db_post, strlen(new_db_post), 0);
 		if (strlen(new_db_post) != rc) {
 			log_msg(LOG_ERR, "(%i/%i): Could not send stuff to DB.", attempts, max_attempts);
 			attempts++;
@@ -326,8 +326,9 @@ static int _insert_webm(const char *file_path, const char filename[static MAX_IM
 	return set_image(&to_insert);
 }
 
-static int _insert_aliased_webm(const char *file_path, const char filename[static MAX_IMAGE_FILENAME_SIZE],
-								const char image_hash[static HASH_IMAGE_STR_SIZE], const char board[static MAX_BOARD_NAME_SIZE]) {
+static int _insert_aliased_webm(const char *file_path,
+								const char image_hash[static HASH_IMAGE_STR_SIZE],
+								const char board[static MAX_BOARD_NAME_SIZE]) {
 	time_t modified_time = get_file_creation_date(file_path);
 	if (modified_time == 0) {
 		log_msg(LOG_ERR, "IAWMT: '%s' does not exist.", file_path);
@@ -382,7 +383,7 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 		 * an alias is it's filename.
 		 */
 		if (_old_alias == NULL) {
-			rc = _insert_aliased_webm(file_path, filename, image_hash, board);
+			rc = _insert_aliased_webm(file_path, image_hash, board);
 			log_msg(LOG_FUN, "%s is a new alias of %s.", file_path, _old_webm->filename);
 		} else {
 			/* Regardless, this webm is an alias and we don't care. Delete it. */
@@ -502,7 +503,8 @@ int associate_alias_with_webm(const webm *webm, const char alias_key[static MAX_
 		return 0;
 	}
 
-	int i, found = 0;
+	unsigned int i;
+	int found = 0;
 	for (i = 0; i < deserialized->aliases->count; i++) {
 		const char *existing = vector_get(deserialized->aliases, i);
 		if (strncmp(existing, alias_key, MAX_KEY_SIZE) == 0) {

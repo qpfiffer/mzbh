@@ -1,4 +1,5 @@
 // vim: noet ts=4 sw=4
+#pragma clang diagnostic ignored "-Wmissing-field-initializers"
 #include <ctype.h>
 #include <fcntl.h>
 #include <string.h>
@@ -94,7 +95,7 @@ int endswith(const char *string, const char *suffix) {
 	if (string_siz < suffix_siz)
 		return 0;
 
-	int i = 0;
+	unsigned int i = 0;
 	for (; i < suffix_siz; i++) {
 		if (suffix[i] != string[string_siz - suffix_siz + i])
 			return 0;
@@ -125,7 +126,7 @@ char *strnstr(const char *haystack, const char *needle, size_t len) {
 }
 
 void url_decode(const char *src, const size_t src_siz, char *dest) {
-	int srcIter = 0, destIter = 0;
+	unsigned int srcIter = 0, destIter = 0;
 	char to_conv[] = "00";
 
 	while (srcIter < src_siz) {

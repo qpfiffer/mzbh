@@ -57,16 +57,17 @@ char *serialize_webm(const webm *to_serialize) {
 	return serialized_string;
 }
 
-static const unsigned int x_count(const char prefix[static MAX_KEY_SIZE]) {
+static unsigned int x_count(const char prefix[static MAX_KEY_SIZE]) {
 	unsigned int num = fetch_num_matches_from_db(prefix);
 	return num;
 }
-const unsigned int webm_count() {
+
+unsigned int webm_count() {
 	char prefix[MAX_KEY_SIZE] = WEBM_NMSPC;
 	return x_count(prefix);
 }
 
-const unsigned int webm_alias_count() {
+unsigned int webm_alias_count() {
 	char prefix[MAX_KEY_SIZE] = ALIAS_NMSPC;
 	return x_count(prefix);
 }
@@ -135,7 +136,7 @@ char *serialize_webm_to_alias(const webm_to_alias *w2a) {
 
 	char *serialized_string = NULL;
 
-	int i;
+	unsigned int i;
 	for (i = 0; i < w2a->aliases->count; i++) {
 		json_array_append_string(root_array, vector_get(w2a->aliases, i));
 	}
@@ -159,7 +160,7 @@ webm_to_alias *deserialize_webm_to_alias(const char *json) {
 
 	to_return->aliases = vector_new(MAX_KEY_SIZE, num_aliases);
 
-	int i;
+	unsigned int i;
 	for (i = 0; i < num_aliases; i++) {
 		const char *alias = json_array_get_string(webm_to_alias_object, i);
 		vector_append(to_return->aliases, alias, strlen(alias));

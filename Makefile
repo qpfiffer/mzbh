@@ -1,4 +1,4 @@
-CFLAGS=-Werror -Wall -O2 -g3
+CFLAGS=-Werror -Wextra -Wall -O2 -g3
 INCLUDES=-pthread -I./include/
 NAME=waifu.xyz
 COMMON_OBJ=benchmark.o blue_midnight_wish.o http.o models.o db.o parson.o utils.o vector.o logging.o

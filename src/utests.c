@@ -123,7 +123,7 @@ int vectors_are_zeroed() {
 	vector_append(new_vec, k2, strlen(k2));
 	vector_append(new_vec, k2, strlen(k2));
 
-	int i;
+	unsigned int i;
 	for (i = 0; i < new_vec->count; i++) {
 		assert(strncmp(k2, vector_get(new_vec, i), strlen(k2)) == 0);
 	}
@@ -161,5 +161,7 @@ int run_tests() {
 }
 
 int main(const int argc, const char *argv[]) {
+	UNUSED(argc);
+	UNUSED(argv);
 	return run_tests();
 }

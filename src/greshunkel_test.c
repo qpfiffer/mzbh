@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #define DEBUG
+#include "utils.h"
 #include "greshunkel.h"
 
 const char document[] =
@@ -24,14 +25,18 @@ const char document[] =
 "</html>\n";
 
 char *return_z(const char *argument) {
+	UNUSED(argument);
 	return "z";
 }
 
 char *return_hello(const char *arg) {
+	UNUSED(arg);
 	return "HELLO!";
 }
 
 int main(int argc, char *argv[]) {
+	UNUSED(argc);
+	UNUSED(argv);
 	size_t new_size = 0;
 
 	greshunkel_ctext *ctext = gshkl_init_context();
