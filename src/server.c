@@ -433,15 +433,15 @@ static int robots_handler(const http_request *request, http_response *response) 
 
 /* All other routes: */
 static const route all_routes[] = {
-	{"GET", "^/robots.txt$", 0, &robots_handler, &mmap_cleanup},
-	{"GET", "^/favicon.ico$", 0, &favicon_handler, &mmap_cleanup},
-	{"GET", "^/static/[a-zA-Z0-9/_-]*\\.[a-zA-Z]*$", 0, &static_handler, &mmap_cleanup},
-	{"GET", "^/chug/([a-zA-Z]*)$", 1, &board_handler, &heap_cleanup},
-	{"GET", "^/chug/([a-zA-Z]*)/([0-9]*)$", 2, &paged_board_handler, &heap_cleanup},
-	{"GET", "^/slurp/([a-zA-Z]*)/((.*)(.webm|.jpg))$", 2, &webm_handler, &heap_cleanup},
-	{"GET", "^/chug/([a-zA-Z]*)/((.*)(.webm|.jpg))$", 2, &board_static_handler, &mmap_cleanup},
-	{"GET", "^/by/alias/([0-9]*)$", 1, &by_alias_handler, &mmap_cleanup},
-	{"GET", "^/$", 0, &index_handler, &heap_cleanup},
+	{"GET", "robots_txt", "^/robots.txt$", 0, &robots_handler, &mmap_cleanup},
+	{"GET", "favicon_ico", "^/favicon.ico$", 0, &favicon_handler, &mmap_cleanup},
+	{"GET", "generic_static", "^/static/[a-zA-Z0-9/_-]*\\.[a-zA-Z]*$", 0, &static_handler, &mmap_cleanup},
+	{"GET", "board_handler_no_num", "^/chug/([a-zA-Z]*)$", 1, &board_handler, &heap_cleanup},
+	{"GET", "paged_board_handler", "^/chug/([a-zA-Z]*)/([0-9]*)$", 2, &paged_board_handler, &heap_cleanup},
+	{"GET", "webm_handler", "^/slurp/([a-zA-Z]*)/((.*)(.webm|.jpg))$", 2, &webm_handler, &heap_cleanup},
+	{"GET", "board_static_handler", "^/chug/([a-zA-Z]*)/((.*)(.webm|.jpg))$", 2, &board_static_handler, &mmap_cleanup},
+	{"GET", "by_alias_handler", "^/by/alias/([0-9]*)$", 1, &by_alias_handler, &mmap_cleanup},
+	{"GET", "root_handler", "^/$", 0, &index_handler, &heap_cleanup},
 };
 
 static void *acceptor(void *arg) {

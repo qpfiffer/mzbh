@@ -203,6 +203,27 @@ error:
 	return -1;
 }
 
+static void log_request(const http_request *request, const http_response *response, const int response_code) {
+	char *visitor_ip_addr = get_header_value(request->full_header, strlen(request->full_header), "X-Real-IP");
+	char *user_agent = get_header_value(request->full_header, strlen(request->full_header), "User-Agent");
+
+	if (!visitor_ip_addr)
+		visitor_ip_addr = "NOIP";
+
+	if (!user_agent)
+		user_agent = "NOUSERAGENT";
+
+	log_msg(LOG_FUN, "%s \"%s %s\" %i %i \"%s\"",
+		visitor_ip_addr, request->verb, request->resource,
+		response_code, response->outsize, user_agent);
+
+	if (strncmp(visitor_ip_addr, "NOIP", strlen("NOIP") != 0))
+		free(visitor_ip_addr);
+
+	if (strncmp(user_agent, "NOUSERAGENT", strlen("NOUSERAGENT") != 0))
+		free(user_agent);
+}
+
 int respond(const int accept_fd, const route *all_routes, const size_t route_num_elements) {
 	char to_read[MAX_READ_LEN] = {0};
 	char *actual_response = NULL;
@@ -264,28 +285,12 @@ int respond(const int accept_fd, const route *all_routes, const size_t route_num
 		matching_route = &r_404_route;
 
 	/* Run the handler through with the data we have: */
+	log_msg(LOG_INFO, "Calling handler for %s.", matching_route->name);
 	const int response_code = matching_route->handler(&request, &response);
 	assert(response.outsize > 0);
 	assert(response.out != NULL);
 
-	char *visitor_ip_addr = get_header_value(request.full_header, strlen(request.full_header), "X-Real-IP");
-	char *user_agent = get_header_value(request.full_header, strlen(request.full_header), "User-Agent");
-
-	if (!visitor_ip_addr)
-		visitor_ip_addr = "NOIP";
-
-	if (!user_agent)
-		user_agent = "NOUSERAGENT";
-
-	log_msg(LOG_FUN, "%s \"%s %s\" %i %i \"%s\"",
-		visitor_ip_addr, request.verb, request.resource,
-		response_code, response.outsize, user_agent);
-
-	if (strncmp(visitor_ip_addr, "NOIP", strlen("NOIP") != 0))
-		free(visitor_ip_addr);
-
-	if (strncmp(user_agent, "NOUSERAGENT", strlen("NOUSERAGENT") != 0))
-		free(user_agent);
+	log_request(&request, &response, response_code);
 
 	/* Figure out what header we need to use: */
 	const code_to_message *matched_response = NULL;
@@ -347,8 +352,10 @@ int respond(const int accept_fd, const route *all_routes, const size_t route_num
 		log_msg(LOG_ERR, "Could not send response.");
 		goto error;
 	}
-	if (matching_route->cleanup != NULL)
+	if (matching_route->cleanup != NULL) {
+		log_msg(LOG_INFO, "Calling cleanup for %s.", matching_route->name);
 		matching_route->cleanup(response_code, &response);
+	}
 	free(actual_response);
 
 	return 0;

@@ -34,6 +34,7 @@ typedef struct {
 
 typedef struct route {
 	char verb[VERB_SIZE];
+	char name[64];
 	char route_match[256];
 	size_t expected_matches;
 	int (*handler)(const http_request *request, http_response *response);

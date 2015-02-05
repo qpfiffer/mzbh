@@ -116,7 +116,14 @@ char *receive_chunked_http(const int request_fd) {
 	/* printf("JSON:\n%s", json_buf); */
 	free(raw_buf);
 
-	return json_buf;
+	char *new_buf = realloc(json_buf, json_total + 1);
+	if (new_buf == NULL) {
+		free(json_buf);
+		return NULL;
+	}
+
+	new_buf[json_total] = '\0';
+	return new_buf;
 
 error:
 	if (raw_buf != NULL)
