@@ -280,6 +280,7 @@ int download_image(const post_match *p_match) {
 
 	char fname_plus_extension[MAX_IMAGE_FILENAME_SIZE] = {0};
 	get_non_colliding_image_filename(fname_plus_extension, p_match);
+	/* image_filename is the full path, fname_plus_extension is the file name. */
 	int added = add_image_to_db(image_filename, fname_plus_extension, p_match->board);
 	if (!added) {
 		log_msg(LOG_WARN, "Could not add image to database. Continuing...");

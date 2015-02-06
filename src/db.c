@@ -327,6 +327,7 @@ static int _insert_webm(const char *file_path, const char filename[static MAX_IM
 }
 
 static int _insert_aliased_webm(const char *file_path,
+								const char *filename,
 								const char image_hash[static HASH_IMAGE_STR_SIZE],
 								const char board[static MAX_BOARD_NAME_SIZE]) {
 	time_t modified_time = get_file_creation_date(file_path);
@@ -349,7 +350,7 @@ static int _insert_aliased_webm(const char *file_path,
 	};
 
 	memcpy(to_insert.file_hash, image_hash, sizeof(to_insert.file_hash));
-	memcpy(to_insert.filename, file_path, sizeof(to_insert.filename));
+	memcpy(to_insert.filename, filename, sizeof(to_insert.filename));
 	memcpy(to_insert.board, board, sizeof(to_insert.board));
 
 	return set_aliased_image(&to_insert);
@@ -383,8 +384,8 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 		 * an alias is it's filename.
 		 */
 		if (_old_alias == NULL) {
-			rc = _insert_aliased_webm(file_path, image_hash, board);
-			log_msg(LOG_FUN, "%s is a new alias of %s.", file_path, _old_webm->filename);
+			rc = _insert_aliased_webm(file_path, filename, image_hash, board);
+			log_msg(LOG_FUN, "%s is a new alias of %s.", filename, _old_webm->filename);
 		} else {
 			/* Regardless, this webm is an alias and we don't care. Delete it. */
 			/* There are some bad values in the database. Skip them. */
