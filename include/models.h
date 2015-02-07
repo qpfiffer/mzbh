@@ -17,6 +17,9 @@ typedef struct webm {
 	char board[MAX_BOARD_NAME_SIZE];
 	unsigned char _null_term_hax_3;
 
+	char file_path[MAX_IMAGE_FILENAME_SIZE];
+	unsigned char _null_term_hax_4;
+
 	time_t created_at;
 	size_t size;
 } __attribute__((__packed__)) webm;
@@ -36,6 +39,9 @@ typedef struct webm_alias {
 
 	char board[MAX_BOARD_NAME_SIZE];
 	unsigned char _null_term_hax_3;
+
+	char file_path[MAX_IMAGE_FILENAME_SIZE];
+	unsigned char _null_term_hax_4;
 
 	time_t created_at;
 } __attribute__((__packed__)) webm_alias;

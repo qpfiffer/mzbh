@@ -287,7 +287,7 @@ webm_to_alias *get_webm_to_alias(const char image_hash[static HASH_ARRAY_SIZE]) 
 /* Alias get/set stuff */
 int set_aliased_image(const webm_alias *alias) {
 	char key[MAX_KEY_SIZE] = {0};
-	create_alias_key(alias->filename, key);
+	create_alias_key(alias->file_path, key);
 
 	char *serialized = serialize_alias(alias);
 	/* log_msg(LOG_INFO, "Serialized: %s", serialized); */
@@ -320,6 +320,7 @@ static int _insert_webm(const char *file_path, const char filename[static MAX_IM
 		.size = size
 	};
 	memcpy(to_insert.file_hash, image_hash, sizeof(to_insert.file_hash));
+	memcpy(to_insert.file_path, file_path, sizeof(to_insert.file_path));
 	memcpy(to_insert.filename, filename, sizeof(to_insert.filename));
 	memcpy(to_insert.board, board, sizeof(to_insert.board));
 
@@ -344,6 +345,7 @@ static int _insert_aliased_webm(const char *file_path,
 
 	webm_alias to_insert = {
 		.file_hash = {0},
+		.file_path = {0},
 		.filename = {0},
 		.board = {0},
 		.created_at = modified_time,
@@ -351,6 +353,7 @@ static int _insert_aliased_webm(const char *file_path,
 
 	memcpy(to_insert.file_hash, image_hash, sizeof(to_insert.file_hash));
 	memcpy(to_insert.filename, filename, sizeof(to_insert.filename));
+	memcpy(to_insert.file_path, file_path, sizeof(to_insert.file_path));
 	memcpy(to_insert.board, board, sizeof(to_insert.board));
 
 	return set_aliased_image(&to_insert);
@@ -373,49 +376,48 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 	}
 
 	/* Check to see if the one we're scanning is the exact match we got from the DB. */
-	if (strncmp(_old_webm->filename, filename, MAX_IMAGE_FILENAME_SIZE) != 0) {
-		/* It's not the canonical original, so insert an alias. */
-
-		webm_alias *_old_alias = get_aliased_image(file_path);
-		int rc = 1;
-		/* If we DONT already have an alias for this image with this filename,
-		 * insert one.
-		 * We know if this filename is an alias already because the hash of
-		 * an alias is it's filename.
+	if (strncmp(_old_webm->filename, filename, MAX_IMAGE_FILENAME_SIZE) == 0 &&
+		strncmp(_old_webm->board, board, MAX_BOARD_NAME_SIZE) == 0) {
+		/* The one we got from the DB is the one we're working on, or at least
+		 * it has the same name, board and file hash.
 		 */
-		if (_old_alias == NULL) {
-			rc = _insert_aliased_webm(file_path, filename, image_hash, board);
-			log_msg(LOG_FUN, "%s is a new alias of %s.", filename, _old_webm->filename);
-		} else {
-			/* Regardless, this webm is an alias and we don't care. Delete it. */
-			/* There are some bad values in the database. Skip them. */
-			if (!endswith(_old_alias->filename, ".webm"))
-				log_msg(LOG_ERR, "'%s' is a bad value.", _old_webm->filename);
-			log_msg(LOG_WARN, "%s is already marked as an alias of %s. Old alias is: '%s'",
-					file_path, _old_webm->filename, _old_alias->filename);
-		}
-
-		char alias_key[MAX_KEY_SIZE] = {0};
-		create_alias_key(file_path, alias_key);
-		/* Create or update the many2many between these two: */
-		associate_alias_with_webm(_old_webm, alias_key);
-
-		if (rc) {
-			log_msg(LOG_WARN, "Unlinking '%s'.", file_path);
-			//unlink(file_path);
-		} else
-			log_msg(LOG_ERR, "Something went wrong when adding image to db.");
-		free(_old_alias);
 		free(_old_webm);
-		return rc;
+		return 1;
 	}
 
-	/* The one we got from the DB is the one we're working on, or at least
-	 * it has the same name and file hash.
+	/* It's not the canonical original, so insert an alias. */
+	webm_alias *_old_alias = get_aliased_image(file_path);
+	int rc = 1;
+	/* If we DONT already have an alias for this image with this filename,
+	 * insert one.
+	 * We know if this filename is an alias already because the hash of
+	 * an alias is it's filename.
 	 */
-	free(_old_webm);
-	return 1;
+	if (_old_alias == NULL) {
+		rc = _insert_aliased_webm(file_path, filename, image_hash, board);
+		log_msg(LOG_FUN, "%s (%s) is a new alias of %s (%s).", filename, board, _old_webm->filename, _old_webm->board);
+	} else {
+		/* Regardless, this webm is an alias and we don't care. Delete it. */
+		/* There are some bad values in the database. Skip them. */
+		if (!endswith(_old_alias->filename, ".webm"))
+			log_msg(LOG_ERR, "'%s' is a bad value.", _old_webm->filename);
+		log_msg(LOG_WARN, "%s is already marked as an alias of %s. Old alias is: '%s'",
+				file_path, _old_webm->filename, _old_alias->filename);
+	}
 
+	char alias_key[MAX_KEY_SIZE] = {0};
+	create_alias_key(file_path, alias_key);
+	/* Create or update the many2many between these two: */
+	associate_alias_with_webm(_old_webm, alias_key);
+
+	if (rc) {
+		log_msg(LOG_WARN, "Unlinking '%s'.", file_path);
+		//unlink(file_path);
+	} else
+		log_msg(LOG_ERR, "Something went wrong when adding image to db.");
+	free(_old_alias);
+	free(_old_webm);
+	return rc;
 }
 
 db_match *filter(const char prefix[static MAX_KEY_SIZE], const void *extrainput,

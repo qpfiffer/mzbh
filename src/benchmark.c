@@ -5,8 +5,10 @@
 
 #include "benchmark.h"
 #include "logging.h"
+#include "utils.h"
 
 inline struct bmark begin_benchmark(const char *name) {
+#ifdef BENCHMARK
 	long ms;
 	struct timespec spec;
 	clock_gettime(CLOCK_MONOTONIC, &spec);
@@ -18,9 +20,16 @@ inline struct bmark begin_benchmark(const char *name) {
 	};
 
 	return x;
+#else
+	UNUSED(name);
+	struct bmark x = {0};
+
+	return x;
+#endif
 }
 
 inline void end_benchmark(const struct bmark x) {
+#ifdef BENCHMARK
 	long ms, diff;
 	struct timespec spec;
 	clock_gettime(CLOCK_REALTIME, &spec);
@@ -29,4 +38,7 @@ inline void end_benchmark(const struct bmark x) {
 	diff = ms - x.start;
 
 	log_msg(LOG_DB, "%s complete in %ims", x.name, diff);
+#else
+	UNUSED(x);
+#endif
 }

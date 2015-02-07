@@ -26,6 +26,7 @@ webm *deserialize_webm(const char *json) {
 	strncpy(to_return->file_hash, json_object_get_string(webm_object, "file_hash"), sizeof(to_return->file_hash));
 	strncpy(to_return->filename, json_object_get_string(webm_object, "filename"), sizeof(to_return->filename));
 	strncpy(to_return->board, json_object_get_string(webm_object, "board"), sizeof(to_return->board));
+	strncpy(to_return->file_path, json_object_get_string(webm_object, "file_path"), sizeof(to_return->file_path));
 
 	to_return->created_at = (time_t)json_object_get_number(webm_object, "created_at");
 	to_return->size = (size_t)json_object_get_number(webm_object, "size");
@@ -48,6 +49,7 @@ char *serialize_webm(const webm *to_serialize) {
 	json_object_set_string(root_object, "file_hash", to_serialize->file_hash);
 	json_object_set_string(root_object, "filename", to_serialize->filename);
 	json_object_set_string(root_object, "board", to_serialize->board);
+	json_object_set_string(root_object, "file_path", to_serialize->file_path);
 
 	json_object_set_number(root_object, "created_at", to_serialize->created_at);
 	json_object_set_number(root_object, "size", to_serialize->size);
@@ -95,6 +97,7 @@ char *serialize_alias(const webm_alias *to_serialize) {
 	json_object_set_string(root_object, "file_hash", to_serialize->file_hash);
 	json_object_set_string(root_object, "filename", to_serialize->filename);
 	json_object_set_string(root_object, "board", to_serialize->board);
+	json_object_set_string(root_object, "file_path", to_serialize->file_path);
 
 	json_object_set_number(root_object, "created_at", to_serialize->created_at);
 
@@ -116,6 +119,7 @@ webm_alias *deserialize_alias(const char *json) {
 	strncpy(to_return->file_hash, json_object_get_string(webm_alias_object, "file_hash"), sizeof(to_return->file_hash));
 	strncpy(to_return->filename, json_object_get_string(webm_alias_object, "filename"), sizeof(to_return->filename));
 	strncpy(to_return->board, json_object_get_string(webm_alias_object, "board"), sizeof(to_return->board));
+	strncpy(to_return->file_path, json_object_get_string(webm_alias_object, "file_path"), sizeof(to_return->file_path));
 
 	to_return->created_at = (time_t)json_object_get_number(webm_alias_object, "created_at");
 
