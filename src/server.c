@@ -209,17 +209,9 @@ static int index_handler(const http_request *request, http_response *response) {
 }
 
 static int webm_handler(const http_request *request, http_response *response) {
-	int rc = mmap_file("./templates/webm.html", response);
-	if (!RESPONSE_OK(rc))
-		return rc;
-	// 1. Render the mmap()'d file with greshunkel
-	const char *mmapd_region = (char *)response->out;
-	const size_t original_size = response->outsize;
-
 	char current_board[MAX_BOARD_NAME_SIZE] = {0};
 	get_current_board(current_board, request);
 
-	size_t new_size = 0;
 	greshunkel_ctext *ctext = gshkl_init_context();
 	gshkl_add_string(ctext, "current_board", current_board);
 
@@ -272,33 +264,13 @@ static int webm_handler(const http_request *request, http_response *response) {
 		gshkl_add_int(ctext, "image_date", earliest_date);
 	}
 
-	char *rendered = gshkl_render(ctext, mmapd_region, original_size, &new_size);
-	gshkl_free_context(ctext);
-
-	/* Clean up the stuff we're no longer using. */
-	munmap(response->out, original_size);
-	free(_webm);
-	free(response->extra_data);
-	free(full_path);
-
-	/* Make sure the response is kept up to date: */
-	response->outsize = new_size;
-	response->out = (unsigned char *)rendered;
-	return 200;
+	return render_file(ctext, "./templates/webm.html", response);
 }
 
 static int _board_handler(const http_request *request, http_response *response, const unsigned int page) {
-	int rc = mmap_file("./templates/board.html", response);
-	if (!RESPONSE_OK(rc))
-		return rc;
-	// 1. Render the mmap()'d file with greshunkel
-	const char *mmapd_region = (char *)response->out;
-	const size_t original_size = response->outsize;
-
 	char current_board[MAX_BOARD_NAME_SIZE] = {0};
 	get_current_board(current_board, request);
 
-	size_t new_size = 0;
 	greshunkel_ctext *ctext = gshkl_init_context();
 	gshkl_add_filter(ctext, "thumbnail_for_image", thumbnail_for_image, filter_cleanup);
 	gshkl_add_string(ctext, "current_board", current_board);
@@ -331,29 +303,13 @@ static int _board_handler(const http_request *request, http_response *response, 
 	_add_files_in_dir_to_arr(boards, webm_location());
 
 	gshkl_add_int(ctext, "total", total);
-	char *rendered = gshkl_render(ctext, mmapd_region, original_size, &new_size);
-	gshkl_free_context(ctext);
 
-	/* Clean up the stuff we're no longer using. */
-	munmap(response->out, original_size);
-	free(response->extra_data);
-
-	/* Make sure the response is kept up to date: */
-	response->outsize = new_size;
-	response->out = (unsigned char *)rendered;
-	return 200;
+	return render_file(ctext, "./templates/board.html", response);
 }
 
 static int by_alias_handler(const http_request *request, http_response *response) {
-	int rc = mmap_file("./templates/sorted_by_aliases.html", response);
-	if (!RESPONSE_OK(rc))
-		return rc;
-	const char *mmapd_region = (char *)response->out;
-	const size_t original_size = response->outsize;
-
 	const unsigned int page = strtol(request->resource + request->matches[1].rm_so, NULL, 10);
 
-	size_t new_size = 0;
 	greshunkel_ctext *ctext = gshkl_init_context();
 	gshkl_add_filter(ctext, "thumbnail_for_image", thumbnail_for_image, filter_cleanup);
 	greshunkel_var *images = gshkl_add_array(ctext, "IMAGES");
@@ -383,17 +339,7 @@ static int by_alias_handler(const http_request *request, http_response *response
 	_add_files_in_dir_to_arr(boards, webm_location());
 
 	gshkl_add_int(ctext, "total", total);
-	char *rendered = gshkl_render(ctext, mmapd_region, original_size, &new_size);
-	gshkl_free_context(ctext);
-
-	/* Clean up the stuff we're no longer using. */
-	munmap(response->out, original_size);
-	free(response->extra_data);
-
-	/* Make sure the response is kept up to date: */
-	response->outsize = new_size;
-	response->out = (unsigned char *)rendered;
-	return 200;
+	return render_file(ctext, "./templates/sorted_by_aliases.html", response);
 }
 
 static int board_handler(const http_request *request, http_response *response) {
