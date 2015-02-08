@@ -15,6 +15,7 @@
 
 #include "http.h"
 #include "grengine.h"
+#include "greshunkel.h"
 #include "utils.h"
 #include "logging.h"
 
@@ -86,11 +87,31 @@ void guess_mimetype(const char *ending, const size_t ending_siz, http_response *
 	}
 }
 
-int mmap_file(const char *file_path, const http_request *request, http_response *response) {
-	return mmap_file_ol(file_path, request, response, NULL, NULL);
+int render_file(const struct greshunkel_ctext *ctext, const char *file_path, http_response *response) {
+	int rc = mmap_file(file_path, response);
+	if (!RESPONSE_OK(rc))
+		return rc;
+
+	/* Render the mmap()'d file with greshunkel */
+	const char *mmapd_region = (char *)response->out;
+	const size_t original_size = response->outsize;
+
+	size_t new_size = 0;
+	char *rendered = gshkl_render(ctext, mmapd_region, original_size, &new_size);
+	gshkl_free_context((greshunkel_ctext *)ctext);
+
+	/* Clean up the stuff we're no longer using. */
+	munmap(response->out, original_size);
+	free(response->extra_data);
+
+	/* Make sure the response is kept up to date: */
+	response->outsize = new_size;
+	response->out = (unsigned char *)rendered;
+
+	return 200;
 }
 
-int mmap_file_ol(const char *file_path, const http_request *request, http_response *response,
+static int mmap_file_ol(const char *file_path, http_response *response,
 				 const size_t *offset, const size_t *limit) {
 	response->extra_data = calloc(1, sizeof(struct stat));
 
@@ -147,18 +168,11 @@ int mmap_file_ol(const char *file_path, const http_request *request, http_respon
 	strncpy(ending, file_path + i, sizeof(ending));
 	guess_mimetype(ending, sizeof(ending), response);
 
-	char *range_header_value = get_header_value(request->full_header, strlen(request->full_header), "Range");
-	if (range_header_value) {
-		range_header range = parse_range_header(range_header_value);
-		free(range_header_value);
-
-		log_msg(LOG_INFO, "Range header parsed: Limit: %zu Offset: %zu", range.limit, range.offset);
-		memcpy(&response->byte_range, &range, sizeof(response->byte_range));
-
-		return 206;
-	}
-
 	return 200;
+}
+
+int mmap_file(const char *file_path, http_response *response) {
+	return mmap_file_ol(file_path, response, NULL, NULL);
 }
 
 void heap_cleanup(const int status_code, http_response *response) {
@@ -286,7 +300,7 @@ int respond(const int accept_fd, const route *all_routes, const size_t route_num
 
 	/* Run the handler through with the data we have: */
 	log_msg(LOG_INFO, "Calling handler for %s.", matching_route->name);
-	const int response_code = matching_route->handler(&request, &response);
+	int response_code = matching_route->handler(&request, &response);
 	assert(response.outsize > 0);
 	assert(response.out != NULL);
 
@@ -310,6 +324,18 @@ int respond(const int accept_fd, const route *all_routes, const size_t route_num
 	/* Embed the handler's text into the header: */
 	size_t header_size = 0;
 	size_t actual_response_siz = 0;
+
+	/* Figure out if this thing needs to be partial */
+	char *range_header_value = get_header_value(request.full_header, strlen(request.full_header), "Range");
+	if (range_header_value) {
+		range_header range = parse_range_header(range_header_value);
+		free(range_header_value);
+
+		log_msg(LOG_INFO, "Range header parsed: Limit: %zu Offset: %zu", range.limit, range.offset);
+		memcpy(&response.byte_range, &range, sizeof(response.byte_range));
+
+		response_code = 206;
+	}
 
 	if (response_code == 200 || response_code == 404) {
 		const size_t integer_length = UINT_LEN(response.outsize);

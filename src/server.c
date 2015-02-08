@@ -156,7 +156,7 @@ static int _add_files_in_dir_to_arr(greshunkel_var *loop, const char *dir) {
 static int static_handler(const http_request *request, http_response *response) {
 	/* Remove the leading slash: */
 	const char *file_path = request->resource + sizeof(char);
-	return mmap_file(file_path, request, response);
+	return mmap_file(file_path, response);
 }
 
 static void get_current_board(char current_board[static MAX_BOARD_NAME_SIZE], const http_request *request) {
@@ -193,41 +193,23 @@ static int board_static_handler(const http_request *request, http_response *resp
 	memset(full_path, '\0', full_path_size);
 	snprintf(full_path, full_path_size, "%s/%s/%s", webm_loc, current_board, file_name_decoded);
 
-	return mmap_file(full_path, request, response);
+	return mmap_file(full_path, response);
 }
 
 static int index_handler(const http_request *request, http_response *response) {
-	int rc = mmap_file("./templates/index.html", request, response);
-	if (!RESPONSE_OK(rc))
-		return rc;
-	// 1. Render the mmap()'d file with greshunkel
-	const char *mmapd_region = (char *)response->out;
-	const size_t original_size = response->outsize;
-
+	UNUSED(request);
 	/* Render that shit */
-	size_t new_size = 0;
 	greshunkel_ctext *ctext = gshkl_init_context();
 	gshkl_add_int(ctext, "webm_count", webm_count());
 	gshkl_add_int(ctext, "alias_count", webm_alias_count());
 
 	greshunkel_var *boards = gshkl_add_array(ctext, "BOARDS");
 	_add_files_in_dir_to_arr(boards, webm_location());
-
-	char *rendered = gshkl_render(ctext, mmapd_region, original_size, &new_size);
-	gshkl_free_context(ctext);
-
-	/* Clean up the stuff we're no longer using. */
-	munmap(response->out, original_size);
-	free(response->extra_data);
-
-	/* Make sure the response is kept up to date: */
-	response->outsize = new_size;
-	response->out = (unsigned char *)rendered;
-	return 200;
+	return render_file(ctext, "./templates/index.html", response);
 }
 
 static int webm_handler(const http_request *request, http_response *response) {
-	int rc = mmap_file("./templates/webm.html", request, response);
+	int rc = mmap_file("./templates/webm.html", response);
 	if (!RESPONSE_OK(rc))
 		return rc;
 	// 1. Render the mmap()'d file with greshunkel
@@ -306,7 +288,7 @@ static int webm_handler(const http_request *request, http_response *response) {
 }
 
 static int _board_handler(const http_request *request, http_response *response, const unsigned int page) {
-	int rc = mmap_file("./templates/board.html", request, response);
+	int rc = mmap_file("./templates/board.html", response);
 	if (!RESPONSE_OK(rc))
 		return rc;
 	// 1. Render the mmap()'d file with greshunkel
@@ -363,7 +345,7 @@ static int _board_handler(const http_request *request, http_response *response, 
 }
 
 static int by_alias_handler(const http_request *request, http_response *response) {
-	int rc = mmap_file("./templates/sorted_by_aliases.html", request, response);
+	int rc = mmap_file("./templates/sorted_by_aliases.html", response);
 	if (!RESPONSE_OK(rc))
 		return rc;
 	const char *mmapd_region = (char *)response->out;
@@ -424,12 +406,13 @@ static int paged_board_handler(const http_request *request, http_response *respo
 }
 
 static int favicon_handler(const http_request *request, http_response *response) {
-	strncpy(response->mimetype, "image/x-icon", sizeof(response->mimetype));
-	return mmap_file("./static/favicon.ico", request, response);
+	UNUSED(request);
+	return mmap_file("./static/favicon.ico", response);
 }
 
 static int robots_handler(const http_request *request, http_response *response) {
-	return mmap_file("./static/robots.txt", request, response);
+	UNUSED(request);
+	return mmap_file("./static/robots.txt", response);
 }
 
 /* All other routes: */
