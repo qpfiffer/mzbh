@@ -3,6 +3,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdint.h>
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 
 #include "parse.h"
 #include "parson.h"
@@ -81,20 +84,21 @@ ol_stack *parse_thread_json(const char *all_json, const thread_match *match) {
 		JSON_Object *post = json_array_get_object(posts, i);
 		const char *file_ext = json_object_get_string(post, "ext");
 		const char *filename = json_object_get_string(post, "filename");
-		const size_t siz = (unsigned int)json_object_get_number(post, "fsize");
-		const long _tim = (long)json_object_get_number(post, "tim");
+		const uint64_t siz = json_object_get_number(post, "fsize");
+		const uint64_t _tim = json_object_get_number(post, "tim");
 
 		if (file_ext == NULL)
 			continue;
 
 		if (strstr(file_ext, "webm")) {
-			log_msg(LOG_INFO, "/%s/ Hit: %s%s.", match->board, filename, file_ext);
-
-			char post_number[32] = {0};
-			snprintf(post_number, sizeof(post_number), "%lu", _tim);
+			log_msg(LOG_INFO, "/%s/ Hit: (%"PRIu64") %s%s.", match->board, _tim, filename, file_ext);
 
 			post_match *t_match = calloc(1, sizeof(post_match));
 			t_match->size = siz;
+
+			char post_number[sizeof(t_match->post_number)] = {0};
+			snprintf(post_number, sizeof(post_number), "%"PRIu64, _tim);
+
 			strncpy(t_match->post_number, post_number, sizeof(t_match->post_number));
 			strncpy(t_match->filename, filename, sizeof(t_match->filename));
 			strncpy(t_match->file_ext, file_ext, sizeof(t_match->file_ext));

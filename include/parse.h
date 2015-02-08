@@ -20,7 +20,7 @@ typedef struct post_match {
 	char board[MAX_BOARD_NAME_SIZE];
 	char filename[MAX_IMAGE_FILENAME_SIZE];
 	char file_ext[6];
-	char post_number[32];
+	char post_number[64];
 	size_t size;
 } post_match;
 
