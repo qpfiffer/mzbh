@@ -162,12 +162,12 @@ int mmap_file_ol(const char *file_path, const http_request *request, http_respon
 }
 
 void heap_cleanup(const int status_code, http_response *response) {
-	if (status_code > 200 && status_code < 400)
+	if (RESPONSE_OK(status_code))
 		free(response->out);
 }
 
 void mmap_cleanup(const int status_code, http_response *response) {
-	if (status_code > 200 && status_code < 400) {
+	if (RESPONSE_OK(status_code)) {
 		munmap(response->out, response->outsize);
 		free(response->extra_data);
 	}
@@ -316,9 +316,12 @@ int respond(const int accept_fd, const route *all_routes, const size_t route_num
 		header_size = strlen(response.mimetype) + strlen(matched_response->message)
 			+ integer_length - strlen("%s") - strlen("%zu");
 		actual_response_siz = response.outsize + header_size;
-		actual_response = calloc(1, actual_response_siz + 1);
+		actual_response = malloc(actual_response_siz + 1);
+		actual_response[actual_response_siz] = '\0';
+
 		/* snprintf the header because it's just a string: */
 		snprintf(actual_response, actual_response_siz, matched_response->message, response.mimetype, response.outsize);
+
 		/* memcpy the rest because it could be anything: */
 		memcpy(actual_response + header_size, response.out, response.outsize);
 	} else if (response_code == 206) {
@@ -331,11 +334,14 @@ int respond(const int accept_fd, const route *all_routes, const size_t route_num
 
 		const size_t minb_len = c_offset == 0 ? 1 : UINT_LEN(c_offset);
 		const size_t maxb_len = c_limit == 0 ? 1 : UINT_LEN(c_limit);
+		/* Compute the size of the header */
 		header_size = strlen(response.mimetype) + strlen(matched_response->message)
 			+ integer_length + minb_len + maxb_len + integer_length
 			- strlen("%s") - (strlen("%zu") * 4);
 		actual_response_siz = full_size + header_size;
-		actual_response = calloc(1, actual_response_siz + 1);
+		/* malloc the full response */
+		actual_response = malloc(actual_response_siz + 1);
+		actual_response[actual_response_siz] = '\0';
 
 		/* snprintf the header because it's just a string: */
 		snprintf(actual_response, actual_response_siz, matched_response->message,

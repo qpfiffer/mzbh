@@ -198,7 +198,7 @@ static int board_static_handler(const http_request *request, http_response *resp
 
 static int index_handler(const http_request *request, http_response *response) {
 	int rc = mmap_file("./templates/index.html", request, response);
-	if (rc != 200)
+	if (!RESPONSE_OK(rc))
 		return rc;
 	// 1. Render the mmap()'d file with greshunkel
 	const char *mmapd_region = (char *)response->out;
@@ -228,7 +228,7 @@ static int index_handler(const http_request *request, http_response *response) {
 
 static int webm_handler(const http_request *request, http_response *response) {
 	int rc = mmap_file("./templates/webm.html", request, response);
-	if (rc != 200)
+	if (!RESPONSE_OK(rc))
 		return rc;
 	// 1. Render the mmap()'d file with greshunkel
 	const char *mmapd_region = (char *)response->out;
@@ -295,6 +295,7 @@ static int webm_handler(const http_request *request, http_response *response) {
 
 	/* Clean up the stuff we're no longer using. */
 	munmap(response->out, original_size);
+	free(_webm);
 	free(response->extra_data);
 	free(full_path);
 
@@ -306,7 +307,7 @@ static int webm_handler(const http_request *request, http_response *response) {
 
 static int _board_handler(const http_request *request, http_response *response, const unsigned int page) {
 	int rc = mmap_file("./templates/board.html", request, response);
-	if (rc != 200)
+	if (!RESPONSE_OK(rc))
 		return rc;
 	// 1. Render the mmap()'d file with greshunkel
 	const char *mmapd_region = (char *)response->out;
@@ -363,7 +364,7 @@ static int _board_handler(const http_request *request, http_response *response, 
 
 static int by_alias_handler(const http_request *request, http_response *response) {
 	int rc = mmap_file("./templates/sorted_by_aliases.html", request, response);
-	if (rc != 200)
+	if (!RESPONSE_OK(rc))
 		return rc;
 	const char *mmapd_region = (char *)response->out;
 	const size_t original_size = response->outsize;

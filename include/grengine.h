@@ -6,6 +6,8 @@
 #define VERB_SIZE 16
 #define MAX_MATCHES 4
 
+#define RESPONSE_OK(status_code) (status_code >= 200 && status_code < 400)
+
 /* Structs for you! */
 /* ------------------------------------------------------------------------ */
 
