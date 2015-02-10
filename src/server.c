@@ -98,6 +98,11 @@ static int _add_webms_in_dir_by_date(greshunkel_var *loop, const char *dir,
 	closedir(dirstream);
 	free(dirent_thing);
 
+	if (webm_vec->count <= 0) {
+		gshkl_add_string_to_loop(loop, "None");
+		return 0;
+	}
+
 	qsort(webm_vec->items, webm_vec->count, webm_vec->item_size, &compare_dates);
 	int64_t i;
 	for (i = webm_vec->count - 1; i >= 0; i--) {
@@ -140,6 +145,11 @@ static int _add_files_in_dir_to_arr(greshunkel_var *loop, const char *dir) {
 	}
 	closedir(dirstream);
 	free(dirent_thing);
+
+	if (alphabetical_vec->count <= 0) {
+		gshkl_add_string_to_loop(loop, "None");
+		return 0;
+	}
 
 	qsort(alphabetical_vec->items, alphabetical_vec->count, alphabetical_vec->item_size, &alphabetical_cmp);
 	int64_t i;
