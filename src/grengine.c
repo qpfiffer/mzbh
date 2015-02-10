@@ -301,6 +301,18 @@ int respond(const int accept_fd, const route *all_routes, const size_t route_num
 	/* Run the handler through with the data we have: */
 	log_msg(LOG_INFO, "Calling handler for %s.", matching_route->name);
 	int response_code = matching_route->handler(&request, &response);
+
+	/* Figure out if this thing needs to be partial */
+	char *range_header_value = get_header_value(request.full_header, strlen(request.full_header), "Range");
+	if (range_header_value && RESPONSE_OK(response_code)) {
+		range_header range = parse_range_header(range_header_value);
+		free(range_header_value);
+
+		log_msg(LOG_INFO, "Range header parsed: Limit: %zu Offset: %zu", range.limit, range.offset);
+		memcpy(&response.byte_range, &range, sizeof(response.byte_range));
+
+		response_code = 206;
+	}
 	assert(response.outsize > 0);
 	assert(response.out != NULL);
 
@@ -324,18 +336,6 @@ int respond(const int accept_fd, const route *all_routes, const size_t route_num
 	/* Embed the handler's text into the header: */
 	size_t header_size = 0;
 	size_t actual_response_siz = 0;
-
-	/* Figure out if this thing needs to be partial */
-	char *range_header_value = get_header_value(request.full_header, strlen(request.full_header), "Range");
-	if (range_header_value) {
-		range_header range = parse_range_header(range_header_value);
-		free(range_header_value);
-
-		log_msg(LOG_INFO, "Range header parsed: Limit: %zu Offset: %zu", range.limit, range.offset);
-		memcpy(&response.byte_range, &range, sizeof(response.byte_range));
-
-		response_code = 206;
-	}
 
 	if (response_code == 200 || response_code == 404) {
 		const size_t integer_length = UINT_LEN(response.outsize);
