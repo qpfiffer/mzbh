@@ -142,8 +142,10 @@ int connect_to_host_with_port(const char *host, const char *port) {
 	getaddrinfo(host, port, &hints, &res);
 
 	request_fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-	if (request_fd < 0) {
-		log_msg(LOG_ERR, "Could not create socket.");
+	if (request_fd == -1) {
+		char buf[128] = {0};
+		perror(buf);
+		log_msg(LOG_ERR, "Could not create socket: %s", buf);
 		goto error;
 	}
 
