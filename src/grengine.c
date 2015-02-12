@@ -231,10 +231,10 @@ static void log_request(const http_request *request, const http_response *respon
 		visitor_ip_addr, request->verb, request->resource,
 		response_code, response->outsize, user_agent);
 
-	if (strncmp(visitor_ip_addr, "NOIP", strlen("NOIP") != 0))
+	if (strncmp(visitor_ip_addr, "NOIP", strlen("NOIP")) != 0)
 		free(visitor_ip_addr);
 
-	if (strncmp(user_agent, "NOUSERAGENT", strlen("NOUSERAGENT") != 0))
+	if (strncmp(user_agent, "NOUSERAGENT", strlen("NOUSERAGENT")) != 0)
 		free(user_agent);
 }
 
