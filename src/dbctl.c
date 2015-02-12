@@ -28,14 +28,23 @@ static int _add_directory(const char *directory_to_open, const char board[MAX_BO
 		if (!result)
 			break;
 		if (result->d_name[0] != '.' && endswith(result->d_name, ".webm")) {
-			const size_t full_path_siz = strlen(directory_to_open) + strlen("/") + strlen(result->d_name) + 1;
-			char full_path[full_path_siz];
-			memset(full_path, '\0', full_path_siz);
-			sprintf(full_path, "%s/%s", directory_to_open, result->d_name);
+			int attempts = 0;
+			int max_attempts = 3;
+			for (;attempts < max_attempts; attempts++) {
+				const size_t full_path_siz = strlen(directory_to_open) + strlen("/") + strlen(result->d_name) + 1;
+				char full_path[full_path_siz];
+				memset(full_path, '\0', full_path_siz);
+				sprintf(full_path, "%s/%s", directory_to_open, result->d_name);
 
-			int rc = add_image_to_db(full_path, result->d_name, board);
-			assert(rc);
-			total++;
+				int rc = add_image_to_db(full_path, result->d_name, board);
+				if (rc)
+					break;
+				else {
+					log_msg(LOG_WARN, "(%i/%i) Could not add image to db. Retrying...", 
+						attempts+1, max_attempts);
+				}
+				total++;
+			}
 		}
 	}
 	closedir(dirstream);

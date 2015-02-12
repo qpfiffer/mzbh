@@ -257,7 +257,13 @@ static int webm_handler(const http_request *request, http_response *response) {
 				if (walias) {
 					if (walias->created_at < earliest_date)
 						earliest_date = walias->created_at;
-					gshkl_add_string_to_loop(aliases, walias->filename);
+					const size_t buf_size = UINT_LEN(walias->created_at) + strlen(", ") +
+						strnlen(walias->board, MAX_BOARD_NAME_SIZE) + strlen(", ") +
+						strnlen(walias->filename, MAX_IMAGE_FILENAME_SIZE);
+					char buf[buf_size + 1];
+					buf[buf_size] = '\0';
+					snprintf(buf, buf_size, "%lld, %s, %s", (long long)walias->created_at, walias->board, walias->filename);
+					gshkl_add_string_to_loop(aliases, buf);
 					free(walias);
 				} else {
 					log_msg(LOG_WARN, "Bad alias string: %s", alias);
