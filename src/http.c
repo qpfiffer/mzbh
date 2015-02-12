@@ -134,7 +134,7 @@ error:
 int connect_to_host_with_port(const char *host, const char *port) {
 	struct addrinfo hints = {0};
 	struct addrinfo *res = NULL;
-	int request_fd;
+	int request_fd = -1;
 
 	hints.ai_family = AF_INET;
 	hints.ai_socktype = SOCK_STREAM;
