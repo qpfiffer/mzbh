@@ -10,8 +10,8 @@ COPY static /app/static
 COPY Makefile /app/Makefile
 
 RUN cd /app; make
+COPY run/waifu /etc/service/waifu/run
 
 VOLUME /app/webms
-WORKDIR /app
 EXPOSE 8080
-CMD ["./waifu.xyz"]
+CMD ["/sbin/my_init"]
