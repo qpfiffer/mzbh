@@ -10,6 +10,10 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 
+#include <38-moths/greshunkel.h>
+#include <38-moths/grengine.h>
+#include <38-moths/server.h>
+
 #include "db.h"
 #include "http.h"
 #include "models.h"
@@ -17,6 +21,7 @@
 #include "logging.h"
 #include "server.h"
 #include "stack.h"
+#include "utils.h"
 
 int main_sock_fd = 0;
 pid_t bg_worker = 0;
@@ -380,6 +385,18 @@ int start_bg_worker() {
 	return background_work();
 }
 
+static const route all_routes[] = {
+	{"GET", "robots_txt", "^/robots.txt$", 0, &robots_handler, &mmap_cleanup},
+	{"GET", "favicon_ico", "^/favicon.ico$", 0, &favicon_handler, &mmap_cleanup},
+	{"GET", "generic_static", "^/static/[a-zA-Z0-9/_-]*\\.[a-zA-Z]*$", 0, &static_handler, &mmap_cleanup},
+	{"GET", "board_handler_no_num", "^/chug/([a-zA-Z]*)$", 1, &board_handler, &heap_cleanup},
+	{"GET", "paged_board_handler", "^/chug/([a-zA-Z]*)/([0-9]*)$", 2, &paged_board_handler, &heap_cleanup},
+	{"GET", "webm_handler", "^/slurp/([a-zA-Z]*)/((.*)(.webm|.jpg))$", 2, &webm_handler, &heap_cleanup},
+	{"GET", "board_static_handler", "^/chug/([a-zA-Z]*)/((.*)(.webm|.jpg))$", 2, &board_static_handler, &mmap_cleanup},
+	{"GET", "by_alias_handler", "^/by/alias/([0-9]*)$", 1, &by_alias_handler, &mmap_cleanup},
+	{"GET", "root_handler", "^/$", 0, &index_handler, &heap_cleanup},
+};
+
 int main(int argc, char *argv[]) {
 	signal(SIGTERM, term);
 	signal(SIGINT, term);
@@ -412,7 +429,8 @@ int main(int argc, char *argv[]) {
 		return -1;
 
 	int rc = 0;
-	if ((rc = http_serve(main_sock_fd, num_threads)) != 0) {
+	const size_t num_routes = sizeof(all_routes)/sizeof(all_routes[0]);
+	if ((rc = http_serve(main_sock_fd, num_threads, all_routes, num_routes)) != 0) {
 		term(SIGTERM);
 		log_msg(LOG_ERR, "Could not start HTTP service.");
 		return rc;

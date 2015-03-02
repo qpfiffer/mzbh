@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <38-moths/parse.h>
+
 #include "http.h"
 #include "utils.h"
 #include "parse.h"

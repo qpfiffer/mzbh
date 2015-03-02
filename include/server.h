@@ -11,4 +11,12 @@ struct file_and_time {
 	const time_t ctime;
 };
 
-int http_serve(int main_sock_fd, const int num_threads);
+int static_handler(const http_request *request, http_response *response);
+int board_static_handler(const http_request *request, http_response *response);
+int index_handler(const http_request *request, http_response *response);
+int webm_handler(const http_request *request, http_response *response);
+int by_alias_handler(const http_request *request, http_response *response);
+int board_handler(const http_request *request, http_response *response);
+int paged_board_handler(const http_request *request, http_response *response);
+int favicon_handler(const http_request *request, http_response *response);
+int robots_handler(const http_request *request, http_response *response);

@@ -1,7 +1,7 @@
 // vim: noet ts=4 sw=4
 #pragma once
+#include <38-moths/vector.h>
 #include <time.h>
-#include "vector.h"
 #include "common_defs.h"
 
 /* The unsigned chars in the struct are used to null terminate the

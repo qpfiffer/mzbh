@@ -22,14 +22,16 @@
 #include <unistd.h>
 #include <time.h>
 
+#include <38-moths/greshunkel.h>
+#include <38-moths/grengine.h>
+#include <38-moths/server.h>
+
 #include "db.h"
 #include "http.h"
 #include "logging.h"
 #include "parse.h"
-#include "server.h"
-#include "grengine.h"
-#include "greshunkel.h"
 #include "models.h"
+#include "server.h"
 
 #define RESULTS_PER_PAGE 80
 #define OFFSET_FOR_PAGE(x) x * RESULTS_PER_PAGE
@@ -163,7 +165,7 @@ static int _add_files_in_dir_to_arr(greshunkel_var *loop, const char *dir) {
 }
 
 /* Various handlers for our routes: */
-static int static_handler(const http_request *request, http_response *response) {
+int static_handler(const http_request *request, http_response *response) {
 	/* Remove the leading slash: */
 	const char *file_path = request->resource + sizeof(char);
 	return mmap_file(file_path, response);
@@ -184,7 +186,7 @@ static void get_webm_from_board(char file_name_decoded[static MAX_IMAGE_FILENAME
 	url_decode(file_name, file_name_len, file_name_decoded);
 }
 
-static int board_static_handler(const http_request *request, http_response *response) {
+int board_static_handler(const http_request *request, http_response *response) {
 	const char *webm_loc = webm_location();
 
 	/* Current board */
@@ -206,19 +208,19 @@ static int board_static_handler(const http_request *request, http_response *resp
 	return mmap_file(full_path, response);
 }
 
-static int index_handler(const http_request *request, http_response *response) {
+int index_handler(const http_request *request, http_response *response) {
 	UNUSED(request);
 	/* Render that shit */
 	greshunkel_ctext *ctext = gshkl_init_context();
 	gshkl_add_int(ctext, "webm_count", webm_count());
 	gshkl_add_int(ctext, "alias_count", webm_alias_count());
 
-	greshunkel_var *boards = gshkl_add_array(ctext, "BOARDS");
-	_add_files_in_dir_to_arr(boards, webm_location());
+	greshunkel_var boards = gshkl_add_array(ctext, "BOARDS");
+	_add_files_in_dir_to_arr(&boards, webm_location());
 	return render_file(ctext, "./templates/index.html", response);
 }
 
-static int webm_handler(const http_request *request, http_response *response) {
+int webm_handler(const http_request *request, http_response *response) {
 	char current_board[MAX_BOARD_NAME_SIZE] = {0};
 	get_current_board(current_board, request);
 
@@ -226,8 +228,8 @@ static int webm_handler(const http_request *request, http_response *response) {
 	gshkl_add_string(ctext, "current_board", current_board);
 
 	/* All boards */
-	greshunkel_var *boards = gshkl_add_array(ctext, "BOARDS");
-	_add_files_in_dir_to_arr(boards, webm_location());
+	greshunkel_var boards = gshkl_add_array(ctext, "BOARDS");
+	_add_files_in_dir_to_arr(&boards, webm_location());
 
 	/* Decode the url-encoded filename. */
 	char file_name_decoded[MAX_IMAGE_FILENAME_SIZE] = {0};
@@ -237,7 +239,7 @@ static int webm_handler(const http_request *request, http_response *response) {
 	/* Full path, needed for the image hash */
 	char *full_path = get_full_path_for_webm(current_board, file_name_decoded);
 
-	greshunkel_var *aliases = gshkl_add_array(ctext, "aliases");
+	greshunkel_var aliases = gshkl_add_array(ctext, "aliases");
 	char image_hash[HASH_IMAGE_STR_SIZE] = {0};
 	hash_file(full_path, image_hash);
 	webm *_webm = get_image(image_hash);
@@ -263,18 +265,18 @@ static int webm_handler(const http_request *request, http_response *response) {
 					char buf[buf_size + 1];
 					buf[buf_size] = '\0';
 					snprintf(buf, buf_size, "%lld, %s, %s", (long long)walias->created_at, walias->board, walias->filename);
-					gshkl_add_string_to_loop(aliases, buf);
+					gshkl_add_string_to_loop(&aliases, buf);
 					free(walias);
 				} else {
 					log_msg(LOG_WARN, "Bad alias string: %s", alias);
 					log_msg(LOG_WARN, "Bad alias on: %s%s", WEBM_NMSPC, image_hash);
-					gshkl_add_string_to_loop(aliases, alias);
+					gshkl_add_string_to_loop(&aliases, alias);
 				}
 			}
 			vector_free(w2a->aliases);
 			free(w2a);
 		} else {
-			gshkl_add_string_to_loop(aliases, "None");
+			gshkl_add_string_to_loop(&aliases, "None");
 		}
 
 		gshkl_add_int(ctext, "image_date", earliest_date);
@@ -290,18 +292,18 @@ static int _board_handler(const http_request *request, http_response *response, 
 	greshunkel_ctext *ctext = gshkl_init_context();
 	gshkl_add_filter(ctext, "thumbnail_for_image", thumbnail_for_image, filter_cleanup);
 	gshkl_add_string(ctext, "current_board", current_board);
-	greshunkel_var *images = gshkl_add_array(ctext, "IMAGES");
+	greshunkel_var images = gshkl_add_array(ctext, "IMAGES");
 
 	char images_dir[256] = {0};
 	snprintf(images_dir, sizeof(images_dir), "%s/%s", webm_location(), current_board);
-	int total = _add_webms_in_dir_by_date(images, images_dir,
+	int total = _add_webms_in_dir_by_date(&images, images_dir,
 			OFFSET_FOR_PAGE(page), RESULTS_PER_PAGE);
 
-	greshunkel_var *pages = gshkl_add_array(ctext, "PAGES");
+	greshunkel_var pages = gshkl_add_array(ctext, "PAGES");
 	int i;
 	const unsigned int max = total/RESULTS_PER_PAGE;
 	for (i = max; i >= 0; i--)
-		gshkl_add_int_to_loop(pages, i);
+		gshkl_add_int_to_loop(&pages, i);
 
 	if (page > 0) {
 		gshkl_add_int(ctext, "prev_page", page - 1);
@@ -315,29 +317,29 @@ static int _board_handler(const http_request *request, http_response *response, 
 		gshkl_add_string(ctext, "next_page", "");
 	}
 
-	greshunkel_var *boards = gshkl_add_array(ctext, "BOARDS");
-	_add_files_in_dir_to_arr(boards, webm_location());
+	greshunkel_var boards = gshkl_add_array(ctext, "BOARDS");
+	_add_files_in_dir_to_arr(&boards, webm_location());
 
 	gshkl_add_int(ctext, "total", total);
 
 	return render_file(ctext, "./templates/board.html", response);
 }
 
-static int by_alias_handler(const http_request *request, http_response *response) {
+int by_alias_handler(const http_request *request, http_response *response) {
 	const unsigned int page = strtol(request->resource + request->matches[1].rm_so, NULL, 10);
 
 	greshunkel_ctext *ctext = gshkl_init_context();
 	gshkl_add_filter(ctext, "thumbnail_for_image", thumbnail_for_image, filter_cleanup);
-	greshunkel_var *images = gshkl_add_array(ctext, "IMAGES");
-	gshkl_add_string_to_loop(images, "None");
+	greshunkel_var images = gshkl_add_array(ctext, "IMAGES");
+	gshkl_add_string_to_loop(&images, "None");
 
 	int total = webm_count();
 
-	greshunkel_var *pages = gshkl_add_array(ctext, "PAGES");
+	greshunkel_var pages = gshkl_add_array(ctext, "PAGES");
 	int i;
 	const unsigned int max = total/RESULTS_PER_PAGE;
 	for (i = max; i >= 0; i--)
-		gshkl_add_int_to_loop(pages, i);
+		gshkl_add_int_to_loop(&pages, i);
 
 	if (page > 0) {
 		gshkl_add_int(ctext, "prev_page", page - 1);
@@ -351,117 +353,28 @@ static int by_alias_handler(const http_request *request, http_response *response
 		gshkl_add_string(ctext, "next_page", "");
 	}
 
-	greshunkel_var *boards = gshkl_add_array(ctext, "BOARDS");
-	_add_files_in_dir_to_arr(boards, webm_location());
+	greshunkel_var boards = gshkl_add_array(ctext, "BOARDS");
+	_add_files_in_dir_to_arr(&boards, webm_location());
 
 	gshkl_add_int(ctext, "total", total);
 	return render_file(ctext, "./templates/sorted_by_aliases.html", response);
 }
 
-static int board_handler(const http_request *request, http_response *response) {
+int board_handler(const http_request *request, http_response *response) {
 	return _board_handler(request, response, 0);
 }
 
-static int paged_board_handler(const http_request *request, http_response *response) {
+int paged_board_handler(const http_request *request, http_response *response) {
 	const unsigned int page = strtol(request->resource + request->matches[2].rm_so, NULL, 10);
 	return _board_handler(request, response, page);
 }
 
-static int favicon_handler(const http_request *request, http_response *response) {
+int favicon_handler(const http_request *request, http_response *response) {
 	UNUSED(request);
 	return mmap_file("./static/favicon.ico", response);
 }
 
-static int robots_handler(const http_request *request, http_response *response) {
+int robots_handler(const http_request *request, http_response *response) {
 	UNUSED(request);
 	return mmap_file("./static/robots.txt", response);
 }
-
-/* All other routes: */
-static const route all_routes[] = {
-	{"GET", "robots_txt", "^/robots.txt$", 0, &robots_handler, &mmap_cleanup},
-	{"GET", "favicon_ico", "^/favicon.ico$", 0, &favicon_handler, &mmap_cleanup},
-	{"GET", "generic_static", "^/static/[a-zA-Z0-9/_-]*\\.[a-zA-Z]*$", 0, &static_handler, &mmap_cleanup},
-	{"GET", "board_handler_no_num", "^/chug/([a-zA-Z]*)$", 1, &board_handler, &heap_cleanup},
-	{"GET", "paged_board_handler", "^/chug/([a-zA-Z]*)/([0-9]*)$", 2, &paged_board_handler, &heap_cleanup},
-	{"GET", "webm_handler", "^/slurp/([a-zA-Z]*)/((.*)(.webm|.jpg))$", 2, &webm_handler, &heap_cleanup},
-	{"GET", "board_static_handler", "^/chug/([a-zA-Z]*)/((.*)(.webm|.jpg))$", 2, &board_static_handler, &mmap_cleanup},
-	{"GET", "by_alias_handler", "^/by/alias/([0-9]*)$", 1, &by_alias_handler, &mmap_cleanup},
-	{"GET", "root_handler", "^/$", 0, &index_handler, &heap_cleanup},
-};
-
-static void *acceptor(void *arg) {
-	const int main_sock_fd = *(int*)arg;
-	while(1) {
-		struct sockaddr_storage their_addr = {0};
-		socklen_t sin_size = sizeof(their_addr);
-
-		int new_fd = accept(main_sock_fd, (struct sockaddr *)&their_addr, &sin_size);
-
-		if (new_fd == -1) {
-			log_msg(LOG_ERR, "Could not accept new connection.");
-			return NULL;
-		} else {
-			respond(new_fd, all_routes, sizeof(all_routes)/sizeof(all_routes[0]));
-			close(new_fd);
-		}
-	}
-	return NULL;
-}
-
-int http_serve(int main_sock_fd, const int num_threads) {
-	/* Our acceptor pool: */
-	pthread_t workers[num_threads];
-
-	int rc = -1;
-	main_sock_fd = socket(PF_INET, SOCK_STREAM, 0);
-	if (main_sock_fd <= 0) {
-		log_msg(LOG_ERR, "Could not create main socket.");
-		goto error;
-	}
-
-	int opt = 1;
-	setsockopt(main_sock_fd, SOL_SOCKET, SO_REUSEADDR, (void*) &opt, sizeof(opt));
-
-	const int port = 8080;
-	struct sockaddr_in hints = {0};
-	hints.sin_family		 = AF_INET;
-	hints.sin_port			 = htons(port);
-	hints.sin_addr.s_addr	 = htonl(INADDR_ANY);
-
-	rc = bind(main_sock_fd, (struct sockaddr *)&hints, sizeof(hints));
-	if (rc < 0) {
-		log_msg(LOG_ERR, "Could not bind main socket.");
-		goto error;
-	}
-
-	rc = listen(main_sock_fd, 0);
-	if (rc < 0) {
-		log_msg(LOG_ERR, "Could not listen on main socket.");
-		goto error;
-	}
-	log_msg(LOG_FUN, "Listening on http://localhost:%i/", port);
-
-	int i;
-	for (i = 0; i < num_threads; i++) {
-		if (pthread_create(&workers[i], NULL, acceptor, &main_sock_fd) != 0) {
-			goto error;
-		}
-		log_msg(LOG_INFO, "Thread %i started.", i);
-	}
-
-	for (i = 0; i < num_threads; i++) {
-		pthread_join(workers[i], NULL);
-		log_msg(LOG_INFO, "Thread %i stopped.", i);
-	}
-
-
-	close(main_sock_fd);
-	return 0;
-
-error:
-	perror("Socket error");
-	close(main_sock_fd);
-	return rc;
-}
-
