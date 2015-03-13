@@ -106,8 +106,8 @@ static int _add_webms_in_dir_by_date(greshunkel_var *loop, const char *dir,
 	}
 
 	qsort(webm_vec->items, webm_vec->count, webm_vec->item_size, &compare_dates);
-	int64_t i;
-	for (i = webm_vec->count - 1; i >= 0; i--) {
+	uint64_t i;
+	for (i = 0; i < webm_vec->count; i++) {
 		int8_t can_add = 0;
 		const struct file_and_time *x = vector_get(webm_vec, i);
 		if (!limit && !offset)
@@ -154,8 +154,8 @@ static int _add_files_in_dir_to_arr(greshunkel_var *loop, const char *dir) {
 	}
 
 	qsort(alphabetical_vec->items, alphabetical_vec->count, alphabetical_vec->item_size, &alphabetical_cmp);
-	int64_t i;
-	for (i = alphabetical_vec->count - 1; i >= 0; i--) {
+	uint64_t i;
+	for (i = 0; i < alphabetical_vec->count; i++) {
 		const char *name = vector_get(alphabetical_vec, i);
 		gshkl_add_string_to_loop(loop, name);
 	}
@@ -300,9 +300,9 @@ static int _board_handler(const http_request *request, http_response *response, 
 			OFFSET_FOR_PAGE(page), RESULTS_PER_PAGE);
 
 	greshunkel_var pages = gshkl_add_array(ctext, "PAGES");
-	int i;
+	unsigned int i;
 	const unsigned int max = total/RESULTS_PER_PAGE;
-	for (i = max; i >= 0; i--)
+	for (i = 0; i < max; i++)
 		gshkl_add_int_to_loop(&pages, i);
 
 	if (page > 0) {
@@ -336,9 +336,9 @@ int by_alias_handler(const http_request *request, http_response *response) {
 	int total = webm_count();
 
 	greshunkel_var pages = gshkl_add_array(ctext, "PAGES");
-	int i;
+	unsigned int i;
 	const unsigned int max = total/RESULTS_PER_PAGE;
-	for (i = max; i >= 0; i--)
+	for (i = 0; i < max; i++)
 		gshkl_add_int_to_loop(&pages, i);
 
 	if (page > 0) {
