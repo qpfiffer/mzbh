@@ -64,6 +64,11 @@ static inline int compare_dates(const void *a, const void *b) {
 
 static int _add_webms_in_dir_by_date(greshunkel_var *loop, const char *dir,
 		const unsigned int offset, const unsigned int limit) {
+	/* Check to make sure the directory actually exists. */
+	struct stat dir_st = {0};
+	if (stat(dir, &dir_st) == -1)
+		return 0;
+
 	size_t dirent_siz = offsetof(struct dirent, d_name) +
 							  pathconf(dir, _PC_NAME_MAX) + 1;
 	struct dirent *dirent_thing = calloc(1, dirent_siz);
@@ -100,10 +105,8 @@ static int _add_webms_in_dir_by_date(greshunkel_var *loop, const char *dir,
 	closedir(dirstream);
 	free(dirent_thing);
 
-	if (webm_vec->count <= 0) {
-		gshkl_add_string_to_loop(loop, "None");
+	if (webm_vec->count <= 0)
 		return 0;
-	}
 
 	qsort(webm_vec->items, webm_vec->count, webm_vec->item_size, &compare_dates);
 	uint64_t i;
@@ -148,10 +151,8 @@ static int _add_files_in_dir_to_arr(greshunkel_var *loop, const char *dir) {
 	closedir(dirstream);
 	free(dirent_thing);
 
-	if (alphabetical_vec->count <= 0) {
-		gshkl_add_string_to_loop(loop, "None");
+	if (alphabetical_vec->count <= 0)
 		return 0;
-	}
 
 	qsort(alphabetical_vec->items, alphabetical_vec->count, alphabetical_vec->item_size, &alphabetical_cmp);
 	uint64_t i;
@@ -296,6 +297,12 @@ static int _board_handler(const http_request *request, http_response *response, 
 
 	char images_dir[256] = {0};
 	snprintf(images_dir, sizeof(images_dir), "%s/%s", webm_location(), current_board);
+
+	/* Check to make sure the directory actually exists. */
+	struct stat dir_st = {0};
+	if (stat(images_dir, &dir_st) == -1)
+		return 404;
+
 	int total = _add_webms_in_dir_by_date(&images, images_dir,
 			OFFSET_FOR_PAGE(page), RESULTS_PER_PAGE);
 
