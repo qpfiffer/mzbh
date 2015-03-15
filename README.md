@@ -2,11 +2,13 @@
 
 # Introduction
 
-This is a web-app built from the ground up with no external dependencies, aside
-from [OlegDB](https://olegdb.org/), the database backend. It's job is pretty simple: Collect and host `.webm` files.
+Originally all of the web-app frameworky garbage in this app was custom from the
+ground up, but all of that has been spun-off into [38-Moths](https://github.com/qpfiffer/38-Moths).
+[OlegDB](https://olegdb.org/) is also required.
+`waifu.xyz`'s  job is pretty simple: Collect and host `.webm` files.
 It was built with the following goals in mind:
 
-* No dependencies (other than files I can embed into the project directly)
+* ~~No dependencies (other than files I can embed into the project directly)~~
 * Should be able to run indefinitely (no memory leaks)
 * Should be pretty fast
 * Should be able to run on a cheapo, $5.00 a month 32-bit VPS with no issues.
@@ -34,9 +36,8 @@ This runs the webserver with 4 threads. The default is 2.
 ## Scraper
 
 The scraper hits the 4chan API very slowly and fetches threads it thinks will
-have `.webm`s in them. It then downloads the `.webm` and thumbnails for
-thumbnails for said `.webm`. These are stuck in the `WFU_WEBMS_DIR` location,
-organized by board.
+have `.webm`s in them. It then downloads the `.webm` and thumbnails for said
+`.webm`. These are stuck in the `WFU_WEBMS_DIR` location, organized by board.
 
 The goal is to retain as much metadata as possible while still allowing the
 files to exist in a pure state (no hash filenames, not embedded in a database
