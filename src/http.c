@@ -3,6 +3,7 @@
 	#pragma clang diagnostic ignored "-Wmissing-field-initializers"
 #endif
 #include <arpa/inet.h>
+#include <errno.h>
 #include <netdb.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -141,7 +142,8 @@ int connect_to_host_with_port(const char *host, const char *port) {
 
 	const int gai_rc = getaddrinfo(host, port, &hints, &res);
 	if (gai_rc != 0) {
-		log_msg(LOG_ERR, "Could not get address information: %s", gai_strerror(gai_rc));
+		log_msg(LOG_ERR, "Could not get address information: %s\n Errno: %s",
+				gai_strerror(gai_rc), strerror(errno));
 		goto error;
 	}
 
