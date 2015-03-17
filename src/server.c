@@ -287,6 +287,8 @@ int webm_handler(const http_request *request, http_response *response) {
 		gshkl_add_int(ctext, "image_date", earliest_date);
 	}
 
+	free(_webm);
+	free(full_path);
 	return render_file(ctext, "./templates/webm.html", response);
 }
 
