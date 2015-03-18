@@ -202,6 +202,8 @@ int download_image(const post_match *p_match) {
 
 	/* We already have that file. */
 	if (should_skip) {
+		close(image_request_fd);
+		close(thumb_request_fd);
 		return 1;
 	}
 
