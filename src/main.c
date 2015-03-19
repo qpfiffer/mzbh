@@ -237,6 +237,8 @@ int download_image(const post_match *p_match) {
 	raw_image_resp = receive_http(image_request_fd, &image_size);
 
 	if (thumb_size <= 0 || image_size <= 0) {
+		close(image_request_fd);
+		close(thumb_request_fd);
 		free(raw_thumb_resp);
 		free(raw_image_resp);
 		return 0;
