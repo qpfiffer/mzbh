@@ -340,6 +340,18 @@ static int _board_handler(const http_request *request, http_response *response, 
 
 static int _add_sorted_by_aliases(greshunkel_var *images) {
 	UNUSED(images);
+	db_key_match *key_matches = fetch_matches_from_db(WEBMTOALIAS_NMSPC);
+	db_match *matches = fetch_bulk_from_db(key_matches);
+
+	/* Free all of the matched keys. */
+	/*
+	db_key_match *current = webm_alias_keys;
+	while (current) {
+		db_key_match *next = current->next;
+		free(current);
+		current = next;
+	}
+	*/
 	return 0;
 }
 
