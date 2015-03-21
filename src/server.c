@@ -338,15 +338,21 @@ static int _board_handler(const http_request *request, http_response *response, 
 	return render_file(ctext, "./templates/board.html", response);
 }
 
+static int _add_sorted_by_aliases(greshunkel_var *images) {
+	UNUSED(images);
+	return 0;
+}
+
 int by_alias_handler(const http_request *request, http_response *response) {
 	const unsigned int page = strtol(request->resource + request->matches[1].rm_so, NULL, 10);
 
 	greshunkel_ctext *ctext = gshkl_init_context();
 	gshkl_add_filter(ctext, "thumbnail_for_image", thumbnail_for_image, filter_cleanup);
 	greshunkel_var images = gshkl_add_array(ctext, "IMAGES");
-	gshkl_add_string_to_loop(&images, "None");
-
-	int total = webm_count();
+	int total = _add_sorted_by_aliases(&images);
+	if (total == 0) {
+		gshkl_add_string_to_loop(&images, "None");
+	}
 
 	greshunkel_var pages = gshkl_add_array(ctext, "PAGES");
 	unsigned int i;
