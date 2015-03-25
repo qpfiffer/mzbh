@@ -4,6 +4,7 @@
 #endif
 #include <arpa/inet.h>
 #include <errno.h>
+#include <limits.h>
 #include <netdb.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -86,7 +87,12 @@ char *receive_chunked_http(const int request_fd) {
 		/* We cheat a little and set the first \r to a \0 so strtol will
 		 * do the right thing. */
 		chunk_size_start[chunk_size_end_oft] = '\0';
-		const unsigned int chunk_size = strtol(chunk_size_start, NULL, 16);
+		const long chunk_size = strtol(chunk_size_start, NULL, 16);
+
+		if ((chunk_size == LONG_MIN || chunk_size == LONG_MAX) && errno == ERANGE) {
+			log_msg(LOG_ERR, "Could not parse out chunk size.");
+			goto error;
+		}
 
 		/* printf("Chunk size is %i. Thing is: %s.\n", chunk_size, chunk_size_start); */
 		/* The chunk string, the \r\n after it, the chunk itself and then another \r\n: */
