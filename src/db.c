@@ -32,6 +32,11 @@ static const char DB_MATCH[] =  "GET /%s/%s/_match HTTP/1.1\r\n"
 	"Accept-Encoding: identity\r\n"
 	"\r\n";
 
+static const char DB_BULK_UNJAR[] =  "GET /%s/_bulk_unjar HTTP/1.1\r\n"
+	"Host: "DB_HOST":"DB_PORT"\r\n"
+	"Accept-Encoding: identity\r\n"
+	"\r\n";
+
 static int _fetch_matches_common(const char prefix[static MAX_KEY_SIZE]) {
 	const size_t db_match_siz = strlen(WAIFU_NMSPC) + strlen(DB_MATCH) + strnlen(prefix, MAX_KEY_SIZE);
 	char new_db_request[db_match_siz];
@@ -418,6 +423,44 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 	free(_old_alias);
 	free(_old_webm);
 	return rc;
+}
+
+db_match *fetch_bulk_from_db(struct db_key_match *keys, int free_keys) {
+	const size_t db_bu_siz = strlen(WAIFU_NMSPC) + strlen(DB_BULK_UNJAR);
+	char new_db_request[db_bu_siz];
+	memset(new_db_request, '\0', db_bu_siz);
+
+	int sock = 0;
+	sock = connect_to_host_with_port(DB_HOST, DB_PORT);
+	if (sock == 0)
+		goto error;
+
+	snprintf(new_db_request, db_bu_siz, DB_BULK_UNJAR, WAIFU_NMSPC);
+	unsigned int rc = send(sock, new_db_request, strlen(new_db_request), 0);
+	if (strlen(new_db_request) != rc)
+		goto error;
+
+	db_key_match *current = keys;
+	while (current) {
+		current = current->next;
+
+		unsigned int rc = send(sock, current->key, MAX_KEY_SIZE, 0);
+		if (strlen(current->key) != rc)
+			goto error;
+
+		if (current) {
+			unsigned int rc = send(sock, "\n", strlen("\n"), 0);
+			if (strlen("\n") != rc)
+				goto error;
+		}
+
+		if (free_keys)
+			free(current);
+	}
+	return NULL;
+
+error:
+	return NULL;
 }
 
 db_match *filter(const char prefix[static MAX_KEY_SIZE], const void *extrainput,

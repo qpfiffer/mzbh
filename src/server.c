@@ -338,20 +338,27 @@ static int _board_handler(const http_request *request, http_response *response, 
 	return render_file(ctext, "./templates/board.html", response);
 }
 
-static int _add_sorted_by_aliases(greshunkel_var *images) {
+static unsigned int _add_sorted_by_aliases(greshunkel_var *images) {
 	UNUSED(images);
 	db_key_match *key_matches = fetch_matches_from_db(WEBMTOALIAS_NMSPC);
-	db_match *matches = fetch_bulk_from_db(key_matches);
+	db_match *matches = fetch_bulk_from_db(key_matches, 1);
 
-	/* Free all of the matched keys. */
-	/*
-	db_key_match *current = webm_alias_keys;
+	unsigned int total = 0;
+	db_match *current = matches;
 	while (current) {
-		db_key_match *next = current->next;
+		db_match *next = current->next;
+
+		webm *dsrlzd = deserialize_webm((char *)next->data);
 		free(current);
+
+		gshkl_add_string_to_loop(images, dsrlzd->filename);
+
+		free(dsrlzd);
+		total++;
+
 		current = next;
 	}
-	*/
+
 	return 0;
 }
 
