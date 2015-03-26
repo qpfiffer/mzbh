@@ -34,6 +34,7 @@ static const char DB_MATCH[] =  "GET /%s/%s/_match HTTP/1.1\r\n"
 
 static const char DB_BULK_UNJAR[] =  "GET /%s/_bulk_unjar HTTP/1.1\r\n"
 	"Host: "DB_HOST":"DB_PORT"\r\n"
+	"Content-Length: %zu\r\n"
 	"Accept-Encoding: identity\r\n"
 	"\r\n";
 
@@ -425,41 +426,84 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 	return rc;
 }
 
+static inline size_t _nline_delimited_key_size(const struct db_key_match *keys) {
+	size_t siz = 0;
+
+	const db_key_match *current = keys;
+	while (current) {
+		current = current->next;
+		siz += strlen(current->key);
+		if (current)
+			siz += strlen("\n");
+	}
+
+	return siz;
+}
+
 db_match *fetch_bulk_from_db(struct db_key_match *keys, int free_keys) {
+	size_t dsize = 0;
+	unsigned char *_data = NULL;
+	int sock = 0;
+
 	const size_t db_bu_siz = strlen(WAIFU_NMSPC) + strlen(DB_BULK_UNJAR);
 	char new_db_request[db_bu_siz];
 	memset(new_db_request, '\0', db_bu_siz);
 
-	int sock = 0;
+	sock = 0;
 	sock = connect_to_host_with_port(DB_HOST, DB_PORT);
-	if (sock == 0)
+	if (sock == 0) {
+		log_msg(LOG_ERR, "bulk_unjar: Could not connect to OlegDB.");
 		goto error;
+	}
 
-	snprintf(new_db_request, db_bu_siz, DB_BULK_UNJAR, WAIFU_NMSPC);
+	/* TODO: Is it faster here to A) Loop through the keys twice, allocating a single
+	 * buffer once the size is known or B) looping through the keys once, allocating a
+	 * buffer on the stack and resizing it as we go?
+	 */
+	snprintf(new_db_request, db_bu_siz, DB_BULK_UNJAR, WAIFU_NMSPC, _nline_delimited_key_size(keys));
 	unsigned int rc = send(sock, new_db_request, strlen(new_db_request), 0);
-	if (strlen(new_db_request) != rc)
+	if (strlen(new_db_request) != rc) {
+		log_msg(LOG_ERR, "bulk_unjar: Could not send HTTP header to OlegDB.");
 		goto error;
+	}
 
 	db_key_match *current = keys;
 	while (current) {
 		current = current->next;
 
 		unsigned int rc = send(sock, current->key, MAX_KEY_SIZE, 0);
-		if (strlen(current->key) != rc)
+		if (strlen(current->key) != rc) {
+			log_msg(LOG_ERR, "bulk_unjar: Could not send key to OlegDB.");
 			goto error;
+		}
 
 		if (current) {
 			unsigned int rc = send(sock, "\n", strlen("\n"), 0);
-			if (strlen("\n") != rc)
+			if (strlen("\n") != rc) {
+				log_msg(LOG_ERR, "bulk_unjar: Could not send newline to OlegDB.");
 				goto error;
+			}
 		}
 
 		if (free_keys)
 			free(current);
 	}
+
+	/* Now we get back our weird Oleg-only format of keys. Hopefully
+	 * not chunked.
+	 */
+	_data = receive_http(sock, &dsize);
+	if (!_data) {
+		log_msg(LOG_ERR, "bulk_unjar: Did not receive response from OlegDB.");
+		goto error;
+	}
+
 	return NULL;
 
 error:
+	if (sock)
+		close(sock);
+	free(_data);
 	return NULL;
 }
 
