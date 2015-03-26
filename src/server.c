@@ -348,11 +348,15 @@ static unsigned int _add_sorted_by_aliases(greshunkel_var *images) {
 	while (current) {
 		db_match *next = current->next;
 
-		webm *dsrlzd = deserialize_webm((char *)next->data);
+		webm_to_alias *dsrlzd = deserialize_webm_to_alias((char *)next->data);
 		free(current);
 
-		gshkl_add_string_to_loop(images, dsrlzd->filename);
+		unsigned int i = 0;
+		for (i = 0; i < dsrlzd->aliases->count; i++) {
+			gshkl_add_string_to_loop(images, vector_get(dsrlzd->aliases, i));
+		}
 
+		vector_free(dsrlzd->aliases);
 		free(dsrlzd);
 		total++;
 
