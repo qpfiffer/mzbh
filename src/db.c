@@ -1,4 +1,6 @@
 // vim: noet ts=4 sw=4
+#include <errno.h>
+#include <limits.h>
 #include <stdio.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -440,6 +442,74 @@ static inline size_t _nline_delimited_key_size(const struct db_key_match *keys) 
 	return siz;
 }
 
+static inline db_match *_parse_bulk_response(const unsigned char *data, const size_t dsize) {
+	db_match *current = NULL;
+	db_match *matches = current;
+
+	unsigned int i;
+
+	while (i < dsize) {
+		char siz_buf[BUNJAR_SIZE_SIZ] = {0};
+		unsigned char *data_buf = NULL;
+
+		/* Read in size first */
+		unsigned int j;
+		for (j = 0; j < BUNJAR_SIZE_SIZ; j++)
+			siz_buf[j] = data[j + i];
+
+		i += j;
+
+		const long long record_size = strtol(siz_buf, NULL, 10);
+		if ((record_size == LONG_MIN || record_size == LONG_MAX) && errno == ERANGE) {
+			log_msg(LOG_ERR, "Could not parse out chunk size.");
+			goto error;
+		}
+
+		data_buf = malloc(record_size + 1);
+		if (!data_buf) {
+			log_msg(LOG_ERR, "Could not malloc buffer for record.");
+			goto error;
+		}
+		data_buf[record_size] = '\0';
+
+		if (record_size == 0)
+			continue;
+
+		for (j = 0; j < record_size; j++) {
+			data_buf[j] = data[i + j];
+		}
+
+		current = malloc(sizeof(db_match));
+		if (!current) {
+			log_msg(LOG_ERR, "Could not malloc buffer for match.");
+			goto error;
+		}
+
+		db_match _tmp = {
+			.data = data_buf,
+			.dsize = record_size,
+			.extradata = NULL,
+			.next = NULL
+		};
+		memcpy(current, &_tmp, sizeof(db_match));
+
+		current = current->next;
+		i += j;
+	}
+
+	return matches;
+
+error:
+	while (matches) {
+		db_match *next = matches->next;
+		free((unsigned char *)matches->data);
+		free(matches);
+		matches = next;
+	}
+
+	return NULL;
+}
+
 db_match *fetch_bulk_from_db(struct db_key_match *keys, int free_keys) {
 	size_t dsize = 0;
 	unsigned char *_data = NULL;
@@ -498,7 +568,7 @@ db_match *fetch_bulk_from_db(struct db_key_match *keys, int free_keys) {
 		goto error;
 	}
 
-	return NULL;
+	return _parse_bulk_response(_data, dsize);
 
 error:
 	if (sock)

@@ -5,6 +5,8 @@
 #define DB_HOST "localhost"
 #define DB_PORT "38080"
 
+#define BUNJAR_SIZE_SIZ 8
+
 /* Set and get functions. */
 unsigned char *fetch_data_from_db(const char key[static MAX_KEY_SIZE], size_t *outdata);
 int store_data_in_db(const char key[static MAX_KEY_SIZE], const unsigned char *val, const size_t vlen);
