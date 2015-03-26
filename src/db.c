@@ -112,8 +112,11 @@ db_key_match *fetch_matches_from_db(const char prefix[static MAX_KEY_SIZE]) {
 	unsigned int i;
 	unsigned char *line_start = _data, *line_end = NULL;
 	for (i = 0; i < dsize; i++) {
-		if (_data[i] == '\n' && i + 1 < dsize) {
-			line_end = &_data[i];
+		if (_data[i] == '\n' || i == (dsize - 1)) {
+			if (i == (dsize - 1))
+				line_end = &_data[i + 1];
+			else
+				line_end = &_data[i];
 			const size_t line_size = line_end - line_start;
 
 			db_key_match _stack = {
