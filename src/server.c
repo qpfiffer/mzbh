@@ -339,7 +339,6 @@ static int _board_handler(const http_request *request, http_response *response, 
 }
 
 static unsigned int _add_sorted_by_aliases(greshunkel_var *images) {
-	UNUSED(images);
 	db_key_match *key_matches = fetch_matches_from_db(WEBMTOALIAS_NMSPC);
 	db_match *matches = fetch_bulk_from_db(key_matches, 1);
 
@@ -348,7 +347,8 @@ static unsigned int _add_sorted_by_aliases(greshunkel_var *images) {
 	while (current) {
 		db_match *next = current->next;
 
-		webm_to_alias *dsrlzd = deserialize_webm_to_alias((char *)next->data);
+		webm_to_alias *dsrlzd = deserialize_webm_to_alias((char *)current->data);
+		free((unsigned char *)current->data);
 		free(current);
 
 		unsigned int i = 0;

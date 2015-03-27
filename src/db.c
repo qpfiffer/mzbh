@@ -446,8 +446,8 @@ static inline size_t _nline_delimited_key_size(const struct db_key_match *keys) 
 }
 
 static inline db_match *_parse_bulk_response(const unsigned char *data, const size_t dsize) {
-	db_match *current = NULL;
-	db_match *matches = current;
+	db_match *last = NULL;
+	db_match *matches = NULL;
 
 	unsigned int i = 0;
 
@@ -482,8 +482,8 @@ static inline db_match *_parse_bulk_response(const unsigned char *data, const si
 			data_buf[j] = data[i + j];
 		}
 
-		current = malloc(sizeof(db_match));
-		if (!current) {
+		db_match *actual = malloc(sizeof(db_match));
+		if (!actual) {
 			log_msg(LOG_ERR, "Could not malloc buffer for match.");
 			goto error;
 		}
@@ -494,9 +494,14 @@ static inline db_match *_parse_bulk_response(const unsigned char *data, const si
 			.extradata = NULL,
 			.next = NULL
 		};
-		memcpy(current, &_tmp, sizeof(db_match));
+		memcpy(actual, &_tmp, sizeof(db_match));
 
-		current = current->next;
+		/* This is dumb but I'm on the train right now and I don't care. */
+		if (last)
+			last->next = actual;
+		if (!matches)
+			matches = actual;
+		last = actual;
 		i += j;
 	}
 
