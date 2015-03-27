@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <oleg-http/oleg-http.h>
+
 #include "db.h"
 #include "models.h"
 #include "parson.h"
@@ -60,7 +62,7 @@ char *serialize_webm(const webm *to_serialize) {
 }
 
 static unsigned int x_count(const char prefix[static MAX_KEY_SIZE]) {
-	unsigned int num = fetch_num_matches_from_db(prefix);
+	unsigned int num = fetch_num_matches_from_db(&oleg_conn, prefix);
 	return num;
 }
 
