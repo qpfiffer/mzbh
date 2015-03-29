@@ -340,8 +340,9 @@ static int _board_handler(const http_request *request, http_response *response, 
 }
 
 static unsigned int _add_sorted_by_aliases(greshunkel_var *images) {
-	db_key_match *key_matches = fetch_matches_from_db(WEBMTOALIAS_NMSPC);
-	db_match *matches = fetch_bulk_from_db(key_matches, 1);
+	char p[MAX_KEY_SIZE] = WEBMTOALIAS_NMSPC;
+	db_key_match *key_matches = fetch_matches_from_db(&oleg_conn, p);
+	db_match *matches = fetch_bulk_from_db(&oleg_conn, key_matches, 1);
 
 	unsigned int total = 0;
 	db_match *current = matches;

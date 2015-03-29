@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include <sys/stat.h>
 
+#include <oleg-http/oleg-http.h>
+
 #include "common_defs.h"
 #include "db.h"
 #include "models.h"
@@ -99,7 +101,7 @@ static int _alias_count() {
 
 static int _print_alias_matches() {
 	char p[MAX_KEY_SIZE] = "alias";
-	db_key_match *matches = fetch_matches_from_db(p);
+	db_key_match *matches = fetch_matches_from_db(&oleg_conn, p);
 
 	db_key_match *current = matches;
 	while (current) {
@@ -139,7 +141,7 @@ static inline int _dead_webms(const unsigned char *data, const size_t dsize, con
 
 static int _print_webm_filenames() {
 	char p[MAX_KEY_SIZE] = WEBM_NMSPC;
-	db_match *matches = filter(p, NULL, &_f_ds_webms);
+	db_match *matches = filter(&oleg_conn, p, NULL, &_f_ds_webms);
 
 	db_match *cur = matches;
 	while (cur) {
@@ -153,7 +155,7 @@ static int _print_webm_filenames() {
 
 static int _dead_files() {
 	char p[MAX_KEY_SIZE] = WEBM_NMSPC;
-	db_match *matches = filter(p, NULL, &_dead_webms);
+	db_match *matches = filter(&oleg_conn, p, NULL, &_dead_webms);
 
 	db_match *cur = matches;
 	while (cur) {
