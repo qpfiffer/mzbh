@@ -258,6 +258,7 @@ int webm_handler(const http_request *request, http_response *response) {
 		webm_to_alias *w2a = get_webm_to_alias(image_hash);
 		if (w2a != NULL && w2a->aliases->count > 0) {
 			unsigned int i;
+			/* TODO: Use bulk_unjar here. */
 			for (i = 0; i < w2a->aliases->count; i++) {
 				const char *alias = vector_get(w2a->aliases, i);
 				webm_alias *walias = get_aliased_image_with_key(alias);
