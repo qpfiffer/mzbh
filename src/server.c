@@ -338,15 +338,45 @@ static int _board_handler(const http_request *request, http_response *response, 
 	return render_file(ctext, "./templates/board.html", response);
 }
 
+static unsigned int _add_sorted_by_aliases(greshunkel_var *images) {
+	char p[MAX_KEY_SIZE] = WEBMTOALIAS_NMSPC;
+	db_key_match *key_matches = fetch_matches_from_db(&oleg_conn, p);
+	db_match *matches = fetch_bulk_from_db(&oleg_conn, key_matches, 1);
+
+	unsigned int total = 0;
+	db_match *current = matches;
+	while (current) {
+		db_match *next = current->next;
+
+		webm_to_alias *dsrlzd = deserialize_webm_to_alias((char *)current->data);
+		free((unsigned char *)current->data);
+		free(current);
+
+		unsigned int i = 0;
+		for (i = 0; i < dsrlzd->aliases->count; i++) {
+			gshkl_add_string_to_loop(images, vector_get(dsrlzd->aliases, i));
+		}
+
+		vector_free(dsrlzd->aliases);
+		free(dsrlzd);
+		total++;
+
+		current = next;
+	}
+
+	return 0;
+}
+
 int by_alias_handler(const http_request *request, http_response *response) {
 	const unsigned int page = strtol(request->resource + request->matches[1].rm_so, NULL, 10);
 
 	greshunkel_ctext *ctext = gshkl_init_context();
 	gshkl_add_filter(ctext, "thumbnail_for_image", thumbnail_for_image, filter_cleanup);
 	greshunkel_var images = gshkl_add_array(ctext, "IMAGES");
-	gshkl_add_string_to_loop(&images, "None");
-
-	int total = webm_count();
+	int total = _add_sorted_by_aliases(&images);
+	if (total == 0) {
+		gshkl_add_string_to_loop(&images, "None");
+	}
 
 	greshunkel_var pages = gshkl_add_array(ctext, "PAGES");
 	unsigned int i;
