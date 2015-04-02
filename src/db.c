@@ -205,11 +205,16 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 	associate_alias_with_webm(_old_webm, alias_key);
 
 	if (rc) {
-		log_msg(LOG_WARN, "Unlinking and creating a symlink from '%s' to '%s'.", file_path, _old_webm->file_path);
-		if (unlink(file_path) == -1)
-			log_msg(LOG_ERR, "Could not delete '%s'.", file_path);
-		if (symlink(_old_webm->file_path, file_path) == -1)
-			log_msg(LOG_ERR, "Could not create symlink from '%s' to '%s'.", file_path, _old_webm->file_path);
+		char *real_fpath = NULL, *real_old_fpath = NULL;
+		real_fpath = realpath(file_path, NULL);
+		real_old_fpath = realpath(_old_webm->file_path, NULL);
+		log_msg(LOG_WARN, "Unlinking and creating a symlink from '%s' to '%s'.", real_fpath, real_old_fpath);
+		if (unlink(real_fpath) == -1)
+			log_msg(LOG_ERR, "Could not delete '%s'.", real_fpath);
+		if (symlink(real_old_fpath, real_fpath) == -1)
+			log_msg(LOG_ERR, "Could not create symlink from '%s' to '%s'.", real_fpath, real_old_fpath);
+		free(real_fpath);
+		free(real_old_fpath);
 	} else
 		log_msg(LOG_ERR, "Something went wrong when adding image to db.");
 	free(_old_alias);

@@ -182,6 +182,11 @@ int hash_string(const unsigned char *string, const size_t siz, char outbuf[stati
 
 int hash_file(const char *file_path, char outbuf[static HASH_IMAGE_STR_SIZE]) {
 	int fd = open(file_path, O_RDONLY);
+	if (fd <= 0) {
+		log_msg(LOG_ERR, "Could not open file for hashing.");
+		perror("hash_file");
+		goto error;
+	}
 	unsigned char *data_ptr = NULL;
 
 	struct stat st = {0};
