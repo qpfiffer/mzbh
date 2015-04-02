@@ -66,3 +66,33 @@ typedef struct webm_to_alias {
 void create_webm_to_alias_key(const char file_hash[static HASH_IMAGE_STR_SIZE], char outbuf[static MAX_KEY_SIZE]);
 char *serialize_webm_to_alias(const webm_to_alias *w2a);
 webm_to_alias *deserialize_webm_to_alias(const char *json);
+
+typedef struct thread {
+	char board[MAX_BOARD_NAME_SIZE];
+	unsigned char _null_term_hax_1;
+
+	vector *post_keys;
+} __attribute__((__packed__)) thread;
+
+void create_thread_key(const char board[static MAX_BOARD_NAME_SIZE], const int thread_id);
+char *serialize_thread(const thread *to_serialize);
+thread *deserialize_thread(const char *json);
+
+typedef struct post {
+	unsigned int post_id; /* 4chan post id. */
+
+	char thread_key[MAX_KEY_SIZE]; /* "Foreign key" to thread object. */
+	unsigned char _null_term_hax_1;
+
+	char board[MAX_BOARD_NAME_SIZE];
+	unsigned char _null_term_hax_2;
+
+	char *body_content;
+	size_t body_content_len;
+
+	vector *replied_to_keys; /* keys that this post replied to. */
+} __attribute__((__packed__)) post;
+
+void create_post_key(const char board[static MAX_BOARD_NAME_SIZE], const unsigned int post_id);
+char *serialize_post(const post *to_serialize);
+thread *deserialize_post(const char *json);

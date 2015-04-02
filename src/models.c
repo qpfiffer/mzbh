@@ -190,3 +190,7 @@ webm_to_alias *deserialize_webm_to_alias(const char *json) {
 	json_value_free(serialized);
 	return to_return;
 }
+
+void create_thread_key(const char board[static MAX_BOARD_NAME_SIZE], const int thread_id);
+char *serialize_thread(const thread *to_serialize);
+thread *deserialize_thread(const char *json);
