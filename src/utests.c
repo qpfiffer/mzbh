@@ -19,6 +19,8 @@ int webm_serialization() {
 		._null_term_hax_2 = 0,
 		.board = "b",
 		._null_term_hax_3 = 0,
+		.post = "POST129382983",
+		._null_term_hax_4 = 0,
 		.created_at = 1419626658,
 		.size = 123000
 	};
@@ -42,6 +44,8 @@ int webm_alias_serialization() {
 		.board = "b",
 		._null_term_hax_3 = 0,
 		.created_at = 1419626658,
+		.post = "POST129382983",
+		._null_term_hax_4 = 0,
 	};
 
 	char *serialized = serialize_alias(&to_test);
