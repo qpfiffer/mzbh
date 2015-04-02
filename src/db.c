@@ -205,8 +205,9 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 	associate_alias_with_webm(_old_webm, alias_key);
 
 	if (rc) {
-		log_msg(LOG_WARN, "Unlinking '%s'.", file_path);
-		//unlink(file_path);
+		log_msg(LOG_WARN, "Unlinking and creating a symlink from '%s' to '%s'.", file_path, _old_webm->file_path);
+		unlink(file_path);
+		symlink(_old_webm->file_path, file_path);
 	} else
 		log_msg(LOG_ERR, "Something went wrong when adding image to db.");
 	free(_old_alias);

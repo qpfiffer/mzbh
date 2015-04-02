@@ -325,7 +325,7 @@ error:
 
 int download_images() {
 	struct stat st = {0};
-	if (stat(webm_location(), &st) == -1) {
+	if (lstat(webm_location(), &st) == -1) {
 		log_msg(LOG_WARN, "Creating webms directory %s.", webm_location());
 		mkdir(webm_location(), 0755);
 	}

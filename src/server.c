@@ -66,7 +66,7 @@ static int _add_webms_in_dir_by_date(greshunkel_var *loop, const char *dir,
 		const unsigned int offset, const unsigned int limit) {
 	/* Check to make sure the directory actually exists. */
 	struct stat dir_st = {0};
-	if (stat(dir, &dir_st) == -1)
+	if (lstat(dir, &dir_st) == -1)
 		return 0;
 
 	size_t dirent_siz = offsetof(struct dirent, d_name) +
@@ -86,7 +86,7 @@ static int _add_webms_in_dir_by_date(greshunkel_var *loop, const char *dir,
 		if (result->d_name[0] != '.' && endswith(result->d_name, ".webm")) {
 			struct stat st = {0};
 			char *full_path = get_full_path_for_file(dir, result->d_name);
-			if (stat(full_path, &st) == -1) {
+			if (lstat(full_path, &st) == -1) {
 				log_msg(LOG_ERR, "Could not stat file: %s", result->d_name);
 				free(full_path);
 				continue;
@@ -307,7 +307,7 @@ static int _board_handler(const http_request *request, http_response *response, 
 
 	/* Check to make sure the directory actually exists. */
 	struct stat dir_st = {0};
-	if (stat(images_dir, &dir_st) == -1)
+	if (lstat(images_dir, &dir_st) == -1)
 		return 404;
 
 	int total = _add_webms_in_dir_by_date(&images, images_dir,

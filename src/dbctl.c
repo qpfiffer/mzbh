@@ -69,7 +69,7 @@ static int full_scan() {
 
 		sprintf(dir_name, "%s/%s", webm_location(), result->d_name);
 		struct stat st = {0};
-		stat(dir_name, &st);
+		lstat(dir_name, &st);
 
 		/* webms are organized by board */
 		if (result->d_name[0] != '.' && S_ISDIR(st.st_mode)) {
@@ -132,7 +132,7 @@ static inline int _dead_webms(const unsigned char *data, const size_t dsize, con
 
 	char *file_path = get_full_path_for_webm(_webm->board, _webm->filename);
 	struct stat st = {0};
-	if (stat(file_path, &st) == -1)
+	if (lstat(file_path, &st) == -1)
 		log_msg(LOG_FUN, "'%s' does not exist.", file_path);
 	free(file_path);
 	free(_webm);
