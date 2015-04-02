@@ -58,6 +58,33 @@ int webm_alias_serialization() {
 	return 1;
 }
 
+int thread_serialization() {
+	thread to_test = {
+		.board = "b",
+		._null_term_hax_1 = 0,
+		.post_keys = vector_new(sizeof(char) * MAX_KEY_SIZE, 16)
+	};
+
+	unsigned int i;
+	for (i = 0; i < 3; i++)
+		vector_append(to_test.post_keys, "TEST_KEY", strlen("TEST_KEY"));
+
+	char *serialized = serialize_thread(&to_test);
+	thread *deserialized = deserialize_thread(serialized);
+
+	assert(memcmp(to_test.board, deserialized->board, sizeof(to_test.board)) == 0);
+	assert(to_test.post_keys->count == deserialized->post_keys->count);
+	for (i = 0; i < deserialized->post_keys->count; i++)
+		assert(strncmp(vector_get(to_test.post_keys, i), vector_get(deserialized->post_keys, i), MAX_KEY_SIZE) == 0);
+
+	vector_free(to_test.post_keys);
+	vector_free(deserialized->post_keys);
+	free(serialized);
+	free(deserialized);
+
+	return 1;
+}
+
 int hash_stuff() {
 	char outbuf[HASH_IMAGE_STR_SIZE] = {0};
 	char hash_key[MAX_KEY_SIZE] = "3000655_blitzbang2.webm";
@@ -110,6 +137,8 @@ int can_serialize_w2a() {
 
 	free(json);
 	vector_free(new_vec);
+	vector_free(deserialized->aliases);
+	free(deserialized);
 	return 1;
 }
 
@@ -130,9 +159,10 @@ int vectors_are_zeroed() {
 	vector_append(new_vec, k2, strlen(k2));
 
 	unsigned int i;
-	for (i = 0; i < new_vec->count; i++) {
+	for (i = 0; i < new_vec->count; i++)
 		assert(strncmp(k2, vector_get(new_vec, i), strlen(k2)) == 0);
-	}
+
+	vector_free(new_vec);
 
 	return 1;
 }
@@ -157,6 +187,7 @@ int can_parse_range_query() {
 int run_tests() {
 	webm_serialization();
 	webm_alias_serialization();
+	thread_serialization();
 	hash_stuff();
 	can_get_header_values();
 	can_serialize_w2a();

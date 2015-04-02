@@ -74,7 +74,8 @@ typedef struct thread {
 	vector *post_keys;
 } __attribute__((__packed__)) thread;
 
-void create_thread_key(const char board[static MAX_BOARD_NAME_SIZE], const int thread_id);
+void create_thread_key(const char board[static MAX_BOARD_NAME_SIZE], const char *thread_id,
+		char outbuf[static MAX_KEY_SIZE]);
 char *serialize_thread(const thread *to_serialize);
 thread *deserialize_thread(const char *json);
 
@@ -93,6 +94,7 @@ typedef struct post {
 	vector *replied_to_keys; /* keys that this post replied to. */
 } __attribute__((__packed__)) post;
 
-void create_post_key(const char board[static MAX_BOARD_NAME_SIZE], const unsigned int post_id);
+void create_post_key(const char board[static MAX_BOARD_NAME_SIZE], const char *post_id,
+	char outbuf[static MAX_KEY_SIZE]);
 char *serialize_post(const post *to_serialize);
 thread *deserialize_post(const char *json);

@@ -191,6 +191,66 @@ webm_to_alias *deserialize_webm_to_alias(const char *json) {
 	return to_return;
 }
 
-void create_thread_key(const char board[static MAX_BOARD_NAME_SIZE], const int thread_id);
-char *serialize_thread(const thread *to_serialize);
-thread *deserialize_thread(const char *json);
+void create_thread_key(const char board[static MAX_BOARD_NAME_SIZE], const char *thread_id,
+		char outbuf[static MAX_KEY_SIZE]) {
+	snprintf(outbuf, MAX_KEY_SIZE, "%s%s%s", THREAD_NMSPC, board, thread_id);
+}
+
+char *serialize_thread(const thread *to_serialize) {
+	if (!to_serialize)
+		return NULL;
+
+	JSON_Value *root_value = json_value_init_object();
+	JSON_Object *root_object = json_value_get_object(root_value);
+
+	char *serialized_string = NULL;
+
+	json_object_set_string(root_object, "board", to_serialize->board);
+
+	JSON_Value *post_keys = json_value_init_array();
+	JSON_Array *post_keys_array = json_value_get_array(post_keys);
+
+	unsigned int i;
+	for (i = 0; i < to_serialize->post_keys->count; i++)
+		json_array_append_string(post_keys_array, vector_get(to_serialize->post_keys, i));
+
+	json_object_set_value(root_object, "post_keys", post_keys);
+
+	serialized_string = json_serialize_to_string(root_value);
+
+	json_value_free(root_value);
+	return serialized_string;
+}
+
+thread *deserialize_thread(const char *json) {
+	if (!json)
+		return NULL;
+
+	thread *to_return = calloc(1, sizeof(thread));
+
+	JSON_Value *serialized = json_parse_string(json);
+	JSON_Object *thread_object = json_value_get_object(serialized);
+
+	strncpy(to_return->board, json_object_get_string(thread_object, "board"), sizeof(to_return->board));
+
+	JSON_Array *post_keys_array = json_object_get_array(thread_object, "post_keys");
+
+	const size_t num_post_keys  = json_array_get_count(post_keys_array);
+	to_return->post_keys = vector_new(MAX_KEY_SIZE, num_post_keys);
+
+	unsigned int i;
+	for (i = 0; i < num_post_keys; i++) {
+		const char *key = json_array_get_string(post_keys_array, i);
+		vector_append(to_return->post_keys, key, strlen(key));
+	}
+
+	json_value_free(serialized);
+	return to_return;
+}
+
+void create_post_key(const char board[static MAX_BOARD_NAME_SIZE], const char *post_id,
+	char outbuf[static MAX_KEY_SIZE]) {
+	snprintf(outbuf, MAX_KEY_SIZE, "%s%s%s", POST_NMSPC, board, post_id);
+}
+char *serialize_post(const post *to_serialize);
+thread *deserialize_post(const char *json);

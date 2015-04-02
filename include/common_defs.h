@@ -12,6 +12,8 @@
 #define WEBM_NMSPC "webm"
 #define ALIAS_NMSPC "alias"
 #define WEBMTOALIAS_NMSPC "W2A"
+#define POST_NMSPC "PST"
+#define THREAD_NMSPC "THRD"
 
 #define MAX_IMAGE_FILENAME_SIZE 255
 #define MAX_BOARD_NAME_SIZE 16
