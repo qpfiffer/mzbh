@@ -206,8 +206,10 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 
 	if (rc) {
 		log_msg(LOG_WARN, "Unlinking and creating a symlink from '%s' to '%s'.", file_path, _old_webm->file_path);
-		unlink(file_path);
-		symlink(_old_webm->file_path, file_path);
+		if (unlink(file_path) == -1)
+			log_msg(LOG_ERR, "Could not delete '%s'.", file_path);
+		if (symlink(_old_webm->file_path, file_path) == -1)
+			log_msg(LOG_ERR, "Could not create symlink from '%s' to '%s'.", file_path, _old_webm->file_path);
 	} else
 		log_msg(LOG_ERR, "Something went wrong when adding image to db.");
 	free(_old_alias);
