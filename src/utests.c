@@ -85,6 +85,45 @@ int thread_serialization() {
 	return 1;
 }
 
+int post_serialization() {
+	post to_test = {
+		.post_id = "145685859304",
+		._null_term_hax_1 = 0,
+		.thread_key = "THRD",
+		._null_term_hax_2 = 0,
+		.board = "/b/",
+		._null_term_hax_3 = 0,
+		.body_content = malloc(strlen("Hello!")),
+		.replied_to_keys = vector_new(sizeof(char) * MAX_KEY_SIZE, 16)
+	};
+	strncpy(to_test.body_content, "Hello!", strlen("Hello!"));
+
+	unsigned int i;
+	for (i = 0; i < 3; i++)
+		vector_append(to_test.replied_to_keys, "TEST_KEY", strlen("TEST_KEY"));
+
+	char *serialized = serialize_post(&to_test);
+	post *deserialized = deserialize_post(serialized);
+
+	assert(memcmp(to_test.post_id, deserialized->post_id, sizeof(to_test.post_id)) == 0);
+	assert(memcmp(to_test.thread_key, deserialized->thread_key, sizeof(to_test.thread_key)) == 0);
+	assert(memcmp(to_test.board, deserialized->board, sizeof(to_test.board)) == 0);
+	assert(memcmp(to_test.body_content, deserialized->body_content, strlen(to_test.body_content)) == 0);
+
+	assert(to_test.replied_to_keys->count == deserialized->replied_to_keys->count);
+	for (i = 0; i < deserialized->replied_to_keys->count; i++)
+		assert(strncmp(vector_get(to_test.replied_to_keys, i), vector_get(deserialized->replied_to_keys, i), MAX_KEY_SIZE) == 0);
+
+	vector_free(to_test.replied_to_keys);
+	vector_free(deserialized->replied_to_keys);
+	free(to_test.body_content);
+	free(deserialized->body_content);
+	free(serialized);
+	free(deserialized);
+
+	return 1;
+}
+
 int hash_stuff() {
 	char outbuf[HASH_IMAGE_STR_SIZE] = {0};
 	char hash_key[MAX_KEY_SIZE] = "3000655_blitzbang2.webm";

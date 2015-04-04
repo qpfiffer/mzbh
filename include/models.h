@@ -80,16 +80,16 @@ char *serialize_thread(const thread *to_serialize);
 thread *deserialize_thread(const char *json);
 
 typedef struct post {
-	unsigned int post_id; /* 4chan post id. */
-
-	char thread_key[MAX_KEY_SIZE]; /* "Foreign key" to thread object. */
+	char post_id[32]; /* 4chan post id. */
 	unsigned char _null_term_hax_1;
 
-	char board[MAX_BOARD_NAME_SIZE];
+	char thread_key[MAX_KEY_SIZE]; /* "Foreign key" to thread object. */
 	unsigned char _null_term_hax_2;
 
+	char board[MAX_BOARD_NAME_SIZE];
+	unsigned char _null_term_hax_3;
+
 	char *body_content;
-	size_t body_content_len;
 
 	vector *replied_to_keys; /* keys that this post replied to. */
 } __attribute__((__packed__)) post;
@@ -97,4 +97,4 @@ typedef struct post {
 void create_post_key(const char board[static MAX_BOARD_NAME_SIZE], const char *post_id,
 	char outbuf[static MAX_KEY_SIZE]);
 char *serialize_post(const post *to_serialize);
-thread *deserialize_post(const char *json);
+post *deserialize_post(const char *json);
