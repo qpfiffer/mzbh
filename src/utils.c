@@ -52,7 +52,7 @@ void ensure_directory_for_board(const char *board) {
 	snprintf(to_create, buf_siz, "%s/%s", webm_location(), board);
 
 	struct stat st = {0};
-	if (lstat(to_create, &st) == -1) {
+	if (stat(to_create, &st) == -1) {
 		log_msg(LOG_WARN, "Creating directory %s.", to_create);
 		mkdir(to_create, 0755);
 	}
@@ -155,14 +155,14 @@ void url_decode(const char *src, const size_t src_siz, char *dest) {
 
 time_t get_file_creation_date(const char *file_path) {
 	struct stat st = {0};
-	if (lstat(file_path, &st) == -1)
+	if (stat(file_path, &st) == -1)
 		return 0;
 	return st.st_mtime;
 }
 
 size_t get_file_size(const char *file_path) {
 	struct stat st = {0};
-	if (lstat(file_path, &st) == -1)
+	if (stat(file_path, &st) == -1)
 		return 0;
 	return st.st_size;
 }
@@ -190,7 +190,7 @@ int hash_file(const char *file_path, char outbuf[static HASH_IMAGE_STR_SIZE]) {
 	unsigned char *data_ptr = NULL;
 
 	struct stat st = {0};
-	if (lstat(file_path, &st) == -1)
+	if (stat(file_path, &st) == -1)
 		goto error;
 
 	data_ptr = mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
