@@ -434,7 +434,7 @@ int main(int argc, char *argv[]) {
 
 	int rc = 0;
 	const size_t num_routes = sizeof(all_routes)/sizeof(all_routes[0]);
-	if ((rc = http_serve(main_sock_fd, num_threads, all_routes, num_routes)) != 0) {
+	if ((rc = http_serve(&main_sock_fd, num_threads, all_routes, num_routes)) != 0) {
 		term(SIGTERM);
 		log_msg(LOG_ERR, "Could not start HTTP service.");
 		return rc;
