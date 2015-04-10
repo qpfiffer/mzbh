@@ -13,6 +13,7 @@ typedef struct post_match {
 	char filename[MAX_IMAGE_FILENAME_SIZE];
 	char file_ext[6];
 	char post_number[64];
+	char *body_content;
 	size_t size;
 } post_match;
 

@@ -129,13 +129,13 @@ static ol_stack *build_thread_index() {
 			ol_stack *thread_matches = parse_thread_json(thread_json, match);
 			while (thread_matches->next != NULL) {
 				post_match *p_match = (post_match *)spop(&thread_matches);
-				/* TODO: Don't add it to the images to download if we already
-				 * have that image, with that size, from that board. */
+
 				char fname[MAX_IMAGE_FILENAME_SIZE] = {0};
 				int should_skip = get_non_colliding_image_file_path(fname, p_match);
 
 				/* We already have that file. */
 				if (should_skip) {
+					free(p_match->body_content);
 					free(p_match);
 					continue;
 				}
@@ -144,6 +144,7 @@ static ol_stack *build_thread_index() {
 				webm_alias *existing = get_aliased_image(fname);
 				if (existing) {
 					log_msg(LOG_INFO, "Found alias for '%s', skipping.", fname);
+					free(p_match->body_content);
 					free(p_match);
 					free(existing);
 					continue;
@@ -289,8 +290,11 @@ int download_image(const post_match *p_match) {
 
 	char fname_plus_extension[MAX_IMAGE_FILENAME_SIZE] = {0};
 	get_non_colliding_image_filename(fname_plus_extension, p_match);
+
+	char post_key[MAX_KEY_SIZE] = {0};
+	create_post_key(p_match->board, p_match->post_number, post_key);
 	/* image_filename is the full path, fname_plus_extension is the file name. */
-	int added = add_image_to_db(image_filename, fname_plus_extension, p_match->board);
+	int added = add_image_to_db(image_filename, fname_plus_extension, p_match->board, post_key);
 	if (!added) {
 		log_msg(LOG_WARN, "Could not add image to database. Continuing...");
 	}
@@ -340,6 +344,11 @@ int download_images() {
 	/* Now actually download the images. */
 	while (images_to_download->next != NULL) {
 		post_match *p_match = (post_match *)spop(&images_to_download);
+
+		int added = add_post_to_db(p_match);
+		if (added != 0)
+			log_msg(LOG_WARN, "Could not add post %s to database.", p_match->post_number);
+
 		int i;
 		const int max_retries = 5;
 		for (i = 0; i < max_retries; i ++) {
@@ -350,6 +359,8 @@ int download_images() {
 			log_msg(LOG_WARN, "(%i/%i): Could not download image. Retrying after sleep.", i + 1, max_retries);
 			sleep(10);
 		}
+
+		free(p_match->body_content);
 		free(p_match);
 	}
 

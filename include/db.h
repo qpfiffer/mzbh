@@ -23,7 +23,14 @@ struct webm_alias *get_aliased_image_with_key(const char key[static MAX_KEY_SIZE
 /* Attempts to add an image to the database.
  * Returns 0 on success.
  */
-int add_image_to_db(const char *file_path, const char *filename, const char board[MAX_BOARD_NAME_SIZE]);
+int add_image_to_db(const char *file_path, const char *filename, const char board[MAX_BOARD_NAME_SIZE],
+		const char post_key[MAX_KEY_SIZE]);
+
+/* Attempts to add a new post to the database.
+ * Returns 0 on success.
+ */
+struct post_match;
+int add_post_to_db(const struct post_match *p_match);
 
 /* Associates a webm with an alias.
  * Returns 1 on success.

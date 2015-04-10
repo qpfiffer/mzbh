@@ -93,7 +93,8 @@ int set_aliased_image(const webm_alias *alias) {
 }
 
 static int _insert_webm(const char *file_path, const char filename[static MAX_IMAGE_FILENAME_SIZE], 
-						const char image_hash[static HASH_IMAGE_STR_SIZE], const char board[static MAX_BOARD_NAME_SIZE]) {
+						const char image_hash[static HASH_IMAGE_STR_SIZE], const char board[static MAX_BOARD_NAME_SIZE],
+						const char post_key[MAX_KEY_SIZE]) {
 	time_t modified_time = get_file_creation_date(file_path);
 	if (modified_time == 0) {
 		log_msg(LOG_ERR, "IWMT: '%s' does not exist.", file_path);
@@ -111,12 +112,14 @@ static int _insert_webm(const char *file_path, const char filename[static MAX_IM
 		.filename = {0},
 		.board = {0},
 		.created_at = modified_time,
-		.size = size
+		.size = size,
+		.post = {0}
 	};
 	memcpy(to_insert.file_hash, image_hash, sizeof(to_insert.file_hash));
 	memcpy(to_insert.file_path, file_path, sizeof(to_insert.file_path));
 	memcpy(to_insert.filename, filename, sizeof(to_insert.filename));
 	memcpy(to_insert.board, board, sizeof(to_insert.board));
+	memcpy(to_insert.post, post_key, sizeof(to_insert.post));
 
 	return set_image(&to_insert);
 }
@@ -124,7 +127,8 @@ static int _insert_webm(const char *file_path, const char filename[static MAX_IM
 static int _insert_aliased_webm(const char *file_path,
 								const char *filename,
 								const char image_hash[static HASH_IMAGE_STR_SIZE],
-								const char board[static MAX_BOARD_NAME_SIZE]) {
+								const char board[static MAX_BOARD_NAME_SIZE],
+								const char post_key[MAX_KEY_SIZE]) {
 	time_t modified_time = get_file_creation_date(file_path);
 	if (modified_time == 0) {
 		log_msg(LOG_ERR, "IAWMT: '%s' does not exist.", file_path);
@@ -143,17 +147,20 @@ static int _insert_aliased_webm(const char *file_path,
 		.filename = {0},
 		.board = {0},
 		.created_at = modified_time,
+		.post = {0}
 	};
 
 	memcpy(to_insert.file_hash, image_hash, sizeof(to_insert.file_hash));
 	memcpy(to_insert.filename, filename, sizeof(to_insert.filename));
 	memcpy(to_insert.file_path, file_path, sizeof(to_insert.file_path));
 	memcpy(to_insert.board, board, sizeof(to_insert.board));
+	memcpy(to_insert.post, post_key, sizeof(to_insert.post));
 
 	return set_aliased_image(&to_insert);
 }
 
-int add_image_to_db(const char *file_path, const char *filename, const char board[MAX_BOARD_NAME_SIZE]) {
+int add_image_to_db(const char *file_path, const char *filename, const char board[MAX_BOARD_NAME_SIZE],
+		const char post_key[MAX_KEY_SIZE]) {
 	char image_hash[HASH_IMAGE_STR_SIZE] = {0};
 	if (!hash_file(file_path, image_hash)) {
 		log_msg(LOG_ERR, "Could not hash '%s'.", file_path);
@@ -163,7 +170,7 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 	webm *_old_webm = get_image(image_hash);
 
 	if (!_old_webm) {
-		int rc = _insert_webm(file_path, filename, image_hash, board);
+		int rc = _insert_webm(file_path, filename, image_hash, board, post_key);
 		if (!rc)
 			log_msg(LOG_ERR, "Something went wrong inserting webm.");
 		return rc;
@@ -188,7 +195,7 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 	 * an alias is it's filename.
 	 */
 	if (_old_alias == NULL) {
-		rc = _insert_aliased_webm(file_path, filename, image_hash, board);
+		rc = _insert_aliased_webm(file_path, filename, image_hash, board, post_key);
 		log_msg(LOG_FUN, "%s (%s) is a new alias of %s (%s).", filename, board, _old_webm->filename, _old_webm->board);
 	} else {
 		/* Regardless, this webm is an alias and we don't care. Delete it. */
@@ -220,6 +227,12 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 	free(_old_alias);
 	free(_old_webm);
 	return rc;
+}
+
+int add_post_to_db(const struct post_match *p_match) {
+	if (!p_match)
+		return 1;
+	return 0;
 }
 
 int associate_alias_with_webm(const webm *webm, const char alias_key[static MAX_KEY_SIZE]) {

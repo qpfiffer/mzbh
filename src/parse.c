@@ -86,6 +86,7 @@ ol_stack *parse_thread_json(const char *all_json, const thread_match *match) {
 		const char *filename = json_object_get_string(post, "filename");
 		const uint64_t siz = json_object_get_number(post, "fsize");
 		const uint64_t _tim = json_object_get_number(post, "tim");
+		const char *body_content = json_object_get_string(post, "com");
 
 		if (file_ext == NULL)
 			continue;
@@ -93,18 +94,23 @@ ol_stack *parse_thread_json(const char *all_json, const thread_match *match) {
 		if (strstr(file_ext, "webm")) {
 			log_msg(LOG_INFO, "/%s/ Hit: (%"PRIu64") %s%s.", match->board, _tim, filename, file_ext);
 
-			post_match *t_match = calloc(1, sizeof(post_match));
-			t_match->size = siz;
+			post_match *p_match = calloc(1, sizeof(post_match));
+			p_match->size = siz;
 
-			char post_number[sizeof(t_match->post_number)] = {0};
+			char post_number[sizeof(p_match->post_number)] = {0};
 			snprintf(post_number, sizeof(post_number), "%"PRIu64, _tim);
 
-			strncpy(t_match->post_number, post_number, sizeof(t_match->post_number));
-			strncpy(t_match->filename, filename, sizeof(t_match->filename));
-			strncpy(t_match->file_ext, file_ext, sizeof(t_match->file_ext));
-			strncpy(t_match->board, match->board, sizeof(t_match->board));
+			strncpy(p_match->post_number, post_number, sizeof(p_match->post_number));
+			strncpy(p_match->filename, filename, sizeof(p_match->filename));
+			strncpy(p_match->file_ext, file_ext, sizeof(p_match->file_ext));
+			strncpy(p_match->board, match->board, sizeof(p_match->board));
 
-			spush(&matches, t_match);
+			if (body_content) {
+				p_match->body_content = malloc(strlen(body_content) + 1);
+				strncpy(p_match->body_content, body_content, strlen(body_content));
+			}
+
+			spush(&matches, p_match);
 		}
 	}
 
