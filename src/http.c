@@ -73,7 +73,7 @@ char *receive_chunked_http(const int request_fd) {
 
 	/* 4Chan throws us data as chunk-encoded HTTP. Rad. */
 	char *header_end = strstr(raw_buf, "\r\n\r\n");
-	if (header_end == NULLL) {
+	if (header_end == NULL) {
 		log_msg(LOG_ERR, "Could not find end of header in initial chunk.");
 		goto error;
 	}
