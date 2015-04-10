@@ -73,6 +73,10 @@ char *receive_chunked_http(const int request_fd) {
 
 	/* 4Chan throws us data as chunk-encoded HTTP. Rad. */
 	char *header_end = strstr(raw_buf, "\r\n\r\n");
+	if (header_end == NULL) {
+		log_msg(LOG_ERR, "Could not find end of header in initial chunk.");
+		goto error;
+	}
 	char *cursor_pos = header_end  + (sizeof(char) * 4);
 
 	size_t json_total = 0;
@@ -82,6 +86,10 @@ char *receive_chunked_http(const int request_fd) {
 		/* This is where the data begins. */
 		char *chunk_size_start = cursor_pos;
 		char *chunk_size_end = strstr(chunk_size_start, "\r\n");
+		if (chunk_size_end == NULL) {
+			log_msg(LOG_ERR, "Could not find '\r\n' in chunk.");
+			goto error;
+		}
 		const int chunk_size_end_oft = chunk_size_end - chunk_size_start;
 
 		/* We cheat a little and set the first \r to a \0 so strtol will
