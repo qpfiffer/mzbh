@@ -254,9 +254,91 @@ struct post *get_post(const char key[static MAX_KEY_SIZE]) {
 	return _post;
 }
 
+static int _insert_thread(const char key[static MAX_KEY_SIZE], const thread *to_save) {
+	char *serialized = serialize_thread(to_save);
+	log_msg(LOG_INFO, "Serialized thread: %s", serialized);
+
+	int ret = store_data_in_db(&oleg_conn, key, (unsigned char *)serialized, strlen(serialized));
+	free(serialized);
+
+	return ret;
+}
+
+static int _insert_post(const char key[static MAX_KEY_SIZE], const post *to_save) {
+	char *serialized = serialize_post(to_save);
+	log_msg(LOG_INFO, "Serialized post: %s", serialized);
+
+	int ret = store_data_in_db(&oleg_conn, key, (unsigned char *)serialized, strlen(serialized));
+	free(serialized);
+
+	return ret;
+}
+
 int add_post_to_db(const struct post_match *p_match) {
 	if (!p_match)
 		return 1;
+
+	char post_key[MAX_KEY_SIZE] = {0};
+	create_post_key(p_match->board, p_match->post_number, post_key);
+
+	post *existing_post = get_post(post_key);
+	if (existing_post != NULL) {
+		/* We already have this post saved. */
+		vector_free(existing_post->replied_to_keys);
+		free(existing_post->body_content);
+		free(existing_post);
+
+		return 0;
+	}
+
+	/* 1. Create thread key */
+	char thread_key[MAX_KEY_SIZE] = {0};
+	create_thread_key(p_match->board, p_match->thread_number, thread_key);
+
+	/* 2. Check database for existing thread */
+	thread *existing_thread = get_thread(thread_key);
+	if (existing_thread == NULL) {
+		/* 3. Create it if it doesn't exist */
+		thread _new_thread = {
+			.board = {0},
+			._null_term_hax_1 = 0,
+			.post_keys = vector_new(MAX_KEY_SIZE, 1)
+		};
+
+		existing_thread = malloc(sizeof(struct thread));
+		memcpy(existing_thread, &_new_thread, sizeof(struct thread));
+	}
+
+	/* 4. There is no 4. */
+	/* 5. Add new post key to thread foreign keys */
+	vector_append(existing_thread->post_keys, post_key, sizeof(post_key));
+	/* 6. Save thread object */
+	_insert_thread(thread_key, existing_thread);
+	vector_free(existing_thread->post_keys);
+	free(existing_thread);
+
+	/* 7. Create post, Add thread key to post */
+	post to_insert = {
+		.post_id = {0},
+		._null_term_hax_1 = 0,
+		.thread_key = {0},
+		._null_term_hax_2 = 0,
+		.board = {0},
+		._null_term_hax_3 = 0,
+		.body_content = NULL,
+		.replied_to_keys = NULL
+	};
+
+	strncpy(to_insert.post_id, p_match->post_number, sizeof(to_insert.post_id));
+	strncpy(to_insert.thread_key, thread_key, sizeof(to_insert.thread_key));
+	strncpy(to_insert.board, p_match->board, sizeof(to_insert.board));
+
+	to_insert.body_content = strdup(p_match->body_content);
+
+	/* 8. Save post object */
+	_insert_post(post_key, &to_insert);
+	free(to_insert.body_content);
+	vector_free(to_insert.replied_to_keys);
 	return 0;
 }
 
