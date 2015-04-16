@@ -38,7 +38,7 @@ static int _add_directory(const char *directory_to_open, const char board[MAX_BO
 				memset(full_path, '\0', full_path_siz);
 				sprintf(full_path, "%s/%s", directory_to_open, result->d_name);
 
-				int rc = add_image_to_db(full_path, result->d_name, board);
+				int rc = add_image_to_db(full_path, result->d_name, board, "-1");
 				if (rc)
 					break;
 				else {
@@ -69,7 +69,7 @@ static int full_scan() {
 
 		sprintf(dir_name, "%s/%s", webm_location(), result->d_name);
 		struct stat st = {0};
-		lstat(dir_name, &st);
+		stat(dir_name, &st);
 
 		/* webms are organized by board */
 		if (result->d_name[0] != '.' && S_ISDIR(st.st_mode)) {
@@ -132,7 +132,7 @@ static inline int _dead_webms(const unsigned char *data, const size_t dsize, con
 
 	char *file_path = get_full_path_for_webm(_webm->board, _webm->filename);
 	struct stat st = {0};
-	if (lstat(file_path, &st) == -1)
+	if (stat(file_path, &st) == -1)
 		log_msg(LOG_FUN, "'%s' does not exist.", file_path);
 	free(file_path);
 	free(_webm);

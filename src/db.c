@@ -12,6 +12,7 @@
 #include "http.h"
 #include "logging.h"
 #include "models.h"
+#include "parse.h"
 #include "utils.h"
 
 /* Webm get/set stuff */
@@ -93,7 +94,8 @@ int set_aliased_image(const webm_alias *alias) {
 }
 
 static int _insert_webm(const char *file_path, const char filename[static MAX_IMAGE_FILENAME_SIZE], 
-						const char image_hash[static HASH_IMAGE_STR_SIZE], const char board[static MAX_BOARD_NAME_SIZE]) {
+						const char image_hash[static HASH_IMAGE_STR_SIZE], const char board[static MAX_BOARD_NAME_SIZE],
+						const char post_key[MAX_KEY_SIZE]) {
 	time_t modified_time = get_file_creation_date(file_path);
 	if (modified_time == 0) {
 		log_msg(LOG_ERR, "IWMT: '%s' does not exist.", file_path);
@@ -111,12 +113,14 @@ static int _insert_webm(const char *file_path, const char filename[static MAX_IM
 		.filename = {0},
 		.board = {0},
 		.created_at = modified_time,
-		.size = size
+		.size = size,
+		.post = {0}
 	};
 	memcpy(to_insert.file_hash, image_hash, sizeof(to_insert.file_hash));
 	memcpy(to_insert.file_path, file_path, sizeof(to_insert.file_path));
 	memcpy(to_insert.filename, filename, sizeof(to_insert.filename));
 	memcpy(to_insert.board, board, sizeof(to_insert.board));
+	memcpy(to_insert.post, post_key, sizeof(to_insert.post));
 
 	return set_image(&to_insert);
 }
@@ -124,7 +128,8 @@ static int _insert_webm(const char *file_path, const char filename[static MAX_IM
 static int _insert_aliased_webm(const char *file_path,
 								const char *filename,
 								const char image_hash[static HASH_IMAGE_STR_SIZE],
-								const char board[static MAX_BOARD_NAME_SIZE]) {
+								const char board[static MAX_BOARD_NAME_SIZE],
+								const char post_key[MAX_KEY_SIZE]) {
 	time_t modified_time = get_file_creation_date(file_path);
 	if (modified_time == 0) {
 		log_msg(LOG_ERR, "IAWMT: '%s' does not exist.", file_path);
@@ -143,17 +148,20 @@ static int _insert_aliased_webm(const char *file_path,
 		.filename = {0},
 		.board = {0},
 		.created_at = modified_time,
+		.post = {0}
 	};
 
 	memcpy(to_insert.file_hash, image_hash, sizeof(to_insert.file_hash));
 	memcpy(to_insert.filename, filename, sizeof(to_insert.filename));
 	memcpy(to_insert.file_path, file_path, sizeof(to_insert.file_path));
 	memcpy(to_insert.board, board, sizeof(to_insert.board));
+	memcpy(to_insert.post, post_key, sizeof(to_insert.post));
 
 	return set_aliased_image(&to_insert);
 }
 
-int add_image_to_db(const char *file_path, const char *filename, const char board[MAX_BOARD_NAME_SIZE]) {
+int add_image_to_db(const char *file_path, const char *filename, const char board[MAX_BOARD_NAME_SIZE],
+		const char post_key[MAX_KEY_SIZE]) {
 	char image_hash[HASH_IMAGE_STR_SIZE] = {0};
 	if (!hash_file(file_path, image_hash)) {
 		log_msg(LOG_ERR, "Could not hash '%s'.", file_path);
@@ -163,7 +171,7 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 	webm *_old_webm = get_image(image_hash);
 
 	if (!_old_webm) {
-		int rc = _insert_webm(file_path, filename, image_hash, board);
+		int rc = _insert_webm(file_path, filename, image_hash, board, post_key);
 		if (!rc)
 			log_msg(LOG_ERR, "Something went wrong inserting webm.");
 		return rc;
@@ -188,7 +196,7 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 	 * an alias is it's filename.
 	 */
 	if (_old_alias == NULL) {
-		rc = _insert_aliased_webm(file_path, filename, image_hash, board);
+		rc = _insert_aliased_webm(file_path, filename, image_hash, board, post_key);
 		log_msg(LOG_FUN, "%s (%s) is a new alias of %s (%s).", filename, board, _old_webm->filename, _old_webm->board);
 	} else {
 		/* Regardless, this webm is an alias and we don't care. Delete it. */
@@ -220,6 +228,131 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 	free(_old_alias);
 	free(_old_webm);
 	return rc;
+}
+
+struct thread *get_thread(const char key[static MAX_KEY_SIZE]) {
+	size_t json_size = 0;
+	char *json = (char *)fetch_data_from_db(&oleg_conn, key, &json_size);
+
+	if (json == NULL)
+		return NULL;
+
+	thread *_thread = deserialize_thread(json);
+	free(json);
+	return _thread;
+}
+
+struct post *get_post(const char key[static MAX_KEY_SIZE]) {
+	size_t json_size = 0;
+	char *json = (char *)fetch_data_from_db(&oleg_conn, key, &json_size);
+
+	if (json == NULL)
+		return NULL;
+
+	post *_post = deserialize_post(json);
+	free(json);
+	return _post;
+}
+
+static int _insert_thread(const char key[static MAX_KEY_SIZE], const thread *to_save) {
+	char *serialized = serialize_thread(to_save);
+	log_msg(LOG_INFO, "Serialized thread: %s", serialized);
+
+	int ret = store_data_in_db(&oleg_conn, key, (unsigned char *)serialized, strlen(serialized));
+	free(serialized);
+
+	return ret;
+}
+
+static int _insert_post(const char key[static MAX_KEY_SIZE], const post *to_save) {
+	char *serialized = serialize_post(to_save);
+	log_msg(LOG_INFO, "Serialized post: %s", serialized);
+
+	int ret = store_data_in_db(&oleg_conn, key, (unsigned char *)serialized, strlen(serialized));
+	free(serialized);
+
+	return ret;
+}
+
+int add_post_to_db(const struct post_match *p_match) {
+	if (!p_match)
+		return 1;
+
+	char post_key[MAX_KEY_SIZE] = {0};
+	create_post_key(p_match->board, p_match->post_number, post_key);
+
+	post *existing_post = get_post(post_key);
+	if (existing_post != NULL) {
+		/* We already have this post saved. */
+		vector_free(existing_post->replied_to_keys);
+		free(existing_post->body_content);
+		free(existing_post);
+
+		return 0;
+	}
+
+	/* 1. Create thread key */
+	char thread_key[MAX_KEY_SIZE] = {0};
+	create_thread_key(p_match->board, p_match->thread_number, thread_key);
+
+	/* 2. Check database for existing thread */
+	thread *existing_thread = get_thread(thread_key);
+	if (existing_thread == NULL) {
+		/* 3. Create it if it doesn't exist */
+		thread _new_thread = {
+			.board = {0},
+			._null_term_hax_1 = 0,
+			.post_keys = vector_new(MAX_KEY_SIZE, 2)
+		};
+
+		existing_thread = malloc(sizeof(struct thread));
+		strncpy(_new_thread.board, p_match->board, sizeof(_new_thread.board));
+		memcpy(existing_thread, &_new_thread, sizeof(struct thread));
+	}
+
+	/* 4. There is no 4. */
+	/* 5. Add new post key to thread foreign keys */
+	unsigned int i;
+	int found = 0;
+	for (i = 0; i < existing_thread->post_keys->count; i++) {
+		const char *existing = vector_get(existing_thread->post_keys, i);
+		if (strncmp(existing, post_key, MAX_KEY_SIZE) == 0) {
+			found = 1;
+			break;
+		}
+	}
+	if (!found) {
+		vector_append(existing_thread->post_keys, post_key, sizeof(post_key));
+		/* 6. Save thread object */
+		_insert_thread(thread_key, existing_thread);
+	}
+	vector_free(existing_thread->post_keys);
+	free(existing_thread);
+
+	/* 7. Create post, Add thread key to post */
+	post to_insert = {
+		.post_id = {0},
+		._null_term_hax_1 = 0,
+		.thread_key = {0},
+		._null_term_hax_2 = 0,
+		.board = {0},
+		._null_term_hax_3 = 0,
+		.body_content = NULL,
+		.replied_to_keys = vector_new(MAX_KEY_SIZE, 2)
+	};
+
+	strncpy(to_insert.post_id, p_match->post_number, sizeof(to_insert.post_id));
+	strncpy(to_insert.thread_key, thread_key, sizeof(to_insert.thread_key));
+	strncpy(to_insert.board, p_match->board, sizeof(to_insert.board));
+
+	if (p_match->body_content != NULL)
+		to_insert.body_content = strdup(p_match->body_content);
+
+	/* 8. Save post object */
+	_insert_post(post_key, &to_insert);
+	free(to_insert.body_content);
+	vector_free(to_insert.replied_to_keys);
+	return 0;
 }
 
 int associate_alias_with_webm(const webm *webm, const char alias_key[static MAX_KEY_SIZE]) {

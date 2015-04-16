@@ -252,5 +252,64 @@ void create_post_key(const char board[static MAX_BOARD_NAME_SIZE], const char *p
 	char outbuf[static MAX_KEY_SIZE]) {
 	snprintf(outbuf, MAX_KEY_SIZE, "%s%s%s", POST_NMSPC, board, post_id);
 }
-char *serialize_post(const post *to_serialize);
-thread *deserialize_post(const char *json);
+
+char *serialize_post(const post *to_serialize) {
+	if (!to_serialize)
+		return NULL;
+
+	JSON_Value *root_value = json_value_init_object();
+	JSON_Object *root_object = json_value_get_object(root_value);
+
+	char *serialized_string = NULL;
+
+	json_object_set_string(root_object, "post_id", to_serialize->post_id);
+	json_object_set_string(root_object, "thread_key", to_serialize->thread_key);
+	json_object_set_string(root_object, "board", to_serialize->board);
+	if (to_serialize->body_content)
+		json_object_set_string(root_object, "body_content", to_serialize->body_content);
+
+	JSON_Value *thread_keys = json_value_init_array();
+	JSON_Array *thread_keys_array = json_value_get_array(thread_keys);
+
+	unsigned int i;
+	for (i = 0; i < to_serialize->replied_to_keys->count; i++)
+		json_array_append_string(thread_keys_array,
+				vector_get(to_serialize->replied_to_keys, i));
+
+	json_object_set_value(root_object, "replied_to_keys", thread_keys);
+
+	serialized_string = json_serialize_to_string(root_value);
+
+	json_value_free(root_value);
+	return serialized_string;
+}
+
+post *deserialize_post(const char *json) {
+	if (!json)
+		return NULL;
+
+	post *to_return = calloc(1, sizeof(post));
+
+	JSON_Value *serialized = json_parse_string(json);
+	JSON_Object *post_object = json_value_get_object(serialized);
+
+	strncpy(to_return->post_id, json_object_get_string(post_object, "post_id"), sizeof(to_return->post_id));
+	strncpy(to_return->thread_key, json_object_get_string(post_object, "thread_key"), sizeof(to_return->thread_key));
+	strncpy(to_return->board, json_object_get_string(post_object, "board"), sizeof(to_return->board));
+
+	to_return->body_content = strdup(json_object_get_string(post_object, "body_content"));
+
+	JSON_Array *post_keys_array = json_object_get_array(post_object, "replied_to_keys");
+
+	const size_t num_keys  = json_array_get_count(post_keys_array);
+	to_return->replied_to_keys = vector_new(MAX_KEY_SIZE, num_keys);
+
+	unsigned int i;
+	for (i = 0; i < num_keys; i++) {
+		const char *key = json_array_get_string(post_keys_array, i);
+		vector_append(to_return->replied_to_keys, key, strlen(key));
+	}
+
+	json_value_free(serialized);
+	return to_return;
+}

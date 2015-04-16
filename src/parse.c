@@ -4,8 +4,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
 
 #include "parse.h"
 #include "parson.h"
@@ -34,7 +32,7 @@ ol_stack *parse_catalog_json(const char *all_json, const char board[MAX_BOARD_NA
 		for (j = 0; j < json_array_get_count(threads); j++) {
 			JSON_Object *thread = json_array_get_object(threads, j);
 			JSON_Array *thread_replies = json_object_get_array(thread, "last_replies");
-			const int thread_num = json_object_get_number(thread, "no");
+			const uint64_t thread_num = json_object_get_number(thread, "no");
 			const char *file_ext = json_object_get_string(thread, "ext");
 			const char *post = json_object_get_string(thread, "com");
 
@@ -86,6 +84,7 @@ ol_stack *parse_thread_json(const char *all_json, const thread_match *match) {
 		const char *filename = json_object_get_string(post, "filename");
 		const uint64_t siz = json_object_get_number(post, "fsize");
 		const uint64_t _tim = json_object_get_number(post, "tim");
+		const char *body_content = json_object_get_string(post, "com");
 
 		if (file_ext == NULL)
 			continue;
@@ -93,18 +92,29 @@ ol_stack *parse_thread_json(const char *all_json, const thread_match *match) {
 		if (strstr(file_ext, "webm")) {
 			log_msg(LOG_INFO, "/%s/ Hit: (%"PRIu64") %s%s.", match->board, _tim, filename, file_ext);
 
-			post_match *t_match = calloc(1, sizeof(post_match));
-			t_match->size = siz;
+			post_match *p_match = calloc(1, sizeof(post_match));
+			p_match->size = siz;
 
-			char post_number[sizeof(t_match->post_number)] = {0};
+			/* Convert the canonical post ID to a char array. */
+			char post_number[sizeof(p_match->post_number)] = {0};
 			snprintf(post_number, sizeof(post_number), "%"PRIu64, _tim);
 
-			strncpy(t_match->post_number, post_number, sizeof(t_match->post_number));
-			strncpy(t_match->filename, filename, sizeof(t_match->filename));
-			strncpy(t_match->file_ext, file_ext, sizeof(t_match->file_ext));
-			strncpy(t_match->board, match->board, sizeof(t_match->board));
+			char thread_number[sizeof(p_match->thread_number)] = {0};
+			snprintf(thread_number, sizeof(thread_number), "%"PRIu64, match->thread_num);
 
-			spush(&matches, t_match);
+			strncpy(p_match->post_number, post_number, sizeof(p_match->post_number));
+			strncpy(p_match->thread_number, thread_number, sizeof(p_match->thread_number));
+			strncpy(p_match->filename, filename, sizeof(p_match->filename));
+			strncpy(p_match->file_ext, file_ext, sizeof(p_match->file_ext));
+			strncpy(p_match->board, match->board, sizeof(p_match->board));
+
+			if (body_content) {
+				p_match->body_content = strdup(body_content);
+			} else {
+				p_match->body_content = NULL;
+			}
+
+			spush(&matches, p_match);
 		}
 	}
 
