@@ -302,7 +302,12 @@ post *deserialize_post(const char *json) {
 	strncpy(to_return->thread_key, json_object_get_string(post_object, "thread_key"), sizeof(to_return->thread_key));
 	strncpy(to_return->board, json_object_get_string(post_object, "board"), sizeof(to_return->board));
 
-	to_return->body_content = strdup(json_object_get_string(post_object, "body_content"));
+	const char *b_content = json_object_get_string(post_object, "body_content");
+	if (b_content) {
+		to_return->body_content = strdup(b_content);
+	} else {
+		to_return->body_content = NULL;
+	}
 
 	JSON_Array *post_keys_array = json_object_get_array(post_object, "replied_to_keys");
 
