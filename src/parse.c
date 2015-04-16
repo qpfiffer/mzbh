@@ -109,8 +109,9 @@ ol_stack *parse_thread_json(const char *all_json, const thread_match *match) {
 			strncpy(p_match->board, match->board, sizeof(p_match->board));
 
 			if (body_content) {
-				p_match->body_content = malloc(strlen(body_content) + 1);
-				strncpy(p_match->body_content, body_content, strlen(body_content));
+				p_match->body_content = strdup(body_content);
+			} else {
+				p_match->body_content = NULL;
 			}
 
 			spush(&matches, p_match);

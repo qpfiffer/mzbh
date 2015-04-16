@@ -265,7 +265,8 @@ char *serialize_post(const post *to_serialize) {
 	json_object_set_string(root_object, "post_id", to_serialize->post_id);
 	json_object_set_string(root_object, "thread_key", to_serialize->thread_key);
 	json_object_set_string(root_object, "board", to_serialize->board);
-	json_object_set_string(root_object, "body_content", to_serialize->body_content);
+	if (to_serialize->body_content)
+		json_object_set_string(root_object, "body_content", to_serialize->body_content);
 
 	JSON_Value *thread_keys = json_value_init_array();
 	JSON_Array *thread_keys_array = json_value_get_array(thread_keys);
@@ -296,10 +297,7 @@ post *deserialize_post(const char *json) {
 	strncpy(to_return->thread_key, json_object_get_string(post_object, "thread_key"), sizeof(to_return->thread_key));
 	strncpy(to_return->board, json_object_get_string(post_object, "board"), sizeof(to_return->board));
 
-	size_t strsize = strlen(json_object_get_string(post_object, "body_content"));
-	to_return->body_content = malloc(strsize + 1);
-	to_return->body_content[strsize] = '\0';
-	strncpy(to_return->body_content, json_object_get_string(post_object, "body_content"), strsize);
+	to_return->body_content = strdup(json_object_get_string(post_object, "body_content"));
 
 	JSON_Array *post_keys_array = json_object_get_array(post_object, "replied_to_keys");
 

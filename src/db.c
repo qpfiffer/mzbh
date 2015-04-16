@@ -302,18 +302,30 @@ int add_post_to_db(const struct post_match *p_match) {
 		thread _new_thread = {
 			.board = {0},
 			._null_term_hax_1 = 0,
-			.post_keys = vector_new(MAX_KEY_SIZE, 1)
+			.post_keys = vector_new(MAX_KEY_SIZE, 2)
 		};
 
 		existing_thread = malloc(sizeof(struct thread));
+		strncpy(_new_thread.board, p_match->board, sizeof(_new_thread.board));
 		memcpy(existing_thread, &_new_thread, sizeof(struct thread));
 	}
 
 	/* 4. There is no 4. */
 	/* 5. Add new post key to thread foreign keys */
-	vector_append(existing_thread->post_keys, post_key, sizeof(post_key));
-	/* 6. Save thread object */
-	_insert_thread(thread_key, existing_thread);
+	unsigned int i;
+	int found = 0;
+	for (i = 0; i < existing_thread->post_keys->count; i++) {
+		const char *existing = vector_get(existing_thread->post_keys, i);
+		if (strncmp(existing, post_key, MAX_KEY_SIZE) == 0) {
+			found = 1;
+			break;
+		}
+	}
+	if (!found) {
+		vector_append(existing_thread->post_keys, post_key, sizeof(post_key));
+		/* 6. Save thread object */
+		_insert_thread(thread_key, existing_thread);
+	}
 	vector_free(existing_thread->post_keys);
 	free(existing_thread);
 
@@ -326,14 +338,15 @@ int add_post_to_db(const struct post_match *p_match) {
 		.board = {0},
 		._null_term_hax_3 = 0,
 		.body_content = NULL,
-		.replied_to_keys = NULL
+		.replied_to_keys = vector_new(MAX_KEY_SIZE, 2)
 	};
 
 	strncpy(to_insert.post_id, p_match->post_number, sizeof(to_insert.post_id));
 	strncpy(to_insert.thread_key, thread_key, sizeof(to_insert.thread_key));
 	strncpy(to_insert.board, p_match->board, sizeof(to_insert.board));
 
-	to_insert.body_content = strdup(p_match->body_content);
+	if (p_match->body_content != NULL)
+		to_insert.body_content = strdup(p_match->body_content);
 
 	/* 8. Save post object */
 	_insert_post(post_key, &to_insert);
