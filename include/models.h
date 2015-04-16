@@ -98,3 +98,4 @@ void create_post_key(const char board[static MAX_BOARD_NAME_SIZE], const char *p
 	char outbuf[static MAX_KEY_SIZE]);
 char *serialize_post(const post *to_serialize);
 post *deserialize_post(const char *json);
+unsigned int post_count();

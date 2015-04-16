@@ -84,6 +84,11 @@ unsigned int webm_alias_count() {
 	return x_count(prefix);
 }
 
+unsigned int post_count() {
+	char prefix[MAX_KEY_SIZE] = POST_NMSPC;
+	return x_count(prefix);
+}
+
 void create_alias_key(const char file_path[static MAX_IMAGE_FILENAME_SIZE], char outbuf[static MAX_KEY_SIZE]) {
 	/* MORE HASHES IS MORE POWER */
 	char str_hash[HASH_IMAGE_STR_SIZE] = {0};
