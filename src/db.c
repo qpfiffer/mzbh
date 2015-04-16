@@ -12,6 +12,7 @@
 #include "http.h"
 #include "logging.h"
 #include "models.h"
+#include "parse.h"
 #include "utils.h"
 
 /* Webm get/set stuff */
@@ -227,6 +228,30 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 	free(_old_alias);
 	free(_old_webm);
 	return rc;
+}
+
+struct thread *get_thread(const char key[static MAX_KEY_SIZE]) {
+	size_t json_size = 0;
+	char *json = (char *)fetch_data_from_db(&oleg_conn, key, &json_size);
+
+	if (json == NULL)
+		return NULL;
+
+	thread *_thread = deserialize_thread(json);
+	free(json);
+	return _thread;
+}
+
+struct post *get_post(const char key[static MAX_KEY_SIZE]) {
+	size_t json_size = 0;
+	char *json = (char *)fetch_data_from_db(&oleg_conn, key, &json_size);
+
+	if (json == NULL)
+		return NULL;
+
+	post *_post = deserialize_post(json);
+	free(json);
+	return _post;
 }
 
 int add_post_to_db(const struct post_match *p_match) {

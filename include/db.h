@@ -31,6 +31,8 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
  */
 struct post_match;
 int add_post_to_db(const struct post_match *p_match);
+struct post *get_post(const char key[static MAX_KEY_SIZE]);
+struct thread *get_thread(const char key[static MAX_KEY_SIZE]);
 
 /* Associates a webm with an alias.
  * Returns 1 on success.
