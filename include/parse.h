@@ -1,11 +1,14 @@
 // vim: noet ts=4 sw=4
 #pragma once
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+
 #include "stack.h"
 #include "models.h"
 
 typedef struct thread_match {
 	char board[MAX_BOARD_NAME_SIZE];
-	int thread_num;
+	uint64_t thread_num;
 } thread_match;
 
 typedef struct post_match {
@@ -13,8 +16,9 @@ typedef struct post_match {
 	char filename[MAX_IMAGE_FILENAME_SIZE];
 	char file_ext[6];
 	char post_number[64];
+	char thread_number[64];
 	char *body_content;
-	size_t size;
+	size_t size; /* Size of the file */
 } post_match;
 
 /* FUCK THE MUTEABLE STATE */

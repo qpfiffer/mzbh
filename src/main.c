@@ -38,7 +38,7 @@ const char CATALOG_REQUEST[] =
 	"Accept: application/json\r\n\r\n";
 
 const char THREAD_REQUEST[] =
-	"GET /%s/thread/%i.json HTTP/1.1\r\n"
+	"GET /%s/thread/%"PRIu64".json HTTP/1.1\r\n"
 	"User-Agent: Mozilla/5.0 (Windows NT 5.1; rv:31.0) Gecko/20100101 Firefox/31.0\r\n"
 	"Host: a.4cdn.org\r\n"
 	"Accept: application/json\r\n\r\n";
@@ -293,6 +293,7 @@ int download_image(const post_match *p_match) {
 
 	char post_key[MAX_KEY_SIZE] = {0};
 	create_post_key(p_match->board, p_match->post_number, post_key);
+
 	/* image_filename is the full path, fname_plus_extension is the file name. */
 	int added = add_image_to_db(image_filename, fname_plus_extension, p_match->board, post_key);
 	if (!added) {
