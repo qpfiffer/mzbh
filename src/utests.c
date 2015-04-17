@@ -4,11 +4,11 @@
 #include <string.h>
 
 #include <38-moths/parse.h>
+#include <38-moths/logging.h>
 
 #include "http.h"
 #include "utils.h"
 #include "parse.h"
-#include "logging.h"
 #include "models.h"
 
 int webm_serialization() {

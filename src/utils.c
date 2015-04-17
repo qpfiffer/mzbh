@@ -14,7 +14,8 @@
 #include <inttypes.h>
 #include <unistd.h>
 
-#include "logging.h"
+#include <38-moths/logging.h>
+
 #include "models.h"
 #include "parse.h"
 #include "sha3api_ref.h"

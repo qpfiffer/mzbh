@@ -6,8 +6,9 @@
 #include <math.h>
 #include <time.h>
 
+#include <38-moths/logging.h>
+
 #include "benchmark.h"
-#include "logging.h"
 #include "utils.h"
 
 inline struct bmark begin_benchmark(const char *name) {

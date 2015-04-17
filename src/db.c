@@ -7,10 +7,11 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <38-moths/logging.h>
+
 #include "db.h"
 #include "benchmark.h"
 #include "http.h"
-#include "logging.h"
 #include "models.h"
 #include "parse.h"
 #include "utils.h"

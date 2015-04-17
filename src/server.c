@@ -22,13 +22,10 @@
 #include <unistd.h>
 #include <time.h>
 
-#include <38-moths/greshunkel.h>
-#include <38-moths/grengine.h>
-#include <38-moths/server.h>
+#include <38-moths/38-moths.h>
 
 #include "db.h"
 #include "http.h"
-#include "logging.h"
 #include "parse.h"
 #include "models.h"
 #include "server.h"
