@@ -246,15 +246,19 @@ int webm_handler(const http_request *request, http_response *response) {
 	char image_hash[HASH_IMAGE_STR_SIZE] = {0};
 	hash_file(full_path, image_hash);
 	webm *_webm = get_image(image_hash);
-	if (!_webm)
+	if (!_webm) {
 		gshkl_add_int(ctext, "image_date", -1);
-	else {
+		gshkl_add_string(ctext, "post_content", "(No information on this webm)");
+		gshkl_add_string(ctext, "post_id", "");
+	} else {
 		post *_post = get_post(_webm->post);
 		if (_post && _post->body_content) {
 			gshkl_add_string(ctext, "post_content", _post->body_content);
+			gshkl_add_string(ctext, "post_id", _post->post_id);
 			free(_post->body_content);
 		} else {
-			gshkl_add_string(ctext, "post_content", "");
+			gshkl_add_string(ctext, "post_content", "(No information on this webm)");
+			gshkl_add_string(ctext, "post_id", "");
 		}
 		free(_post);
 		time_t earliest_date = _webm->created_at;
