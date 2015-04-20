@@ -10,6 +10,7 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 
+#include <oleg-http/http.h>
 #include <38-moths/38-moths.h>
 
 #include "db.h"
