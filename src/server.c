@@ -250,13 +250,13 @@ int webm_handler(const http_request *request, http_response *response) {
 		gshkl_add_int(ctext, "image_date", -1);
 	else {
 		post *_post = get_post(_webm->post);
-		if (_post) {
+		if (_post && _post->body_content) {
 			gshkl_add_string(ctext, "post_content", _post->body_content);
-			free(_post->body_content);
-			free(_post);
 		} else {
 			gshkl_add_string(ctext, "post_content", "");
 		}
+		free(_post->body_content);
+		free(_post);
 		time_t earliest_date = _webm->created_at;
 
 		/* Add known aliases from DB. We fetch every alias from the M2M,
