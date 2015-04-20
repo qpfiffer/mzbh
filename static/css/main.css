@@ -43,3 +43,7 @@ div.post-content span {
 	display: inline;
 	width: auto;
 }
+
+div.post-content .quote {
+	color: #789922;
+}
