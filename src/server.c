@@ -252,10 +252,10 @@ int webm_handler(const http_request *request, http_response *response) {
 		post *_post = get_post(_webm->post);
 		if (_post && _post->body_content) {
 			gshkl_add_string(ctext, "post_content", _post->body_content);
+			free(_post->body_content);
 		} else {
 			gshkl_add_string(ctext, "post_content", "");
 		}
-		free(_post->body_content);
 		free(_post);
 		time_t earliest_date = _webm->created_at;
 
