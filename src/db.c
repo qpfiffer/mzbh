@@ -1,5 +1,6 @@
 // vim: noet ts=4 sw=4
 #include <errno.h>
+#include <fcntl.h>
 #include <limits.h>
 #include <stdio.h>
 #include <sys/socket.h>
@@ -161,6 +162,42 @@ static int _insert_aliased_webm(const char *file_path,
 	return set_aliased_image(&to_insert);
 }
 
+void modify_aliased_file(const char *file_path, const webm *_old_webm, const time_t new_stamp) {
+	char *real_fpath = NULL, *real_old_fpath = NULL;
+	real_fpath = realpath(file_path, NULL);
+	real_old_fpath = realpath(_old_webm->file_path, NULL);
+
+	log_msg(LOG_WARN, "Unlinking and creating a symlink from '%s' to '%s'.",
+			real_fpath, real_old_fpath);
+
+	/* Unlink new file. */
+	if (unlink(real_fpath) == -1)
+		log_msg(LOG_ERR, "Could not delete '%s'.", real_fpath);
+	/* Symlink to old file. */
+	if (symlink(real_old_fpath, real_fpath) == -1)
+		log_msg(LOG_ERR, "Could not create symlink from '%s' to '%s'.",
+				real_fpath, real_old_fpath);
+
+	/* Update timestamp on symlink to reflect what the real timestamp is (the one
+	 * on the alias). */
+	int fd = open(real_fpath, O_RDONLY);
+	if (fd < 0) {
+		log_msg(LOG_ERR, "Could not open symlink for time modification.");
+	} else {
+		struct timespec _new_time = {
+			.tv_sec = new_stamp,
+			.tv_nsec = 0
+		};
+
+		/* POSIX is fucking weird, man: */
+		const struct timespec _new_times[] = { _new_time, _new_time };
+		if (futimens(fd, _new_times) != 0)
+			log_msg(LOG_WARN, "Unable to set timesteamp on new symlink.");
+	}
+
+	free(real_fpath);
+	free(real_old_fpath);
+}
 int add_image_to_db(const char *file_path, const char *filename, const char board[MAX_BOARD_NAME_SIZE],
 		const char post_key[MAX_KEY_SIZE]) {
 	char image_hash[HASH_IMAGE_STR_SIZE] = {0};
@@ -204,6 +241,7 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 		/* There are some bad values in the database. Skip them. */
 		if (!endswith(_old_alias->filename, ".webm"))
 			log_msg(LOG_ERR, "'%s' is a bad value.", _old_webm->filename);
+
 		log_msg(LOG_WARN, "%s is already marked as an alias of %s. Old alias is: '%s'",
 				file_path, _old_webm->filename, _old_alias->filename);
 	}
@@ -214,16 +252,7 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 	associate_alias_with_webm(_old_webm, alias_key);
 
 	if (rc) {
-		char *real_fpath = NULL, *real_old_fpath = NULL;
-		real_fpath = realpath(file_path, NULL);
-		real_old_fpath = realpath(_old_webm->file_path, NULL);
-		log_msg(LOG_WARN, "Unlinking and creating a symlink from '%s' to '%s'.", real_fpath, real_old_fpath);
-		if (unlink(real_fpath) == -1)
-			log_msg(LOG_ERR, "Could not delete '%s'.", real_fpath);
-		if (symlink(real_old_fpath, real_fpath) == -1)
-			log_msg(LOG_ERR, "Could not create symlink from '%s' to '%s'.", real_fpath, real_old_fpath);
-		free(real_fpath);
-		free(real_old_fpath);
+		modify_aliased_file(file_path, _old_webm, _old_alias->created_at);
 	} else
 		log_msg(LOG_ERR, "Something went wrong when adding image to db.");
 	free(_old_alias);
