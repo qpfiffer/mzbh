@@ -255,10 +255,12 @@ int webm_handler(const http_request *request, http_response *response) {
 		post *_post = get_post(_webm->post);
 		if (_post) {
 			gshkl_add_string(ctext, "thread_id", _post->thread_key);
+			gshkl_add_string(ctext, "post_id", _post->post_id);
 			if (_post->body_content) {
 				gshkl_add_string(ctext, "post_content", _post->body_content);
-				gshkl_add_string(ctext, "post_id", _post->post_id);
 				free(_post->body_content);
+			} else {
+				gshkl_add_string(ctext, "post_content", "(No information on this webm)");
 			}
 		} else {
 			gshkl_add_string(ctext, "post_content", "(No information on this webm)");
@@ -386,15 +388,60 @@ int by_thread_handler(const http_request *request, http_response *response) {
 	char thread_id[256] = {0};
 	strncpy(thread_id, request->resource + request->matches[1].rm_so, sizeof(thread_id));
 
+	thread *_thread = get_thread(thread_id);
+	if (_thread == NULL)
+		return 404;
+
 	greshunkel_ctext *ctext = gshkl_init_context();
 	gshkl_add_string(ctext, "thread_id", thread_id);
-	gshkl_add_int(ctext, "total", 0);
 
 	greshunkel_var posts = gshkl_add_array(ctext, "POSTS");
-	gshkl_add_string_to_loop(&posts, "NOPE");
+
+	db_key_match *cur = NULL;
+	unsigned int i;
+	for (i = 0; i < _thread->post_keys->count; i++) {
+		db_key_match _stack = {
+			.key = {0},
+			.next = cur
+		};
+		const char *_key = vector_get(_thread->post_keys, i);
+		memcpy((char *)_stack.key, _key, strlen(_key));
+
+		db_key_match *new = calloc(1, sizeof(db_key_match));
+		memcpy(new, &_stack, sizeof(db_key_match));
+
+		cur = new;
+	}
+
+	vector_free(_thread->post_keys);
+	free(_thread);
+
+	db_match *matches = fetch_bulk_from_db(&oleg_conn, cur, 1);
+
+	unsigned int total = 0;
+	db_match *current = matches;
+	while (current) {
+		db_match *next = current->next;
+
+		post *dsrlzd = deserialize_post((char *)current->data);
+		free((unsigned char *)current->data);
+		free(current);
+
+		if (dsrlzd) {
+			gshkl_add_string_to_loop(&posts, dsrlzd->post_id);
+			vector_free(dsrlzd->replied_to_keys);
+		}
+
+		free(dsrlzd);
+		total++;
+
+		current = next;
+	}
 
 	greshunkel_var boards = gshkl_add_array(ctext, "BOARDS");
 	_add_files_in_dir_to_arr(&boards, webm_location());
+
+	gshkl_add_int(ctext, "total", total);
 
 	return render_file(ctext, "./templates/by_thread.html", response);
 }
