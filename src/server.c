@@ -250,12 +250,16 @@ int webm_handler(const http_request *request, http_response *response) {
 		gshkl_add_int(ctext, "image_date", -1);
 		gshkl_add_string(ctext, "post_content", "(No information on this webm)");
 		gshkl_add_string(ctext, "post_id", "");
+		gshkl_add_string(ctext, "thread_id", "#");
 	} else {
 		post *_post = get_post(_webm->post);
-		if (_post && _post->body_content) {
-			gshkl_add_string(ctext, "post_content", _post->body_content);
-			gshkl_add_string(ctext, "post_id", _post->post_id);
-			free(_post->body_content);
+		if (_post) {
+			gshkl_add_string(ctext, "thread_id", _post->thread_key);
+			if (_post->body_content) {
+				gshkl_add_string(ctext, "post_content", _post->body_content);
+				gshkl_add_string(ctext, "post_id", _post->post_id);
+				free(_post->body_content);
+			}
 		} else {
 			gshkl_add_string(ctext, "post_content", "(No information on this webm)");
 			gshkl_add_string(ctext, "post_id", "");
@@ -376,6 +380,23 @@ static unsigned int _add_sorted_by_aliases(greshunkel_var *images) {
 	}
 
 	return 0;
+}
+
+int by_thread_handler(const http_request *request, http_response *response) {
+	char thread_id[256] = {0};
+	strncpy(thread_id, request->resource + request->matches[1].rm_so, sizeof(thread_id));
+
+	greshunkel_ctext *ctext = gshkl_init_context();
+	gshkl_add_string(ctext, "thread_id", thread_id);
+	gshkl_add_int(ctext, "total", 0);
+
+	greshunkel_var posts = gshkl_add_array(ctext, "POSTS");
+	gshkl_add_string_to_loop(&posts, "NOPE");
+
+	greshunkel_var boards = gshkl_add_array(ctext, "BOARDS");
+	_add_files_in_dir_to_arr(&boards, webm_location());
+
+	return render_file(ctext, "./templates/by_thread.html", response);
 }
 
 int by_alias_handler(const http_request *request, http_response *response) {
