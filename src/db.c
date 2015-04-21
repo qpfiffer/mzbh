@@ -1,10 +1,10 @@
 // vim: noet ts=4 sw=4
 #include <errno.h>
-#include <fcntl.h>
 #include <limits.h>
 #include <stdio.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -180,19 +180,16 @@ void modify_aliased_file(const char *file_path, const webm *_old_webm, const tim
 
 	/* Update timestamp on symlink to reflect what the real timestamp is (the one
 	 * on the alias). */
-	int fd = open(real_fpath, O_RDONLY);
-	if (fd < 0) {
-		log_msg(LOG_ERR, "Could not open symlink for time modification.");
-	} else {
-		struct timespec _new_time = {
-			.tv_sec = new_stamp,
-			.tv_nsec = 0
-		};
+	struct timeval _new_time = {
+		.tv_sec = new_stamp,
+		.tv_usec = 0
+	};
 
-		/* POSIX is fucking weird, man: */
-		const struct timespec _new_times[] = { _new_time, _new_time };
-		if (futimens(fd, _new_times) != 0)
-			log_msg(LOG_WARN, "Unable to set timesteamp on new symlink.");
+	/* POSIX is fucking weird, man: */
+	const struct timeval _new_times[] = { _new_time, _new_time };
+	if (lutimes(real_fpath, _new_times) != 0) {
+		log_msg(LOG_WARN, "Unable to set timesteamp on new symlink.");
+		perror("Alias symlink timestamp update");
 	}
 
 	free(real_fpath);
