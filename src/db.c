@@ -249,7 +249,18 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 	associate_alias_with_webm(_old_webm, alias_key);
 
 	if (rc) {
-		modify_aliased_file(file_path, _old_webm, _old_alias->created_at);
+		if (_old_alias == NULL) {
+			time_t new_stamp = 0;
+			struct stat st = {0};
+			if (stat(file_path, &st) != 0) {
+				log_msg(LOG_ERR, "Could not stat new alias.");
+			} else {
+				new_stamp = st.st_mtime;
+			}
+			modify_aliased_file(file_path, _old_webm, new_stamp);
+		} else {
+			modify_aliased_file(file_path, _old_webm, _old_alias->created_at);
+		}
 	} else
 		log_msg(LOG_ERR, "Something went wrong when adding image to db.");
 	free(_old_alias);
