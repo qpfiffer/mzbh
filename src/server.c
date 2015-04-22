@@ -22,13 +22,10 @@
 #include <unistd.h>
 #include <time.h>
 
-#include <38-moths/greshunkel.h>
-#include <38-moths/grengine.h>
-#include <38-moths/server.h>
+#include <38-moths/38-moths.h>
 
 #include "db.h"
 #include "http.h"
-#include "logging.h"
 #include "parse.h"
 #include "models.h"
 #include "server.h"
@@ -219,6 +216,7 @@ int index_handler(const http_request *request, http_response *response) {
 	greshunkel_ctext *ctext = gshkl_init_context();
 	gshkl_add_int(ctext, "webm_count", webm_count());
 	gshkl_add_int(ctext, "alias_count", webm_alias_count());
+	gshkl_add_int(ctext, "post_count", post_count());
 
 	greshunkel_var boards = gshkl_add_array(ctext, "BOARDS");
 	_add_files_in_dir_to_arr(&boards, webm_location());
@@ -248,9 +246,31 @@ int webm_handler(const http_request *request, http_response *response) {
 	char image_hash[HASH_IMAGE_STR_SIZE] = {0};
 	hash_file(full_path, image_hash);
 	webm *_webm = get_image(image_hash);
-	if (!_webm)
+
+	/* This code is fucking terrible. */
+	if (!_webm) {
 		gshkl_add_int(ctext, "image_date", -1);
-	else {
+		gshkl_add_string(ctext, "post_content", "(No information on this webm)");
+		gshkl_add_string(ctext, "post_id", "");
+		gshkl_add_string(ctext, "thread_id", "#");
+	} else {
+		post *_post = get_post(_webm->post);
+		if (_post) {
+			gshkl_add_string(ctext, "thread_id", _post->thread_key);
+			gshkl_add_string(ctext, "post_id", _post->post_id);
+			if (_post->body_content) {
+				gshkl_add_string(ctext, "post_content", _post->body_content);
+				free(_post->body_content);
+			} else {
+				gshkl_add_string(ctext, "post_content", "(No information on this webm)");
+			}
+			vector_free(_post->replied_to_keys);
+		} else {
+			gshkl_add_string(ctext, "post_content", "(No information on this webm)");
+			gshkl_add_string(ctext, "post_id", "");
+			gshkl_add_string(ctext, "thread_id", "#");
+		}
+		free(_post);
 		time_t earliest_date = _webm->created_at;
 
 		/* Add known aliases from DB. We fetch every alias from the M2M,
@@ -366,6 +386,72 @@ static unsigned int _add_sorted_by_aliases(greshunkel_var *images) {
 	}
 
 	return 0;
+}
+
+int by_thread_handler(const http_request *request, http_response *response) {
+	char thread_id[256] = {0};
+	strncpy(thread_id, request->resource + request->matches[1].rm_so, sizeof(thread_id));
+
+	if (thread_id == NULL || request->resource + request->matches[1].rm_so == 0)
+		return 404;
+
+	thread *_thread = get_thread(thread_id);
+	if (_thread == NULL)
+		return 404;
+
+	greshunkel_ctext *ctext = gshkl_init_context();
+	gshkl_add_string(ctext, "thread_id", thread_id);
+
+	greshunkel_var posts = gshkl_add_array(ctext, "POSTS");
+
+	db_key_match *cur = NULL;
+	unsigned int i;
+	for (i = 0; i < _thread->post_keys->count; i++) {
+		db_key_match _stack = {
+			.key = {0},
+			.next = cur
+		};
+		const char *_key = vector_get(_thread->post_keys, i);
+		memcpy((char *)_stack.key, _key, strlen(_key));
+
+		db_key_match *new = calloc(1, sizeof(db_key_match));
+		memcpy(new, &_stack, sizeof(db_key_match));
+
+		cur = new;
+	}
+
+	vector_free(_thread->post_keys);
+	free(_thread);
+
+	db_match *matches = fetch_bulk_from_db(&oleg_conn, cur, 1);
+
+	unsigned int total = 0;
+	db_match *current = matches;
+	while (current) {
+		db_match *next = current->next;
+
+		post *dsrlzd = deserialize_post((char *)current->data);
+		free((unsigned char *)current->data);
+		free(current);
+
+		if (dsrlzd) {
+			gshkl_add_string_to_loop(&posts, dsrlzd->post_id);
+			vector_free(dsrlzd->replied_to_keys);
+			free(dsrlzd->body_content);
+		}
+
+		free(dsrlzd);
+		total++;
+
+		current = next;
+	}
+
+	greshunkel_var boards = gshkl_add_array(ctext, "BOARDS");
+	_add_files_in_dir_to_arr(&boards, webm_location());
+
+	gshkl_add_int(ctext, "total", total);
+
+	return render_file(ctext, "./templates/by_thread.html", response);
 }
 
 int by_alias_handler(const http_request *request, http_response *response) {

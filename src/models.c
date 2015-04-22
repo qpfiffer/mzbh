@@ -5,12 +5,12 @@
 #include <string.h>
 
 #include <oleg-http/oleg-http.h>
+#include <38-moths/logging.h>
 
 #include "db.h"
 #include "models.h"
 #include "parson.h"
 #include "utils.h"
-#include "logging.h"
 
 void create_webm_key(const char file_hash[static HASH_IMAGE_STR_SIZE], char outbuf[static MAX_KEY_SIZE]) {
 	snprintf(outbuf, MAX_KEY_SIZE, "%s%s", WEBM_NMSPC, file_hash);
@@ -81,6 +81,11 @@ unsigned int webm_count() {
 
 unsigned int webm_alias_count() {
 	char prefix[MAX_KEY_SIZE] = ALIAS_NMSPC;
+	return x_count(prefix);
+}
+
+unsigned int post_count() {
+	char prefix[MAX_KEY_SIZE] = POST_NMSPC;
 	return x_count(prefix);
 }
 
@@ -297,7 +302,12 @@ post *deserialize_post(const char *json) {
 	strncpy(to_return->thread_key, json_object_get_string(post_object, "thread_key"), sizeof(to_return->thread_key));
 	strncpy(to_return->board, json_object_get_string(post_object, "board"), sizeof(to_return->board));
 
-	to_return->body_content = strdup(json_object_get_string(post_object, "body_content"));
+	const char *b_content = json_object_get_string(post_object, "body_content");
+	if (b_content) {
+		to_return->body_content = strdup(b_content);
+	} else {
+		to_return->body_content = NULL;
+	}
 
 	JSON_Array *post_keys_array = json_object_get_array(post_object, "replied_to_keys");
 

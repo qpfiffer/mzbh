@@ -28,3 +28,22 @@ body {
 	padding-bottom: 2em;
 	font-size: 18px;
 }
+div.post-content {
+	background-color: #F0E0D6;
+	border: 1px solid #D9BFB7;
+	border-left: none;
+	border-top: none;
+	display: table;
+	padding: 2px;
+	font-family: 'Times New Roman', serif;
+	font-size: 14px;
+	color: #800000;
+}
+div.post-content span {
+	display: inline;
+	width: auto;
+}
+
+div.post-content .quote {
+	color: #789922;
+}

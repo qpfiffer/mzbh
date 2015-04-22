@@ -4,13 +4,15 @@
 #include <stdio.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <string.h>
 #include <unistd.h>
+
+#include <38-moths/logging.h>
 
 #include "db.h"
 #include "benchmark.h"
 #include "http.h"
-#include "logging.h"
 #include "models.h"
 #include "parse.h"
 #include "utils.h"
@@ -160,6 +162,48 @@ static int _insert_aliased_webm(const char *file_path,
 	return set_aliased_image(&to_insert);
 }
 
+void modify_aliased_file(const char *file_path, const webm *_old_webm, const time_t new_stamp) {
+	char *real_fpath = NULL, *real_old_fpath = NULL;
+	real_fpath = realpath(file_path, NULL);
+	real_old_fpath = realpath(_old_webm->file_path, NULL);
+
+	const size_t bigger = strlen(real_fpath) > strlen(real_old_fpath) ?
+			strlen(real_fpath) : strlen(real_old_fpath);
+
+	if (strncmp(real_fpath, real_old_fpath, bigger) == 0) {
+		log_msg(LOG_WARN, "Cowardly refusing to {un,sym}link the same file to itself.");
+		goto update_time;
+	}
+
+	log_msg(LOG_WARN, "Unlinking and creating a symlink from '%s' to '%s'.",
+			real_fpath, real_old_fpath);
+
+	/* Unlink new file. */
+	if (unlink(real_fpath) == -1)
+		log_msg(LOG_ERR, "Could not delete '%s'.", real_fpath);
+	/* Symlink to old file. */
+	if (symlink(real_old_fpath, real_fpath) == -1)
+		log_msg(LOG_ERR, "Could not create symlink from '%s' to '%s'.",
+				real_fpath, real_old_fpath);
+
+update_time: ; /* Yes the semicolon is necessary. Fucking C. */
+	/* Update timestamp on symlink to reflect what the real timestamp is (the one
+	 * on the alias). */
+	struct timeval _new_time = {
+		.tv_sec = new_stamp,
+		.tv_usec = 0
+	};
+
+	/* POSIX is fucking weird, man: */
+	const struct timeval _new_times[] = { _new_time, _new_time };
+	if (lutimes(real_fpath, _new_times) != 0) {
+		log_msg(LOG_WARN, "Unable to set timesteamp on new symlink.");
+		perror("Alias symlink timestamp update");
+	}
+
+	free(real_fpath);
+	free(real_old_fpath);
+}
 int add_image_to_db(const char *file_path, const char *filename, const char board[MAX_BOARD_NAME_SIZE],
 		const char post_key[MAX_KEY_SIZE]) {
 	char image_hash[HASH_IMAGE_STR_SIZE] = {0};
@@ -203,6 +247,7 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 		/* There are some bad values in the database. Skip them. */
 		if (!endswith(_old_alias->filename, ".webm"))
 			log_msg(LOG_ERR, "'%s' is a bad value.", _old_webm->filename);
+
 		log_msg(LOG_WARN, "%s is already marked as an alias of %s. Old alias is: '%s'",
 				file_path, _old_webm->filename, _old_alias->filename);
 	}
@@ -213,16 +258,18 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 	associate_alias_with_webm(_old_webm, alias_key);
 
 	if (rc) {
-		char *real_fpath = NULL, *real_old_fpath = NULL;
-		real_fpath = realpath(file_path, NULL);
-		real_old_fpath = realpath(_old_webm->file_path, NULL);
-		log_msg(LOG_WARN, "Unlinking and creating a symlink from '%s' to '%s'.", real_fpath, real_old_fpath);
-		if (unlink(real_fpath) == -1)
-			log_msg(LOG_ERR, "Could not delete '%s'.", real_fpath);
-		if (symlink(real_old_fpath, real_fpath) == -1)
-			log_msg(LOG_ERR, "Could not create symlink from '%s' to '%s'.", real_fpath, real_old_fpath);
-		free(real_fpath);
-		free(real_old_fpath);
+		if (_old_alias == NULL) {
+			time_t new_stamp = 0;
+			struct stat st = {0};
+			if (stat(file_path, &st) != 0) {
+				log_msg(LOG_ERR, "Could not stat new alias.");
+			} else {
+				new_stamp = st.st_mtime;
+			}
+			modify_aliased_file(file_path, _old_webm, new_stamp);
+		} else {
+			modify_aliased_file(file_path, _old_webm, _old_alias->created_at);
+		}
 	} else
 		log_msg(LOG_ERR, "Something went wrong when adding image to db.");
 	free(_old_alias);

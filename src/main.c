@@ -10,15 +10,13 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 
-#include <38-moths/greshunkel.h>
-#include <38-moths/grengine.h>
-#include <38-moths/server.h>
+#include <oleg-http/http.h>
+#include <38-moths/38-moths.h>
 
 #include "db.h"
 #include "http.h"
 #include "models.h"
 #include "parse.h"
-#include "logging.h"
 #include "server.h"
 #include "stack.h"
 #include "utils.h"
@@ -410,6 +408,7 @@ static const route all_routes[] = {
 	{"GET", "webm_handler", "^/slurp/([a-zA-Z]*)/((.*)(.webm|.jpg))$", 2, &webm_handler, &heap_cleanup},
 	{"GET", "board_static_handler", "^/chug/([a-zA-Z]*)/((.*)(.webm|.jpg))$", 2, &board_static_handler, &mmap_cleanup},
 	{"GET", "by_alias_handler", "^/by/alias/([0-9]*)$", 1, &by_alias_handler, &heap_cleanup},
+	{"GET", "by_thread_handler", "^/by/thread/([A-Z]*[a-z]*[0-9]*)$", 1, &by_thread_handler, &heap_cleanup},
 	{"GET", "root_handler", "^/$", 0, &index_handler, &heap_cleanup},
 };
 

@@ -8,12 +8,12 @@
 #include <stdio.h>
 #include <sys/stat.h>
 
+#include <38-moths/logging.h>
 #include <oleg-http/oleg-http.h>
 
 #include "common_defs.h"
 #include "db.h"
 #include "models.h"
-#include "logging.h"
 #include "sha3api_ref.h"
 #include "utils.h"
 

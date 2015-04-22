@@ -3,6 +3,7 @@
 	#pragma clang diagnostic ignored "-Wmissing-field-initializers"
 #endif
 #include <ctype.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <string.h>
 #include <stdlib.h>
@@ -14,7 +15,8 @@
 #include <inttypes.h>
 #include <unistd.h>
 
-#include "logging.h"
+#include <38-moths/logging.h>
+
 #include "models.h"
 #include "parse.h"
 #include "sha3api_ref.h"
@@ -182,7 +184,7 @@ int hash_string(const unsigned char *string, const size_t siz, char outbuf[stati
 
 int hash_file(const char *file_path, char outbuf[static HASH_IMAGE_STR_SIZE]) {
 	int fd = open(file_path, O_RDONLY);
-	if (fd <= 0) {
+	if (fd < 0) {
 		log_msg(LOG_ERR, "Could not open file for hashing.");
 		perror("hash_file");
 		goto error;
@@ -206,6 +208,7 @@ error:
 	if (data_ptr != NULL)
 		munmap(data_ptr, st.st_size);
 	close(fd);
+	errno = 0;
 	return 0;
 }
 

@@ -5,9 +5,10 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#include <38-moths/logging.h>
+
 #include "parse.h"
 #include "parson.h"
-#include "logging.h"
 #include "models.h"
 
 ol_stack *parse_catalog_json(const char *all_json, const char board[MAX_BOARD_NAME_SIZE]) {
