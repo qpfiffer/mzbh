@@ -3,6 +3,7 @@
 	#pragma clang diagnostic ignored "-Wmissing-field-initializers"
 #endif
 #include <ctype.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <string.h>
 #include <stdlib.h>
@@ -207,6 +208,7 @@ error:
 	if (data_ptr != NULL)
 		munmap(data_ptr, st.st_size);
 	close(fd);
+	errno = 0;
 	return 0;
 }
 
