@@ -437,9 +437,9 @@ int by_thread_handler(const http_request *request, http_response *response) {
 		if (dsrlzd) {
 			gshkl_add_string_to_loop(&posts, dsrlzd->post_id);
 			vector_free(dsrlzd->replied_to_keys);
+			free(dsrlzd->body_content);
 		}
 
-		vector_free(dsrlzd->replied_to_keys);
 		free(dsrlzd);
 		total++;
 
