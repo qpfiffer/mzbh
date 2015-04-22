@@ -169,9 +169,10 @@ void modify_aliased_file(const char *file_path, const webm *_old_webm, const tim
 
 	const size_t bigger = strlen(real_fpath) > strlen(real_old_fpath) ?
 			strlen(real_fpath) : strlen(real_old_fpath);
+
 	if (strncmp(real_fpath, real_old_fpath, bigger) == 0) {
-		log_msg(LOG_WARN, "Cowardly refusing to link the same file to itself.");
-		return;
+		log_msg(LOG_WARN, "Cowardly refusing to {un,sym}link the same file to itself.");
+		goto update_time;
 	}
 
 	log_msg(LOG_WARN, "Unlinking and creating a symlink from '%s' to '%s'.",
@@ -185,6 +186,7 @@ void modify_aliased_file(const char *file_path, const webm *_old_webm, const tim
 		log_msg(LOG_ERR, "Could not create symlink from '%s' to '%s'.",
 				real_fpath, real_old_fpath);
 
+update_time: ; /* Yes the semicolon is necessary. Fucking C. */
 	/* Update timestamp on symlink to reflect what the real timestamp is (the one
 	 * on the alias). */
 	struct timeval _new_time = {
