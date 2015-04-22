@@ -263,10 +263,8 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 		 */
 		if (_old_alias == NULL) {
 			time_t new_stamp = get_file_creation_date(file_path);
-			if (modified_time == 0) {
+			if (new_stamp == 0) {
 				log_msg(LOG_ERR, "Could not stat new alias.");
-			} else {
-				new_stamp = st.st_mtime;
 			}
 
 			modify_aliased_file(file_path, _old_webm, new_stamp);
