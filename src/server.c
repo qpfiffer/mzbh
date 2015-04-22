@@ -388,6 +388,9 @@ int by_thread_handler(const http_request *request, http_response *response) {
 	char thread_id[256] = {0};
 	strncpy(thread_id, request->resource + request->matches[1].rm_so, sizeof(thread_id));
 
+	if (thread_id == NULL || request->resource + request->matches[1].rm_so == 0)
+		return 404;
+
 	thread *_thread = get_thread(thread_id);
 	if (_thread == NULL)
 		return 404;
