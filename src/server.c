@@ -438,6 +438,7 @@ int by_thread_handler(const http_request *request, http_response *response) {
 			vector_free(dsrlzd->replied_to_keys);
 		}
 
+		vector_free(dsrlzd->replied_to_keys);
 		free(dsrlzd);
 		total++;
 
