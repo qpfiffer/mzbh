@@ -167,6 +167,13 @@ void modify_aliased_file(const char *file_path, const webm *_old_webm, const tim
 	real_fpath = realpath(file_path, NULL);
 	real_old_fpath = realpath(_old_webm->file_path, NULL);
 
+	const size_t bigger = strlen(real_fpath) > strlen(real_old_fpath) ?
+			strlen(real_fpath) : strlen(real_old_fpath);
+	if (strncmp(real_fpath, real_old_fpath, bigger) == 0) {
+		log_msg(LOG_WARN, "Cowardly refusing to link the same file to itself.");
+		return;
+	}
+
 	log_msg(LOG_WARN, "Unlinking and creating a symlink from '%s' to '%s'.",
 			real_fpath, real_old_fpath);
 
