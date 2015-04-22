@@ -264,6 +264,7 @@ int webm_handler(const http_request *request, http_response *response) {
 			} else {
 				gshkl_add_string(ctext, "post_content", "(No information on this webm)");
 			}
+			vector_free(_post->replied_to_keys);
 		} else {
 			gshkl_add_string(ctext, "post_content", "(No information on this webm)");
 			gshkl_add_string(ctext, "post_id", "");
