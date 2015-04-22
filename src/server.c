@@ -246,6 +246,8 @@ int webm_handler(const http_request *request, http_response *response) {
 	char image_hash[HASH_IMAGE_STR_SIZE] = {0};
 	hash_file(full_path, image_hash);
 	webm *_webm = get_image(image_hash);
+
+	/* This code is fucking terrible. */
 	if (!_webm) {
 		gshkl_add_int(ctext, "image_date", -1);
 		gshkl_add_string(ctext, "post_content", "(No information on this webm)");
@@ -265,6 +267,7 @@ int webm_handler(const http_request *request, http_response *response) {
 		} else {
 			gshkl_add_string(ctext, "post_content", "(No information on this webm)");
 			gshkl_add_string(ctext, "post_id", "");
+			gshkl_add_string(ctext, "thread_id", "#");
 		}
 		free(_post);
 		time_t earliest_date = _webm->created_at;
