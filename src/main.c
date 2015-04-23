@@ -356,7 +356,7 @@ int download_images() {
 
 			/* Connections are flaky. */
 			log_msg(LOG_WARN, "(%i/%i): Could not download image. Retrying after sleep.", i + 1, max_retries);
-			sleep(10);
+			sleep(1);
 		}
 
 		free(p_match->body_content);
