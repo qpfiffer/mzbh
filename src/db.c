@@ -18,12 +18,11 @@
 #include "utils.h"
 
 /* Webm get/set stuff */
-webm *get_image(const char image_hash[static HASH_ARRAY_SIZE]) {
-	char key[MAX_KEY_SIZE] = {0};
-	create_webm_key(image_hash, key);
+webm *get_image(const char image_hash[static HASH_ARRAY_SIZE], char out_key[static MAX_KEY_SIZE]) {
+	create_webm_key(image_hash, out_key);
 
 	size_t json_size = 0;
-	char *json = (char *)fetch_data_from_db(&oleg_conn, key, &json_size);
+	char *json = (char *)fetch_data_from_db(&oleg_conn, out_key, &json_size);
 	/* log_msg(LOG_INFO, "Json from DB: %s", json); */
 
 	if (json == NULL)
@@ -59,11 +58,10 @@ webm_alias *get_aliased_image_with_key(const char key[static MAX_KEY_SIZE]) {
 	return alias;
 }
 
-webm_alias *get_aliased_image(const char filepath[static MAX_IMAGE_FILENAME_SIZE]) {
-	char key[MAX_KEY_SIZE] = {0};
-	create_alias_key(filepath, key);
+webm_alias *get_aliased_image(const char filepath[static MAX_IMAGE_FILENAME_SIZE], char out_key[static MAX_KEY_SIZE]) {
+	create_alias_key(filepath, out_key);
 
-	return get_aliased_image_with_key(key);
+	return get_aliased_image_with_key(out_key);
 }
 
 webm_to_alias *get_webm_to_alias(const char image_hash[static HASH_ARRAY_SIZE]) {
@@ -205,20 +203,23 @@ update_time: ; /* Yes the semicolon is necessary. Fucking C. */
 	free(real_old_fpath);
 }
 int add_image_to_db(const char *file_path, const char *filename, const char board[MAX_BOARD_NAME_SIZE],
-		const char post_key[MAX_KEY_SIZE]) {
+		const char post_key[MAX_KEY_SIZE], char out_webm_key[static MAX_KEY_SIZE]) {
 	char image_hash[HASH_IMAGE_STR_SIZE] = {0};
 	if (!hash_file(file_path, image_hash)) {
 		log_msg(LOG_ERR, "Could not hash '%s'.", file_path);
 		return 0;
 	}
 
-	webm *_old_webm = get_image(image_hash);
+	webm *_old_webm = get_image(image_hash, out_webm_key);
 
 	if (!_old_webm) {
 		int rc = _insert_webm(file_path, filename, image_hash, board, post_key);
 		if (!rc)
 			log_msg(LOG_ERR, "Something went wrong inserting webm.");
 		return rc;
+	} else {
+		/* This is the wrong key, we're going to use a different one. */
+		memset(out_webm_key, '\0', MAX_KEY_SIZE);
 	}
 
 	/* Check to see if the one we're scanning is the exact match we got from the DB. */
@@ -232,7 +233,7 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 	}
 
 	/* It's not the canonical original, so insert an alias. */
-	webm_alias *_old_alias = get_aliased_image(file_path);
+	webm_alias *_old_alias = get_aliased_image(file_path, out_webm_key);
 	int rc = 1;
 	/* If we DONT already have an alias for this image with this filename,
 	 * insert one.
@@ -252,10 +253,9 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 				file_path, _old_webm->filename, _old_alias->filename);
 	}
 
-	char alias_key[MAX_KEY_SIZE] = {0};
-	create_alias_key(file_path, alias_key);
 	/* Create or update the many2many between these two: */
-	associate_alias_with_webm(_old_webm, alias_key);
+	/* We should already have the alias key stored from up above. */
+	associate_alias_with_webm(_old_webm, out_webm_key);
 
 	if (rc) {
 		/* We don't want old alias, we want current alias here. Otherwise all
@@ -322,7 +322,7 @@ static int _insert_post(const char key[static MAX_KEY_SIZE], const post *to_save
 	return ret;
 }
 
-int add_post_to_db(const struct post_match *p_match) {
+int add_post_to_db(const struct post_match *p_match, const char webm_key[static MAX_KEY_SIZE]) {
 	if (!p_match)
 		return 1;
 
@@ -385,6 +385,8 @@ int add_post_to_db(const struct post_match *p_match) {
 		._null_term_hax_2 = 0,
 		.board = {0},
 		._null_term_hax_3 = 0,
+		.webm_key = {0},
+		._null_term_hax_4 = 0,
 		.body_content = NULL,
 		.replied_to_keys = vector_new(MAX_KEY_SIZE, 2)
 	};
@@ -392,6 +394,7 @@ int add_post_to_db(const struct post_match *p_match) {
 	strncpy(to_insert.post_id, p_match->post_number, sizeof(to_insert.post_id));
 	strncpy(to_insert.thread_key, thread_key, sizeof(to_insert.thread_key));
 	strncpy(to_insert.board, p_match->board, sizeof(to_insert.board));
+	strncpy(to_insert.webm_key, webm_key, sizeof(to_insert.webm_key));
 
 	if (p_match->body_content != NULL)
 		to_insert.body_content = strdup(p_match->body_content);

@@ -38,11 +38,12 @@ static int _add_directory(const char *directory_to_open, const char board[MAX_BO
 				memset(full_path, '\0', full_path_siz);
 				sprintf(full_path, "%s/%s", directory_to_open, result->d_name);
 
-				int rc = add_image_to_db(full_path, result->d_name, board, "-1");
+				char webm_key[MAX_KEY_SIZE] = {0};
+				int rc = add_image_to_db(full_path, result->d_name, board, "-1", webm_key);
 				if (rc)
 					break;
 				else {
-					log_msg(LOG_WARN, "(%i/%i) Could not add image to db. Retrying...", 
+					log_msg(LOG_WARN, "(%i/%i) Could not add image to db. Retrying...",
 						attempts+1, max_attempts);
 				}
 				total++;

@@ -139,7 +139,8 @@ static ol_stack *build_thread_index() {
 				}
 
 				/* Check if we have an existing alias for this file. */
-				webm_alias *existing = get_aliased_image(fname);
+				char key[MAX_KEY_SIZE] = {0};
+				webm_alias *existing = get_aliased_image(fname, key);
 				if (existing) {
 					log_msg(LOG_INFO, "Found alias for '%s', skipping.", fname);
 					free(p_match->body_content);
@@ -292,11 +293,19 @@ int download_image(const post_match *p_match) {
 	char post_key[MAX_KEY_SIZE] = {0};
 	create_post_key(p_match->board, p_match->post_number, post_key);
 
+	/* Written to by add_image_to_db */
+	char webm_key[MAX_KEY_SIZE] = {0};
+
 	/* image_filename is the full path, fname_plus_extension is the file name. */
-	int added = add_image_to_db(image_filename, fname_plus_extension, p_match->board, post_key);
+	int added = add_image_to_db(image_filename, fname_plus_extension, p_match->board, post_key, webm_key);
 	if (!added) {
 		log_msg(LOG_WARN, "Could not add image to database. Continuing...");
 	}
+
+	added = add_post_to_db(p_match, webm_key);
+	if (added != 0)
+		log_msg(LOG_WARN, "Could not add post %s to database.", p_match->post_number);
+
 
 	/* Don't need the post match anymore: */
 	free(raw_image_resp);
@@ -343,10 +352,6 @@ int download_images() {
 	/* Now actually download the images. */
 	while (images_to_download->next != NULL) {
 		post_match *p_match = (post_match *)spop(&images_to_download);
-
-		int added = add_post_to_db(p_match);
-		if (added != 0)
-			log_msg(LOG_WARN, "Could not add post %s to database.", p_match->post_number);
 
 		int i;
 		const int max_retries = 5;

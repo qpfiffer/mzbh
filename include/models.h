@@ -89,6 +89,9 @@ typedef struct post {
 	char board[MAX_BOARD_NAME_SIZE];
 	unsigned char _null_term_hax_3;
 
+	char webm_key[MAX_KEY_SIZE]; /* This could be either an alias or an original. */
+	unsigned char _null_term_hax_4;
+
 	char *body_content;
 
 	vector *replied_to_keys; /* keys that this post replied to. */

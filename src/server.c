@@ -244,8 +244,9 @@ int webm_handler(const http_request *request, http_response *response) {
 
 	greshunkel_var aliases = gshkl_add_array(ctext, "aliases");
 	char image_hash[HASH_IMAGE_STR_SIZE] = {0};
+	char webm_key[MAX_KEY_SIZE] = {0};
 	hash_file(full_path, image_hash);
-	webm *_webm = get_image(image_hash);
+	webm *_webm = get_image(image_hash, webm_key);
 
 	/* This code is fucking terrible. */
 	if (!_webm) {
