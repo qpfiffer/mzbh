@@ -421,39 +421,40 @@ int by_thread_handler(const http_request *request, http_response *response) {
 		cur = new;
 	}
 
-	db_match *matches = fetch_bulk_from_db(&oleg_conn, cur, 1);
-
-	/* So here we iterate through both loops, the matches and the keys. */
-	i = 0;
 	unsigned int total = 0;
-	db_match *current = matches;
-	while (current) {
-		db_match *next = current->next;
+	if (i > 0) {
+		db_match *matches = fetch_bulk_from_db(&oleg_conn, cur, 1);
 
-		const char *_key = vector_get(_thread->post_keys, i);
+		/* So here we iterate through both loops, the matches and the keys. */
+		i = 0;
+		db_match *current = matches;
+		while (current) {
+			db_match *next = current->next;
 
-		post *dsrlzd = deserialize_post((char *)current->data);
-		free((unsigned char *)current->data);
-		free(current);
+			const char *_key = vector_get(_thread->post_keys, i);
 
-		if (dsrlzd) {
-			gshkl_add_string_to_loop(&posts, dsrlzd->post_id);
-			gshkl_add_string_to_loop(&posts, _key);
+			post *dsrlzd = deserialize_post((char *)current->data);
+			free((unsigned char *)current->data);
+			free(current);
 
-			vector_free(dsrlzd->replied_to_keys);
-			free(dsrlzd->body_content);
+			if (dsrlzd) {
+				gshkl_add_string_to_loop(&posts, dsrlzd->post_id);
+				gshkl_add_string_to_loop(&posts, _key);
+
+				vector_free(dsrlzd->replied_to_keys);
+				free(dsrlzd->body_content);
+			}
+
+			free(dsrlzd);
+			total++;
+			i++;
+
+			current = next;
 		}
-
-		free(dsrlzd);
-		total++;
-		i++;
-
-		current = next;
 	}
 
 	vector_free(_thread->post_keys);
 	free(_thread);
-
 
 	greshunkel_var boards = gshkl_add_array(ctext, "BOARDS");
 	_add_files_in_dir_to_arr(&boards, webm_location());
