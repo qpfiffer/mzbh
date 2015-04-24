@@ -93,6 +93,8 @@ int post_serialization() {
 		._null_term_hax_2 = 0,
 		.board = "/b/",
 		._null_term_hax_3 = 0,
+		.webm_key = "FakeWebmKeyLol",
+		._null_term_hax_4 = 0,
 		.body_content = malloc(strlen("Hello!")),
 		.replied_to_keys = vector_new(sizeof(char) * MAX_KEY_SIZE, 16)
 	};
@@ -108,6 +110,7 @@ int post_serialization() {
 	assert(memcmp(to_test.post_id, deserialized->post_id, sizeof(to_test.post_id)) == 0);
 	assert(memcmp(to_test.thread_key, deserialized->thread_key, sizeof(to_test.thread_key)) == 0);
 	assert(memcmp(to_test.board, deserialized->board, sizeof(to_test.board)) == 0);
+	assert(memcmp(to_test.webm_key, deserialized->webm_key, sizeof(to_test.webm_key)) == 0);
 	assert(memcmp(to_test.body_content, deserialized->body_content, strlen(to_test.body_content)) == 0);
 
 	assert(to_test.replied_to_keys->count == deserialized->replied_to_keys->count);
