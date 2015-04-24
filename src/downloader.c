@@ -350,16 +350,8 @@ int download_images() {
 	while (images_to_download->next != NULL) {
 		post_match *p_match = (post_match *)spop(&images_to_download);
 
-		int i;
-		const int max_retries = 5;
-		for (i = 0; i < max_retries; i ++) {
-			if (download_image(p_match))
-				break;
-
-			/* Connections are flaky. */
-			log_msg(LOG_WARN, "(%i/%i): Could not download image. Retrying after sleep.", i + 1, max_retries);
-			sleep(1);
-		}
+		if (!download_image(p_match))
+			log_msg(LOG_WARN, "Could not download image.");
 
 		free(p_match->body_content);
 		free(p_match);
