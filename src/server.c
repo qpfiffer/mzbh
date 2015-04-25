@@ -111,12 +111,13 @@ static int _add_webms_in_dir_by_date(greshunkel_var *loop, const char *dir,
 	uint64_t i;
 	for (i = 0; i < webm_vec->count; i++) {
 		int8_t can_add = 0;
-		const struct file_and_time *x = vector_get(webm_vec, i);
 		if (!limit && !offset)
 			can_add = 1;
 		else if (i >= offset && i < (offset + limit))
 			can_add = 1;
+
 		if (can_add) {
+			const struct file_and_time *x = vector_get(webm_vec, i);
 			gshkl_add_string_to_loop(loop, x->fname);
 		}
 	}
