@@ -215,7 +215,7 @@ int download_image(const post_match *p_match) {
 			p_match->board, p_match->post_number);
 	unsigned int rc = send(thumb_request_fd, thumb_request, strlen(thumb_request), 0);
 	if (rc != strlen(thumb_request)) {
-		log_msg(LOG_ERR, "Could not send all bytes to host while requesting thumbnail.");
+		log_msg(LOG_ERR, "Could not send all bytes to host while requesting thumbnail. Sent (%i/%i).", rc, strlen(thumb_request));
 		goto error;
 	}
 
