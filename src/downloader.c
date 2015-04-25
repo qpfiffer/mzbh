@@ -238,6 +238,7 @@ int download_image(const post_match *p_match) {
 		close(thumb_request_fd);
 		free(raw_thumb_resp);
 		free(raw_image_resp);
+		log_msg(LOG_ERR, "Thumb or image size was zero bytes.");
 		return 0;
 	}
 
@@ -312,6 +313,8 @@ int download_image(const post_match *p_match) {
 
 	close(thumb_request_fd);
 	close(image_request_fd);
+
+	log_msg(LOG_INFO, "Downloaded %s%.*s...", p_match->filename, 5, p_match->file_ext);
 
 	return 1;
 
