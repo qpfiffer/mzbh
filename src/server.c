@@ -439,8 +439,16 @@ int by_thread_handler(const http_request *request, http_response *response) {
 			free(current);
 
 			if (dsrlzd) {
-				gshkl_add_string_to_loop(&posts, dsrlzd->post_id);
-				gshkl_add_string_to_loop(&posts, _key);
+				greshunkel_ctext *_post_sub = gshkl_init_context();
+				gshkl_add_string(_post_sub, "date", dsrlzd->post_id);
+				gshkl_add_string(_post_sub, "key", _key);
+				if (!dsrlzd->webm_key)
+					gshkl_add_string(_post_sub, "webm_key", "");
+				else
+					gshkl_add_string(_post_sub, "webm_key", dsrlzd->webm_key);
+				gshkl_add_string(_post_sub, "board", dsrlzd->board);
+
+				gshkl_add_sub_context_to_loop(&posts, _post_sub);
 
 				vector_free(dsrlzd->replied_to_keys);
 				free(dsrlzd->body_content);
