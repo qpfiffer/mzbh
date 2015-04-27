@@ -29,6 +29,7 @@ struct post_match;
 void get_non_colliding_image_filename(char fname[static MAX_IMAGE_FILENAME_SIZE], const struct post_match *p_match);
 int get_non_colliding_image_file_path(char fname[static MAX_IMAGE_FILENAME_SIZE], const struct post_match *p_match);
 void get_thumb_filename(char thumb_filename[static MAX_IMAGE_FILENAME_SIZE], const struct post_match *p_match);
+void ensure_thumb_directory(const post_match *p_match);
 
 int hash_string(const unsigned char *string, const size_t siz, char outbuf[static HASH_IMAGE_STR_SIZE]);
 int hash_file(const char *filepath, char outbuf[static HASH_IMAGE_STR_SIZE]);

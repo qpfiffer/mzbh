@@ -88,8 +88,19 @@ int get_non_colliding_image_file_path(char fname[static MAX_IMAGE_FILENAME_SIZE]
 	return 0;
 }
 
+void ensure_thumb_directory(const post_match *p_match) {
+	char thumb_dir[MAX_IMAGE_FILENAME_SIZE] = {0};
+	snprintf(thumb_dir, MAX_IMAGE_FILENAME_SIZE, "%s/%s/t", webm_location(), p_match->board);
+
+	struct stat st = {0};
+	if (stat(thumb_dir, &st) == -1) {
+		log_msg(LOG_WARN, "Creating thumb directory %s.", thumb_dir);
+		mkdir(thumb_dir, 0755);
+	}
+}
+
 void get_thumb_filename(char thumb_filename[static MAX_IMAGE_FILENAME_SIZE], const post_match *p_match) {
-	snprintf(thumb_filename, MAX_IMAGE_FILENAME_SIZE, "%s/%s/thumb_%zu_%s.jpg",
+	snprintf(thumb_filename, MAX_IMAGE_FILENAME_SIZE, "%s/%s/t/thumb_%zu_%s.jpg",
 			webm_location(), p_match->board, p_match->size, p_match->filename);
 }
 

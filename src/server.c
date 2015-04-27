@@ -37,7 +37,7 @@ static char *thumbnail_for_image(const char *argument) {
 	const size_t arg_len = strlen(argument);
 	const size_t stop_at = arg_len - strlen("webm");
 
-	const char prefix[] = "thumb_";
+	const char prefix[] = "t/thumb_";
 	const size_t prefix_siz = strlen(prefix);
 
 	char *to_return = calloc(1, stop_at + strlen("jpg") + prefix_siz + 1);

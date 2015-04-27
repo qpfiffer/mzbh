@@ -205,6 +205,7 @@ int download_image(const post_match *p_match) {
 	}
 
 	char thumb_filename[MAX_IMAGE_FILENAME_SIZE] = {0};
+	ensure_thumb_directory(p_match);
 	get_thumb_filename(thumb_filename, p_match);
 
 	log_msg(LOG_INFO, "Downloading %s%.*s...", p_match->filename, 5, p_match->file_ext);
