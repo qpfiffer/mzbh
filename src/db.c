@@ -165,6 +165,11 @@ void modify_aliased_file(const char *file_path, const webm *_old_webm, const tim
 	real_fpath = realpath(file_path, NULL);
 	real_old_fpath = realpath(_old_webm->file_path, NULL);
 
+	if (!real_fpath || !real_old_fpath) {
+		log_msg(LOG_WARN, "One or both files to be linked does not exist.");
+		return;
+	}
+
 	const size_t bigger = strlen(real_fpath) > strlen(real_old_fpath) ?
 			strlen(real_fpath) : strlen(real_old_fpath);
 

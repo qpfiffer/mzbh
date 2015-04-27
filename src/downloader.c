@@ -174,13 +174,16 @@ error:
 	return NULL;
 }
 
-int download_image(const post_match *p_match) {
+int download_image(const post_match *p_match, char webm_key[static MAX_KEY_SIZE]) {
 	int thumb_request_fd = 0;
 	int image_request_fd = 0;
 	unsigned char *raw_thumb_resp = NULL;
 	unsigned char *raw_image_resp = NULL;
 	FILE *thumb_file = NULL;
 	FILE *image_file = NULL;
+
+	if (!p_match->should_download_image)
+		goto end;
 
 	thumb_request_fd = connect_to_host(FOURCHAN_THUMBNAIL_HOST);
 	if (thumb_request_fd < 0) {
@@ -292,19 +295,11 @@ int download_image(const post_match *p_match) {
 	char post_key[MAX_KEY_SIZE] = {0};
 	create_post_key(p_match->board, p_match->post_number, post_key);
 
-	/* Written to by add_image_to_db */
-	char webm_key[MAX_KEY_SIZE] = {0};
-
 	/* image_filename is the full path, fname_plus_extension is the file name. */
 	int added = add_image_to_db(image_filename, fname_plus_extension, p_match->board, post_key, webm_key);
 	if (!added) {
 		log_msg(LOG_WARN, "Could not add image to database. Continuing...");
 	}
-
-	added = add_post_to_db(p_match, webm_key);
-	if (added != 0)
-		log_msg(LOG_WARN, "Could not add post %s to database.", p_match->post_number);
-
 
 	/* Don't need the post match anymore: */
 	free(raw_image_resp);
@@ -317,6 +312,7 @@ int download_image(const post_match *p_match) {
 
 	log_msg(LOG_INFO, "Downloaded %s%.*s...", p_match->filename, 5, p_match->file_ext);
 
+end:
 	return 1;
 
 error:
@@ -354,8 +350,14 @@ int download_images() {
 	while (images_to_download->next != NULL) {
 		post_match *p_match = (post_match *)spop(&images_to_download);
 
-		if (!download_image(p_match))
+		char webm_key[MAX_KEY_SIZE] = {0};
+		if (!download_image(p_match, webm_key))
 			log_msg(LOG_WARN, "Could not download image.");
+
+		int added = add_post_to_db(p_match, webm_key);
+		if (added != 0)
+			log_msg(LOG_WARN, "Could not add post %s to database.", p_match->post_number);
+
 
 		free(p_match->body_content);
 		free(p_match);

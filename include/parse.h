@@ -19,6 +19,7 @@ typedef struct post_match {
 	char thread_number[64];
 	char *body_content;
 	size_t size; /* Size of the file */
+	char should_download_image;
 } post_match;
 
 /* FUCK THE MUTEABLE STATE */
