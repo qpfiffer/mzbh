@@ -442,6 +442,12 @@ int by_thread_handler(const http_request *request, http_response *response) {
 				greshunkel_ctext *_post_sub = gshkl_init_context();
 				gshkl_add_string(_post_sub, "date", dsrlzd->post_id);
 				gshkl_add_string(_post_sub, "key", _key);
+
+				if (dsrlzd->body_content)
+					gshkl_add_string(_post_sub, "content", dsrlzd->body_content);
+				else
+					gshkl_add_string(_post_sub, "content", "");
+
 				if (!dsrlzd->webm_key)
 					gshkl_add_string(_post_sub, "webm_key", "");
 				else

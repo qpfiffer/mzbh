@@ -15,7 +15,8 @@ typedef struct post_match {
 	char board[MAX_BOARD_NAME_SIZE];
 	char filename[MAX_IMAGE_FILENAME_SIZE];
 	char file_ext[6];
-	char post_number[64];
+	char post_no[64]; /* The real post_number */
+	char post_date[64]; /* This is actually post date */
 	char thread_number[64];
 	char *body_content;
 	size_t size; /* Size of the file */

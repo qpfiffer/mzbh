@@ -216,7 +216,7 @@ int download_image(const post_match *p_match, char webm_key[static MAX_KEY_SIZE]
 	/* Build and send the thumbnail request. */
 	char thumb_request[256] = {0};
 	snprintf(thumb_request, sizeof(thumb_request), THUMB_REQUEST,
-			p_match->board, p_match->post_number);
+			p_match->board, p_match->post_date);
 	unsigned int rc = send(thumb_request_fd, thumb_request, strlen(thumb_request), 0);
 	if (rc != strlen(thumb_request)) {
 		log_msg(LOG_ERR, "Could not send all bytes to host while requesting thumbnail. Sent (%i/%i).", rc, strlen(thumb_request));
@@ -226,7 +226,7 @@ int download_image(const post_match *p_match, char webm_key[static MAX_KEY_SIZE]
 	/* Build and send the image request. */
 	char image_request[256] = {0};
 	snprintf(image_request, sizeof(image_request), IMAGE_REQUEST,
-			p_match->board, p_match->post_number, (int)sizeof(p_match->file_ext), p_match->file_ext);
+			p_match->board, p_match->post_date, (int)sizeof(p_match->file_ext), p_match->file_ext);
 	rc = send(image_request_fd, image_request, strlen(image_request), 0);
 	if (rc != strlen(image_request)) {
 		log_msg(LOG_ERR, "Could not send all bytes to host while requesting image.");
@@ -293,7 +293,7 @@ int download_image(const post_match *p_match, char webm_key[static MAX_KEY_SIZE]
 	get_non_colliding_image_filename(fname_plus_extension, p_match);
 
 	char post_key[MAX_KEY_SIZE] = {0};
-	create_post_key(p_match->board, p_match->post_number, post_key);
+	create_post_key(p_match->board, p_match->post_date, post_key);
 
 	/* image_filename is the full path, fname_plus_extension is the file name. */
 	int added = add_image_to_db(image_filename, fname_plus_extension, p_match->board, post_key, webm_key);
@@ -356,7 +356,7 @@ int download_images() {
 
 		int added = add_post_to_db(p_match, webm_key);
 		if (added != 0)
-			log_msg(LOG_WARN, "Could not add post %s to database.", p_match->post_number);
+			log_msg(LOG_WARN, "Could not add post %s to database.", p_match->post_date);
 
 
 		free(p_match->body_content);

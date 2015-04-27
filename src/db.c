@@ -327,7 +327,7 @@ int add_post_to_db(const struct post_match *p_match, const char webm_key[static 
 		return 1;
 
 	char post_key[MAX_KEY_SIZE] = {0};
-	create_post_key(p_match->board, p_match->post_number, post_key);
+	create_post_key(p_match->board, p_match->post_date, post_key);
 
 	post *existing_post = get_post(post_key);
 	if (existing_post != NULL) {
@@ -387,11 +387,14 @@ int add_post_to_db(const struct post_match *p_match, const char webm_key[static 
 		._null_term_hax_3 = 0,
 		.webm_key = {0},
 		._null_term_hax_4 = 0,
+		.post_no= {0},
+		._null_term_hax_5 = 0,
 		.body_content = NULL,
 		.replied_to_keys = vector_new(MAX_KEY_SIZE, 2)
 	};
 
-	strncpy(to_insert.post_id, p_match->post_number, sizeof(to_insert.post_id));
+	strncpy(to_insert.post_id, p_match->post_date, sizeof(to_insert.post_id));
+	strncpy(to_insert.post_no, p_match->post_no, sizeof(to_insert.post_no));
 	strncpy(to_insert.thread_key, thread_key, sizeof(to_insert.thread_key));
 	strncpy(to_insert.board, p_match->board, sizeof(to_insert.board));
 	strncpy(to_insert.webm_key, webm_key, sizeof(to_insert.webm_key));

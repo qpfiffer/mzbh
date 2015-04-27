@@ -274,6 +274,9 @@ char *serialize_post(const post *to_serialize) {
 	if (to_serialize->webm_key)
 		json_object_set_string(root_object, "webm_key", to_serialize->webm_key);
 
+	if (to_serialize->post_no)
+		json_object_set_string(root_object, "post_no", to_serialize->post_no);
+
 	if (to_serialize->body_content)
 		json_object_set_string(root_object, "body_content", to_serialize->body_content);
 
@@ -307,9 +310,12 @@ post *deserialize_post(const char *json) {
 	strncpy(to_return->board, json_object_get_string(post_object, "board"), sizeof(to_return->board));
 
 	const char *wk = json_object_get_string(post_object, "webm_key");
-	if (wk) {
+	if (wk)
 		strncpy(to_return->webm_key, json_object_get_string(post_object, "webm_key"), sizeof(to_return->webm_key));
-	}
+
+	const char *p_no = json_object_get_string(post_object, "post_no");
+	if (p_no)
+		strncpy(to_return->webm_key, json_object_get_string(post_object, "post_no"), sizeof(to_return->post_no));
 
 	const char *b_content = json_object_get_string(post_object, "body_content");
 	if (b_content) {

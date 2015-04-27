@@ -83,6 +83,7 @@ ol_stack *parse_thread_json(const char *all_json, const thread_match *match) {
 		JSON_Object *post = json_array_get_object(posts, i);
 		const char *file_ext = json_object_get_string(post, "ext");
 		const char *filename = json_object_get_string(post, "filename");
+		const uint64_t no = json_object_get_number(post, "no");
 		const uint64_t siz = json_object_get_number(post, "fsize");
 		const uint64_t _tim = json_object_get_number(post, "tim");
 		const char *body_content = json_object_get_string(post, "com");
@@ -94,13 +95,17 @@ ol_stack *parse_thread_json(const char *all_json, const thread_match *match) {
 		p_match->size = siz;
 
 		/* Convert the canonical post ID to a char array. */
-		char post_number[sizeof(p_match->post_number)] = {0};
-		snprintf(post_number, sizeof(post_number), "%"PRIu64, _tim);
+		char post_date[sizeof(p_match->post_date)] = {0};
+		snprintf(post_date, sizeof(post_date), "%"PRIu64, _tim);
+
+		char post_no[sizeof(p_match->post_no)] = {0};
+		snprintf(post_no, sizeof(post_no), "%"PRIu64, no);
 
 		char thread_number[sizeof(p_match->thread_number)] = {0};
 		snprintf(thread_number, sizeof(thread_number), "%"PRIu64, match->thread_num);
 
-		strncpy(p_match->post_number, post_number, sizeof(p_match->post_number));
+		strncpy(p_match->post_date, post_date, sizeof(p_match->post_date));
+		strncpy(p_match->post_no, post_no, sizeof(p_match->post_no));
 		strncpy(p_match->thread_number, thread_number, sizeof(p_match->thread_number));
 		strncpy(p_match->filename, filename, sizeof(p_match->filename));
 		strncpy(p_match->file_ext, file_ext, sizeof(p_match->file_ext));

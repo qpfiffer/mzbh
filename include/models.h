@@ -80,7 +80,7 @@ char *serialize_thread(const thread *to_serialize);
 thread *deserialize_thread(const char *json);
 
 typedef struct post {
-	char post_id[32]; /* 4chan post id. */
+	char post_id[32]; /* post date */
 	unsigned char _null_term_hax_1;
 
 	char thread_key[MAX_KEY_SIZE]; /* "Foreign key" to thread object. */
@@ -91,6 +91,9 @@ typedef struct post {
 
 	char webm_key[MAX_KEY_SIZE]; /* This could be either an alias or an original. */
 	unsigned char _null_term_hax_4;
+
+	char post_no[32]; /* post number */
+	unsigned char _null_term_hax_5;
 
 	char *body_content;
 
