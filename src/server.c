@@ -5,6 +5,7 @@
 #include <arpa/inet.h>
 #include <assert.h>
 #include <dirent.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <netdb.h>
 #include <netinet/in.h>
@@ -32,6 +33,23 @@
 
 #define RESULTS_PER_PAGE 80
 #define OFFSET_FOR_PAGE(x) x * RESULTS_PER_PAGE
+
+static char *pretty_date(const char *argument) {
+	const time_t tim = strtol(argument, NULL, 10);
+
+	if ((tim == LONG_MIN || tim == LONG_MAX) && errno == ERANGE)
+		return strdup(argument);
+
+	const time_t non_milli_tim = tim / 1000;
+
+	struct tm converted;
+	gmtime_r(&non_milli_tim, &converted);
+
+	char *buf = calloc(1, sizeof(char) * 25);
+    strftime(buf, 25, "%F(%a)%T", &converted);
+
+	return buf;
+}
 
 static char *thumbnail_for_image(const char *argument) {
 	const size_t arg_len = strlen(argument);
@@ -230,6 +248,7 @@ int webm_handler(const http_request *request, http_response *response) {
 
 	greshunkel_ctext *ctext = gshkl_init_context();
 	gshkl_add_string(ctext, "current_board", current_board);
+	gshkl_add_filter(ctext, "pretty_date", &pretty_date, &filter_cleanup);
 
 	/* All boards */
 	greshunkel_var boards = gshkl_add_array(ctext, "BOARDS");
@@ -403,6 +422,7 @@ int by_thread_handler(const http_request *request, http_response *response) {
 
 	greshunkel_ctext *ctext = gshkl_init_context();
 	gshkl_add_string(ctext, "thread_id", thread_id);
+	gshkl_add_filter(ctext, "pretty_date", &pretty_date, &filter_cleanup);
 
 	greshunkel_var posts = gshkl_add_array(ctext, "POSTS");
 
@@ -447,6 +467,11 @@ int by_thread_handler(const http_request *request, http_response *response) {
 					gshkl_add_string(_post_sub, "content", dsrlzd->body_content);
 				else
 					gshkl_add_string(_post_sub, "content", "");
+
+				if (dsrlzd->post_no)
+					gshkl_add_string(_post_sub, "post_no", dsrlzd->post_no);
+				else
+					gshkl_add_string(_post_sub, "post_no", "#");
 
 				if (!dsrlzd->webm_key)
 					gshkl_add_string(_post_sub, "webm_key", "");
