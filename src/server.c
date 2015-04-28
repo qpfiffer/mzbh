@@ -409,6 +409,27 @@ static unsigned int _add_sorted_by_aliases(greshunkel_var *images) {
 	return 0;
 }
 
+static db_key_match *create_match_keys_from_vector(const vector *vec) {
+	db_key_match *cur = NULL;
+	unsigned int i;
+	for (i = 0; i < vec->count; i++) {
+		db_key_match _stack = {
+			.key = {0},
+			.next = cur
+		};
+
+		const char *_key = vector_get(vec, i);
+		memcpy((char *)_stack.key, _key, strlen(_key));
+
+		db_key_match *new = calloc(1, sizeof(db_key_match));
+		memcpy(new, &_stack, sizeof(db_key_match));
+
+		cur = new;
+	}
+
+	return cur;
+}
+
 int by_thread_handler(const http_request *request, http_response *response) {
 	char thread_id[256] = {0};
 	strncpy(thread_id, request->resource + request->matches[1].rm_so, sizeof(thread_id));
@@ -426,28 +447,14 @@ int by_thread_handler(const http_request *request, http_response *response) {
 
 	greshunkel_var posts = gshkl_add_array(ctext, "POSTS");
 
-	db_key_match *cur = NULL;
-	unsigned int i;
-	for (i = 0; i < _thread->post_keys->count; i++) {
-		db_key_match _stack = {
-			.key = {0},
-			.next = cur
-		};
-		const char *_key = vector_get(_thread->post_keys, i);
-		memcpy((char *)_stack.key, _key, strlen(_key));
-
-		db_key_match *new = calloc(1, sizeof(db_key_match));
-		memcpy(new, &_stack, sizeof(db_key_match));
-
-		cur = new;
-	}
+	db_key_match *cur = create_match_keys_from_vector(_thread->post_keys);
 
 	unsigned int total = 0;
-	if (i > 0) {
+	if (cur != NULL) {
 		db_match *matches = fetch_bulk_from_db(&oleg_conn, cur, 1);
 
 		/* So here we iterate through both loops, the matches and the keys. */
-		i = 0;
+		unsigned int i = 0;
 		db_match *current = matches;
 		while (current) {
 			db_match *next = current->next;
