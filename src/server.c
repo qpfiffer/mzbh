@@ -276,6 +276,10 @@ int webm_handler(const http_request *request, http_response *response) {
 	int found = 0;
 	if (_webm) {
 		found = 1;
+		if (_alias) {
+			/* This shouldn't happen, but whatever. */
+			free(_alias);
+		}
 	} else if (_alias) {
 		found = 1;
 		free(_webm);
