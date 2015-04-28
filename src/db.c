@@ -387,7 +387,7 @@ int add_post_to_db(const struct post_match *p_match, const char webm_key[static 
 		._null_term_hax_3 = 0,
 		.webm_key = {0},
 		._null_term_hax_4 = 0,
-		.post_no= {0},
+		.post_no = {0},
 		._null_term_hax_5 = 0,
 		.body_content = NULL,
 		.replied_to_keys = vector_new(MAX_KEY_SIZE, 2)

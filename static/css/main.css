@@ -48,3 +48,10 @@ div.post-content span {
 div.post-content .quote {
 	color: #789922;
 }
+div.post-content .file_thumb {
+	float: left;
+	margin-left: 20px;
+	margin-right: 20px;
+	margin-top: 3px;
+	margin-bottom: 5px;
+}

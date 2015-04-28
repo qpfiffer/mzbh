@@ -444,7 +444,8 @@ int by_thread_handler(const http_request *request, http_response *response) {
 
 	greshunkel_ctext *ctext = gshkl_init_context();
 	gshkl_add_string(ctext, "thread_id", thread_id);
-	gshkl_add_filter(ctext, "pretty_date", &pretty_date, &filter_cleanup);
+	gshkl_add_filter(ctext, "pretty_date", pretty_date, filter_cleanup);
+	gshkl_add_filter(ctext, "thumbnail_for_image", thumbnail_for_image, filter_cleanup);
 
 	greshunkel_var posts = gshkl_add_array(ctext, "POSTS");
 
@@ -482,6 +483,7 @@ int by_thread_handler(const http_request *request, http_response *response) {
 				greshunkel_ctext *_post_sub = gshkl_init_context();
 				gshkl_add_string(_post_sub, "date", dsrlzd->post_id);
 				gshkl_add_string(_post_sub, "key", _key);
+				gshkl_add_string(_post_sub, "board", dsrlzd->board);
 
 				if (dsrlzd->body_content)
 					gshkl_add_string(_post_sub, "content", dsrlzd->body_content);
@@ -491,7 +493,7 @@ int by_thread_handler(const http_request *request, http_response *response) {
 				if (dsrlzd->post_no)
 					gshkl_add_string(_post_sub, "post_no", dsrlzd->post_no);
 				else
-					gshkl_add_string(_post_sub, "post_no", "#");
+					gshkl_add_string(_post_sub, "post_no", "");
 
 				if (dsrlzd->webm_key && strlen(dsrlzd->webm_key) > 0) {
 					gshkl_add_string(_post_sub, "webm_key", dsrlzd->webm_key);
@@ -499,12 +501,10 @@ int by_thread_handler(const http_request *request, http_response *response) {
 					 * after a bulk_get.
 					 */
 					vector_append(_webms_from_posts, dsrlzd->webm_key, sizeof(dsrlzd->webm_key));
-					vector_append(_post_context_objs, _post_sub, sizeof(struct greshunkel_ctext));
 				} else {
 					vector_append(_webms_from_posts, NULL, 0);
-					vector_append(_post_context_objs, NULL, 0);
 				}
-				gshkl_add_string(_post_sub, "board", dsrlzd->board);
+				vector_append(_post_context_objs, _post_sub, sizeof(struct greshunkel_ctext));
 
 				gshkl_add_sub_context_to_loop(&posts, _post_sub);
 
@@ -529,24 +529,24 @@ int by_thread_handler(const http_request *request, http_response *response) {
 		db_match *current = matches;
 		while (current) {
 			db_match *next = current->next;
-			if (current->data == NULL) {
-				free(current);
-				goto done;
-			}
-
 			struct greshunkel_ctext *post_ctext = (struct greshunkel_ctext *)vector_get(_post_context_objs, i);
 
-			webm_alias *dsrlzd = deserialize_alias((char *)current->data);
-			free((unsigned char *)current->data);
-			free(current);
+			if (current->data == NULL) {
+				gshkl_add_string(post_ctext, "image", "");
+				goto done;
+			} else {
 
-			if (dsrlzd && dsrlzd->file_path)
-				gshkl_add_string(post_ctext, "image", dsrlzd->filename);
-			else
-				gshkl_add_string(post_ctext, "image", "#");
+				webm_alias *dsrlzd = deserialize_alias((char *)current->data);
+				free((unsigned char *)current->data);
 
-			free(dsrlzd);
+				if (dsrlzd && dsrlzd->file_path)
+					gshkl_add_string(post_ctext, "image", dsrlzd->filename);
+
+				free(dsrlzd);
+			}
+
 done:
+			free(current);
 			current = next;
 			i++;
 		}

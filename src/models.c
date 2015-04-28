@@ -315,7 +315,7 @@ post *deserialize_post(const char *json) {
 
 	const char *p_no = json_object_get_string(post_object, "post_no");
 	if (p_no)
-		strncpy(to_return->webm_key, json_object_get_string(post_object, "post_no"), sizeof(to_return->post_no));
+		strncpy(to_return->post_no, json_object_get_string(post_object, "post_no"), sizeof(to_return->post_no));
 
 	const char *b_content = json_object_get_string(post_object, "body_content");
 	if (b_content) {
