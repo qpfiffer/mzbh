@@ -419,7 +419,8 @@ static db_key_match *create_match_keys_from_vector(const vector *vec) {
 		};
 
 		const char *_key = vector_get(vec, i);
-		memcpy((char *)_stack.key, _key, strlen(_key));
+		size_t larger = strlen(_key) > MAX_KEY_SIZE ? MAX_KEY_SIZE : strlen(_key);
+		strncpy((char *)_stack.key, _key, larger);
 
 		db_key_match *new = calloc(1, sizeof(db_key_match));
 		memcpy(new, &_stack, sizeof(db_key_match));
@@ -455,6 +456,11 @@ int by_thread_handler(const http_request *request, http_response *response) {
 	 * of a webm.
 	 */
 	vector *_webms_from_posts = vector_new(MAX_KEY_SIZE, 32);
+	/* This is another vector of all of the greshunkel contexts we're going to modify
+	 * to add our webm content to once we've looped through once.
+	 * That probably didn't make any sense.
+	 */
+	vector *_post_context_objs = vector_new(sizeof(struct greshunkel_ctext), 32);
 
 	unsigned int total = 0;
 	if (cur != NULL) {
@@ -487,11 +493,17 @@ int by_thread_handler(const http_request *request, http_response *response) {
 				else
 					gshkl_add_string(_post_sub, "post_no", "#");
 
-				if (dsrlzd->webm_key) {
+				if (dsrlzd->webm_key && strlen(dsrlzd->webm_key) > 0) {
 					gshkl_add_string(_post_sub, "webm_key", dsrlzd->webm_key);
+					/* Add the _webm_key and context to the relevant vectors for later modification
+					 * after a bulk_get.
+					 */
 					vector_append(_webms_from_posts, dsrlzd->webm_key, sizeof(dsrlzd->webm_key));
-				} else
-					gshkl_add_string(_post_sub, "webm_key", "");
+					vector_append(_post_context_objs, _post_sub, sizeof(struct greshunkel_ctext));
+				} else {
+					vector_append(_webms_from_posts, NULL, 0);
+					vector_append(_post_context_objs, NULL, 0);
+				}
 				gshkl_add_string(_post_sub, "board", dsrlzd->board);
 
 				gshkl_add_sub_context_to_loop(&posts, _post_sub);
@@ -508,7 +520,40 @@ int by_thread_handler(const http_request *request, http_response *response) {
 		}
 	}
 
+	if (_webms_from_posts->count > 0) {
+		db_key_match *_all_webm_keys = create_match_keys_from_vector(_webms_from_posts);
+
+		db_match *matches = fetch_bulk_from_db(&oleg_conn, _all_webm_keys, 1);
+
+		unsigned int i = 0;
+		db_match *current = matches;
+		while (current) {
+			db_match *next = current->next;
+			if (current->data == NULL) {
+				free(current);
+				goto done;
+			}
+
+			struct greshunkel_ctext *post_ctext = (struct greshunkel_ctext *)vector_get(_post_context_objs, i);
+
+			webm_alias *dsrlzd = deserialize_alias((char *)current->data);
+			free((unsigned char *)current->data);
+			free(current);
+
+			if (dsrlzd && dsrlzd->file_path)
+				gshkl_add_string(post_ctext, "image", dsrlzd->filename);
+			else
+				gshkl_add_string(post_ctext, "image", "#");
+
+			free(dsrlzd);
+done:
+			current = next;
+			i++;
+		}
+	}
+
 	vector_free(_webms_from_posts);
+	vector_free(_post_context_objs);
 	vector_free(_thread->post_keys);
 	free(_thread);
 
