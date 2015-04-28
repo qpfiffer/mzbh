@@ -449,6 +449,13 @@ int by_thread_handler(const http_request *request, http_response *response) {
 
 	db_key_match *cur = create_match_keys_from_vector(_thread->post_keys);
 
+	/* So this is kind of fucked because we're going to be getting back both
+	 * webms and webm_aliases from the DB, but we're going to deserialize them
+	 * all to webm_alias objects. This will work because a webm_alias is a subset
+	 * of a webm.
+	 */
+	vector *_webms_from_posts = vector_new(MAX_KEY_SIZE, 32);
+
 	unsigned int total = 0;
 	if (cur != NULL) {
 		db_match *matches = fetch_bulk_from_db(&oleg_conn, cur, 1);
@@ -480,10 +487,11 @@ int by_thread_handler(const http_request *request, http_response *response) {
 				else
 					gshkl_add_string(_post_sub, "post_no", "#");
 
-				if (!dsrlzd->webm_key)
-					gshkl_add_string(_post_sub, "webm_key", "");
-				else
+				if (dsrlzd->webm_key) {
 					gshkl_add_string(_post_sub, "webm_key", dsrlzd->webm_key);
+					vector_append(_webms_from_posts, dsrlzd->webm_key, sizeof(dsrlzd->webm_key));
+				} else
+					gshkl_add_string(_post_sub, "webm_key", "");
 				gshkl_add_string(_post_sub, "board", dsrlzd->board);
 
 				gshkl_add_sub_context_to_loop(&posts, _post_sub);
@@ -500,6 +508,7 @@ int by_thread_handler(const http_request *request, http_response *response) {
 		}
 	}
 
+	vector_free(_webms_from_posts);
 	vector_free(_thread->post_keys);
 	free(_thread);
 
