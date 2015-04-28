@@ -264,12 +264,25 @@ int webm_handler(const http_request *request, http_response *response) {
 
 	greshunkel_var aliases = gshkl_add_array(ctext, "aliases");
 	char image_hash[HASH_IMAGE_STR_SIZE] = {0};
+
 	char webm_key[MAX_KEY_SIZE] = {0};
 	hash_file(full_path, image_hash);
 	webm *_webm = get_image(image_hash, webm_key);
 
+	char alias_key[MAX_KEY_SIZE] = {0};
+	webm_alias *_alias = get_aliased_image(full_path, alias_key);
+
 	/* This code is fucking terrible. */
-	if (!_webm) {
+	int found = 0;
+	if (_webm) {
+		found = 1;
+	} else if (_alias) {
+		found = 1;
+		free(_webm);
+		_webm = (webm *)_alias;
+	}
+
+	if (!found) {
 		gshkl_add_int(ctext, "image_date", -1);
 		gshkl_add_string(ctext, "post_content", "(No information on this webm)");
 		gshkl_add_string(ctext, "post_id", "");
