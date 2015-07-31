@@ -19,10 +19,10 @@ The webserver is something of my own design because I hate dependencies. It's
 not great but it'll get the job done. You can run just the webserver with:
 
 ```
-./waifu.xyz --serve
+./waifu.xyz
 ```
 
-This runs the webserver by itself without starting the scraper component.
+This runs the webserver by itself.
 
 The webserver also accepts a thread counter argument, `-t`. This specifies the
 number of threads in the acceptor pool.
@@ -43,12 +43,20 @@ The goal is to retain as much metadata as possible while still allowing the
 files to exist in a pure state (no hash filenames, not embedded in a database
 somewhere.)
 
+You can run this with:
+
+```
+./downloader
+```
+
 # Installation
 
 1. `make`
 
 There is no installation. this will just build a handful of binaries you can use.
 
+* `downloader` - The scraper/downloader thing. Responsible for hitting the API,
+  downloading and writing files.
 * `waifu.xyz` - The main webserver/application and scraper. This is the meat of
   everything.
 * `dbctl` - Handy cli program to manage and inspect the DB state.
