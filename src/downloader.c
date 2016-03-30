@@ -20,6 +20,8 @@
 #include "stack.h"
 #include "utils.h"
 
+#define IMAGE_DOWNLOADING_QUEUE_NAME "/waifuimagedlqueue"
+
 const char *BOARDS[] = {"a", "b", "g", "gif", "e", "h", "r", "sci", "soc", "v", "wsg"};
 
 const char FOURCHAN_API_HOST[] = "a.4cdn.org";
@@ -50,9 +52,39 @@ const char THUMB_REQUEST[] =
 	"Host: t.4cdn.org\r\n"
 	"Accept: */*\r\n\r\n";
 
-static ol_stack *build_thread_index() {
+int ensure_directory(const char *location) {
+	struct stat st = {0};
+	int ret = 0;
+	if ((ret = stat(location, &st)) == -1) {
+		log_msg(LOG_WARN, "Creating directory %s.", location);
+		mkdir(location, 0755);
+	}
+
+	return ret;
+}
+
+static inline mqd_t _open_queue(const char *queue_name, int flags, const size_t size) {
+	/* Helper stolen from 38-Moths. */
+	(void) flags;
+	struct mq_attr asq_attr = {
+		.mq_flags = 0,
+		.mq_maxmsg = 10,
+		.mq_msgsize = size,
+		.mq_curmsgs = 0
+	};
+
+	mqd_t to_return = mq_open(queue_name, O_WRONLY | O_CREAT, 0644, &asq_attr);
+	if (to_return == -1)
+		perror("Could not open queue");
+
+	return to_return;
+}
+
+/* static ol_stack *build_thread_index() { */
+static void multithreaded_build_thread_index(void *arg) {
+	mqd_t dl_queue = -1;
 	int request_fd = 0;
-	ol_stack *images_to_download = NULL;
+
 	request_fd = connect_to_host(FOURCHAN_API_HOST);
 	if (request_fd < 0) {
 		log_msg(LOG_ERR, "Could not connect to %s.", FOURCHAN_API_HOST);
@@ -60,10 +92,13 @@ static ol_stack *build_thread_index() {
 	}
 	log_msg(LOG_INFO, "Connected to %s.", FOURCHAN_API_HOST);
 
-	/* This is where we'll queue up images to be downloaded. */
-	images_to_download = malloc(sizeof(ol_stack));
-	images_to_download->next = NULL;
-	images_to_download->data = NULL;
+	/* Open the queue for loading up files. */
+	dl_queue = mq_open(IMAGE_DOWNLOADING_QUEUE_NAME, O_WRONLY);
+	if (dl_queue == -1) {
+		log_msg(LOG_ERR, "Thread index: Could not open queue.");
+		perror("Thread index: ");
+		goto error;
+	}
 
 	unsigned int i;
 	for (i = 0; i < (sizeof(BOARDS)/sizeof(BOARDS[0])); i++) {
@@ -146,7 +181,13 @@ static ol_stack *build_thread_index() {
 					continue;
 				}
 
-				spush(&images_to_download, p_match);
+				ssize_t msg_size = mq_send(dl_queue, (char *)p_match, sizeof(p_match), 0);
+				if (msg_size == -1) {
+					log_msg(LOG_ERR, "Thread index: Could not enqueue p_match.");
+					free(p_match->body_content);
+					free(p_match);
+					free(existing);
+				}
 			}
 			free(thread_matches);
 			free(thread_json);
@@ -333,18 +374,23 @@ error:
 }
 
 int download_images() {
-	struct stat st = {0};
-	if (stat(webm_location(), &st) == -1) {
-		log_msg(LOG_WARN, "Creating webms directory %s.", webm_location());
-		mkdir(webm_location(), 0755);
+	ensure_directory(webm_location());
+
+	/* Spin up image indexing thread */
+	pthread_t image_indexer = {0};
+	if (pthread_create(&image_indexer, NULL, multithreaded_build_thread_index, NULL) != 0) {
+		log_msg(LOG_ERR, "Could not create indexer thread.");
+		return -1;
 	}
 
+	/*
 	ol_stack *images_to_download = NULL;
 	images_to_download = build_thread_index();
 	if (images_to_download == NULL) {
 		log_msg(LOG_WARN, "No images to download.");
 		return -1;
 	}
+	*/
 
 	/* Now actually download the images. */
 	while (images_to_download->next != NULL) {
@@ -369,18 +415,38 @@ int download_images() {
 	return 0;
 }
 
-
 int main(int argc, char *argv[]) {
 	UNUSED(argc);
 	UNUSED(argv);
 
+	mqd_t dl_queue = -1;
+
 	log_msg(LOG_INFO, "Downloader started.");
+
+start:
+	if (mq_unlink(IMAGE_DOWNLOADING_QUEUE_NAME) == 0) {
+		log_msg(LOG_INFO, "Purged old downloader communication queue.");
+	}
+
+	dl_queue = _open_queue(IMAGE_DOWNLOADING_QUEUE_NAME, O_RDWR | O_CREAT, sizeof(post_match));
+	if (po_accepted_queue == -1) {
+		log_msg(LOG_ERR, "Could not pre-open downloader communication queue.");
+		perror("Downloader");
+		return -1;
+	}
+
 	while (1) {
 		if (download_images() != 0) {
 			log_msg(LOG_WARN, "Something went wrong while downloading images.");
+			if (mq_close(dl_queue) == -1)
+				log_msg(LOG_ERR, "Could not close downloader communication queue.");
+			goto start;
 		}
 		sleep(600);
 	}
+
+	if (mq_close(dl_queue) == -1)
+		log_msg(LOG_ERR, "Could not close downloader communication queue.");
 
 	return 0;
 }
