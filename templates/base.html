@@ -1,0 +1,26 @@
+{% load staticfiles %}
+<!DOCTYPE html>
+<html>
+	<head>
+		<link href="{% static "css/furtive.min.css" %}" rel="stylesheet">
+		<link href="{% static "css/main.css" %}" rel="stylesheet">
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>waifuless.xyz - {% block title %}{% endblock %}</title>
+	</head>
+	<body>
+		<div class="grd">
+			<div class="row">
+				<div class="col-1">
+					{% include "_board_list.html" %}
+				</div>
+				<div class="col-6">
+					{% block main %}
+					{% endblock %}
+				</div>
+			</div>
+		</div>
+	</body>
+</html>
+<!-- vim: noet ts=4 ft=htmldjango sw=4:
+-->
