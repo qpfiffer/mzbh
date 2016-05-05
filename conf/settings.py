@@ -124,5 +124,3 @@ USE_TZ = True
 
 STATICFILES_DIRS = ["./static/"]
 STATIC_URL = '/static/'
-
-ALL_BOARDS = ["a", "b", "g", "gif", "e", "h", "r", "sci", "soc", "v", "wsg"]
