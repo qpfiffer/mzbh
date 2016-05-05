@@ -16,9 +16,10 @@ Including another URLconf
 from django.conf.urls import url
 from django.contrib import admin
 
-from apps.main.views import home
+from apps.main.views import home, board
 
 urlpatterns = [
     url(r'^$', home, name='home'),
+    url(r'^chug/([a-zA-Z])/$', board, name='board'),
     url(r'^admin/', admin.site.urls),
 ]

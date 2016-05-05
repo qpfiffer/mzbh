@@ -7,3 +7,9 @@ def home(request):
     webm_alias_count = WebmAlias.objects.all().count()
     post_count = Post.objects.all().count()
     return render(request, "main/home.html", locals())
+
+def board(request, board):
+    webm_count = Webm.objects.all().count()
+    webm_alias_count = WebmAlias.objects.all().count()
+    post_count = Post.objects.all().count()
+    return render(request, "main/home.html", locals())
