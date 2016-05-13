@@ -4,13 +4,13 @@
 {% block main %}
 <div>
 	<div class="bg--light-gray">
-		<p><a href="/chug/xXx @current_board xXx/xXx @image xXx" class="p1">Download xXx @image xXx</a></p>
+		<p><a href="/chug/xXx @current_board xXx/xXx @image xXx" class="p1">Download "{{image.filename|safe}}"</a></p>
 		<video id="webm" autoplay="true" loop="true" controls="true">
 			<source src="/chug/xXx @current_board xXx/xXx @image xXx" type="video/webm" />
 		</video>
 		<div class="post-content">
-			<span>XxX pretty_date xXx @post_id xXx XxX</span>
-			<blockquote>xXx @post_content xXx</blockquote>
+			<span>{{post.created_at}} {{post.post_no}}</span>
+			<blockquote>{{post.body_content|safe}}</blockquote>
 		</div>
 		<p>Information:</p>
 		<ul>

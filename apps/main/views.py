@@ -17,4 +17,5 @@ def board(request, board_char):
 
 def webm(request, webm_id):
     image = Webm.objects.get(pk=webm_id)
+    post = Post.objects.get(webm=image)
     return render(request, "main/webm.html", locals())
