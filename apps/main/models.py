@@ -9,10 +9,12 @@ class Board(models.Model):
 class Thread(models.Model):
     board = models.ForeignKey(Board)
     created_at = models.DateTimeField(auto_now=True)
+    thread_ident = models.CharField(max_length=32, null=False)
 
 class Post(models.Model):
     # Post Date:
     post_id = models.CharField(max_length=32)
+    post_no = models.CharField(max_length=32)
     thread = models.ForeignKey(Thread)
     body_content = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now=True)

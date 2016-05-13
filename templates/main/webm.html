@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}{{image}}{% endblock %}
+
+{% block main %}
+<div>
+	<div class="bg--light-gray">
+		<p><a href="/chug/xXx @current_board xXx/xXx @image xXx" class="p1">Download xXx @image xXx</a></p>
+		<video id="webm" autoplay="true" loop="true" controls="true">
+			<source src="/chug/xXx @current_board xXx/xXx @image xXx" type="video/webm" />
+		</video>
+		<div class="post-content">
+			<span>XxX pretty_date xXx @post_id xXx XxX</span>
+			<blockquote>xXx @post_content xXx</blockquote>
+		</div>
+		<p>Information:</p>
+		<ul>
+			<li><a href="/by/thread/xXx @thread_id xXx">See other posts from this thread</a></li>
+			<li>First found: xXx @image_date xXx</li>
+			<li>Aliases:
+				<ul>
+				xXx LOOP alias aliases xXx
+					<li>xXx @alias xXx</li>
+				xXx BBL xXx
+				</ul>
+			</li>
+		</ul>
+	</div>
+</div>
+{% endblock %}
+<!-- vim: noet ts=4 ft=htmldjango sw=4:
+-->
