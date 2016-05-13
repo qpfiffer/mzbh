@@ -6,8 +6,8 @@
 <div class="images">
 	{% for image in images %}
 	<div class="image bg--light-gray">
-		<a href="{% url "webm" webm_id=image.pk %}" class="p1">xXx @image xXx</a>
-		<a href="/slurp/xXx @current_board xXx/xXx @image xXx">
+		<a href="{% url "webm" webm_id=image.pk %}" class="p1">{{ image.filename|safe }}</a>
+		<a href="{% url "webm" webm_id=image.pk %}">
 			<img src="/static/img/blank.gif" data-echo="/chug/xXx @current_board xXx/XxX thumbnail_for_image xXx @image xXx XxX">
 		</a>
 	</div>
