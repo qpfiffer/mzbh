@@ -1,12 +1,13 @@
 {% extends "base.html" %}
+{% load staticfiles %}
 {% block title %}{{image.filename|safe}}{% endblock %}
 
 {% block main %}
 <div>
 	<div class="bg--light-gray">
-		<p><a href="/chug/xXx @current_board xXx/xXx @image xXx" class="p1">Download "{{image.filename|safe}}"</a></p>
+		<p><a href="{% static image.filepath %}" class="p1">Download "{{image.filename|safe}}"</a></p>
 		<video id="webm" autoplay="true" loop="true" controls="true">
-			<source src="/chug/xXx @current_board xXx/xXx @image xXx" type="video/webm" />
+			<source src="{% static image.filepath %}" type="video/webm" />
 		</video>
 		<div class="post-content">
 			<span>{{post.created_at}} {{post.post_no}}</span>
