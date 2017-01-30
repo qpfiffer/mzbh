@@ -487,8 +487,15 @@ int by_thread_handler(const http_request *request, http_response *response) {
 		/* So here we iterate through both loops, the matches and the keys. */
 		unsigned int i = 0;
 		db_match *current = matches;
+		db_match *end = NULL;
 		while (current) {
-			db_match *next = current->next;
+			end = current;
+			current = current->next;
+		}
+		current = end;
+
+		while (current) {
+			db_match *prev = current->prev;
 
 			const char *_key = vector_get(_thread->post_keys, i);
 
@@ -533,7 +540,7 @@ int by_thread_handler(const http_request *request, http_response *response) {
 			total++;
 			i++;
 
-			current = next;
+			current = prev;
 		}
 	}
 
@@ -545,14 +552,13 @@ int by_thread_handler(const http_request *request, http_response *response) {
 		unsigned int i = 0;
 		db_match *current = matches;
 		while (current) {
+			/* The matches are backwards so we have to reverse it. */
 			db_match *next = current->next;
 			struct greshunkel_ctext *post_ctext = (struct greshunkel_ctext *)vector_get(_post_context_objs, i);
 
 			if (current->data == NULL) {
-				gshkl_add_string(post_ctext, "image", "");
-				goto done;
+				gshkl_add_string(post_ctext, "image", NULL);
 			} else {
-
 				webm_alias *dsrlzd = deserialize_alias((char *)current->data);
 				free((unsigned char *)current->data);
 
@@ -562,7 +568,6 @@ int by_thread_handler(const http_request *request, http_response *response) {
 				free(dsrlzd);
 			}
 
-done:
 			free(current);
 			current = next;
 			i++;
