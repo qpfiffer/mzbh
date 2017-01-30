@@ -32,18 +32,17 @@
 						xXx LOOP post POSTS xXx
 						<div id="pxXx @post.post_no xXx" class="post-content">
 							<div>
-								xXx @post.image xXx
 								xXx UNLESS NOT @post.image xXx
 								File: <a href="/slurp/xXx @post.board xXx/xXx @post.image xXx" class="p1">xXx @post.image xXx</a>
 								xXx ENDLESS xXx
 								<span>XxX pretty_date xXx @post.date xXx XxX No.xXx @post.post_no xXx</span>
 							</div>
 							<div>
+								xXx UNLESS NOT @post.image xXx
 								<a class="file_thumb" href="/slurp/xXx @post.board xXx/xXx @post.image xXx">
-									xXx UNLESS NOT @post.image xXx
 									<img src="/chug/xXx @post.board xXx/XxX thumbnail_for_image xXx @post.image xXx XxX">
-									xXx ENDLESS xXx
 								</a>
+								xXx ENDLESS xXx
 							</div>
 							<div>
 								<blockquote>xXx @post.content xXx</blockquote>
