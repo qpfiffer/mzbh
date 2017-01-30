@@ -487,15 +487,9 @@ int by_thread_handler(const http_request *request, http_response *response) {
 		/* So here we iterate through both loops, the matches and the keys. */
 		unsigned int i = 0;
 		db_match *current = matches;
-		db_match *end = NULL;
-		while (current) {
-			end = current;
-			current = current->next;
-		}
-		current = end;
 
 		while (current) {
-			db_match *prev = current->prev;
+			db_match *next = current->next;
 
 			const char *_key = vector_get(_thread->post_keys, i);
 
@@ -540,7 +534,7 @@ int by_thread_handler(const http_request *request, http_response *response) {
 			total++;
 			i++;
 
-			current = prev;
+			current = next;
 		}
 	}
 
@@ -551,9 +545,16 @@ int by_thread_handler(const http_request *request, http_response *response) {
 
 		unsigned int i = 0;
 		db_match *current = matches;
+		db_match *end = NULL;
+		while (current) {
+			end = current;
+			current = current->next;
+		}
+		current = end;
+
 		while (current) {
 			/* The matches are backwards so we have to reverse it. */
-			db_match *next = current->next;
+			db_match *prev = current->prev;
 			struct greshunkel_ctext *post_ctext = (struct greshunkel_ctext *)vector_get(_post_context_objs, i);
 
 			if (current->data == NULL) {
@@ -569,7 +570,7 @@ int by_thread_handler(const http_request *request, http_response *response) {
 			}
 
 			free(current);
-			current = next;
+			current = prev;
 			i++;
 		}
 	}
