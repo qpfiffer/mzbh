@@ -288,9 +288,9 @@ int webm_handler(const http_request *request, http_response *response) {
 
 	if (!found) {
 		gshkl_add_int(ctext, "image_date", -1);
-		gshkl_add_string(ctext, "post_content", "(No information on this webm)");
-		gshkl_add_string(ctext, "post_id", "");
-		gshkl_add_string(ctext, "thread_id", "#");
+		gshkl_add_string(ctext, "post_content", NULL);
+		gshkl_add_string(ctext, "post_id", NULL);
+		gshkl_add_string(ctext, "thread_id", NULL);
 	} else {
 		post *_post = get_post(_webm->post);
 		if (_post) {
@@ -300,13 +300,13 @@ int webm_handler(const http_request *request, http_response *response) {
 				gshkl_add_string(ctext, "post_content", _post->body_content);
 				free(_post->body_content);
 			} else {
-				gshkl_add_string(ctext, "post_content", "(No information on this webm)");
+				gshkl_add_string(ctext, "post_content", NULL);
 			}
 			vector_free(_post->replied_to_keys);
 		} else {
-			gshkl_add_string(ctext, "post_content", "(No information on this webm)");
-			gshkl_add_string(ctext, "post_id", "");
-			gshkl_add_string(ctext, "thread_id", "#");
+			gshkl_add_string(ctext, "post_content", NULL);
+			gshkl_add_string(ctext, "post_id", NULL);
+			gshkl_add_string(ctext, "thread_id", NULL);
 		}
 		free(_post);
 		time_t earliest_date = _webm->created_at;
