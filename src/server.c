@@ -199,11 +199,29 @@ static void get_current_board(char current_board[static MAX_BOARD_NAME_SIZE], co
 
 static void get_webm_from_board(char file_name_decoded[static MAX_IMAGE_FILENAME_SIZE], const http_request *request) {
 	char file_name[MAX_IMAGE_FILENAME_SIZE] = {0};
+	char file_name_decoded_first_pass[MAX_IMAGE_FILENAME_SIZE] = {0};
 	const size_t file_name_len = request->matches[2].rm_eo - request->matches[2].rm_so;
 	const size_t fname_bgr = sizeof(file_name) > file_name_len ? file_name_len : sizeof(file_name);
 	strncpy(file_name, request->resource + request->matches[2].rm_so, fname_bgr);
 
-	url_decode(file_name, file_name_len, file_name_decoded);
+	url_decode(file_name, file_name_len, file_name_decoded_first_pass);
+	/* Fuck it. */
+	unsigned int i = 0;
+	unsigned int j = 0;
+	for (;i < strnlen(file_name, MAX_IMAGE_FILENAME_SIZE); i++) {
+		/* TODO: Handle " as well. */
+		if (file_name_decoded_first_pass[i] == '\'') {
+			/* &#039; */
+			file_name_decoded[j++] = '&';
+			file_name_decoded[j++] = '#';
+			file_name_decoded[j++] = '0';
+			file_name_decoded[j++] = '3';
+			file_name_decoded[j++] = '9';
+			file_name_decoded[j++] = ';';
+		} else {
+			file_name_decoded[j++] = file_name_decoded_first_pass[i];
+		}
+	}
 }
 
 int board_static_handler(const http_request *request, http_response *response) {
