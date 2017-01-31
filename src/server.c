@@ -62,7 +62,6 @@ static char *thumbnail_for_image(const char *argument) {
 	strncpy(to_return, prefix, prefix_siz);
 	strncat(to_return, argument, stop_at);
 	strncat(to_return, "jpg", strlen("jpg"));
-	strncpy(to_return + prefix_siz + stop_at, "jpg", strlen("jpg"));
 	return to_return;
 }
 
@@ -481,17 +480,15 @@ int by_thread_handler(const http_request *request, http_response *response) {
 	vector *_post_context_objs = vector_new(sizeof(struct greshunkel_ctext), 32);
 
 	unsigned int total = 0;
+	unsigned int i = 0;
 	if (cur != NULL) {
 		db_match *matches = fetch_bulk_from_db(&oleg_conn, cur, 1);
 
 		/* So here we iterate through both loops, the matches and the keys. */
-		unsigned int i = 0;
 		db_match *current = matches;
 
 		while (current) {
 			db_match *next = current->next;
-
-			const char *_key = vector_get(_thread->post_keys, i);
 
 			post *dsrlzd = deserialize_post((char *)current->data);
 			free((unsigned char *)current->data);
@@ -500,7 +497,6 @@ int by_thread_handler(const http_request *request, http_response *response) {
 			if (dsrlzd) {
 				greshunkel_ctext *_post_sub = gshkl_init_context();
 				gshkl_add_string(_post_sub, "date", dsrlzd->post_id);
-				gshkl_add_string(_post_sub, "key", _key);
 				gshkl_add_string(_post_sub, "board", dsrlzd->board);
 
 				if (dsrlzd->body_content)
@@ -543,18 +539,19 @@ int by_thread_handler(const http_request *request, http_response *response) {
 
 		db_match *matches = fetch_bulk_from_db(&oleg_conn, _all_webm_keys, 1);
 
-		unsigned int i = 0;
 		db_match *current = matches;
-		db_match *end = NULL;
-		while (current) {
-			end = current;
-			current = current->next;
-		}
-		current = end;
+		//db_match *end = NULL;
+		//while (current) {
+		//	end = current;
+		//	current = current->next;
+		//}
+		//current = end;
 
 		while (current) {
 			/* The matches are backwards so we have to reverse it. */
-			db_match *prev = current->prev;
+			//db_match *prev = current->prev;
+			i--;
+			db_match *next = current->next;
 			struct greshunkel_ctext *post_ctext = (struct greshunkel_ctext *)vector_get(_post_context_objs, i);
 
 			if (current->data == NULL) {
@@ -570,8 +567,8 @@ int by_thread_handler(const http_request *request, http_response *response) {
 			}
 
 			free(current);
-			current = prev;
-			i++;
+			//current = prev;
+			current = next;
 		}
 	}
 
