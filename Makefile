@@ -10,9 +10,8 @@ all: ctl bin downloader test $(NAME)
 clean:
 	rm -f *.o
 	rm -f dbctl
-	rm -f greshunkel_test
-	rm -f unit_test
 	rm -f downloader
+	rm -f unit_test
 	rm -f $(NAME)
 
 test: unit_test
