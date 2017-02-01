@@ -598,6 +598,8 @@ int by_thread_handler(const http_request *request, http_response *response) {
 	greshunkel_var boards = gshkl_add_array(ctext, "BOARDS");
 	_add_files_in_dir_to_arr(&boards, webm_location());
 
+	vector_reverse(posts.arr);
+
 	gshkl_add_int(ctext, "total", total);
 
 	return render_file(ctext, "./templates/by_thread.html", response);
