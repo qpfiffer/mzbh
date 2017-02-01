@@ -49,6 +49,12 @@
 					</p>
 				</div>
 			</div>
+			<div class="row">
+				<div class="col-2"></div>
+				<div id="search_results" class="col-8">
+					<div class="loader hidden">Loading...</div>
+				</div>
+			</div>
 		</div>
 		<script type="text/javascript">
 			function ready(fn) {
@@ -61,12 +67,16 @@
 			function setup() {
 				var searchBtn = document.querySelectorAll('#search_button')[0];
 				var searchFormURL = document.querySelectorAll('#search_box')[0];
+				var searchResults = document.querySelectorAll('#search_results')[0];
+				var loader = document.querySelectorAll('.loader')[0];
 				searchBtn.addEventListener('click', function(e) {
+					loader.classList.remove('hidden');
 					var url = searchFormURL.value;
 					var request = new XMLHttpRequest();
 					request.open('POST', '/search/url', true);
 					request.setRequestHeader('Content-Type', 'application/json');
 					request.onload = function() {
+						loader.classList.add('hidden');
 						if (this.status >= 200 && this.status < 400) {
 							// Success!
 							var data = JSON.parse(this.response);
@@ -76,6 +86,7 @@
 					};
 
 					request.onerror = function() {
+						loader.classList.add('hidden');
 						// There was a connection error of some sort
 					};
 					request.send(JSON.stringify({'webm_url': url}));
@@ -83,6 +94,7 @@
 			}
 			ready(setup);
 		</script>
+		<link rel="stylesheet" media="all" href="/static/css/loader.css" />
 	</body>
 </html>
 <!-- vim: noet ts=4 sw=4:

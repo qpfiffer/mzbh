@@ -3,6 +3,9 @@
 	font-family: 'Open Sans', Helvetica, Arial, sans-serif;
 	color: #000;
 }
+.hidden {
+	display: none;
+}
 p {
 	font-size: initial;
 	font-weight: initial;
