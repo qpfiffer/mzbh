@@ -47,6 +47,7 @@
 							<button id="search_button" class="btn btn-green">Search</button>
 						</span>
 					</p>
+					<p class="error hidden">Something went wrong. Try uploading the file manually.</p>
 				</div>
 			</div>
 			<div class="row">
@@ -69,6 +70,7 @@
 				var searchFormURL = document.querySelectorAll('#search_box')[0];
 				var searchResults = document.querySelectorAll('#search_results')[0];
 				var loader = document.querySelectorAll('.loader')[0];
+				var error = document.querySelectorAll('.error')[0];
 				searchBtn.addEventListener('click', function(e) {
 					loader.classList.remove('hidden');
 					var url = searchFormURL.value;
@@ -77,17 +79,18 @@
 					request.setRequestHeader('Content-Type', 'application/json');
 					request.onload = function() {
 						loader.classList.add('hidden');
+						error.classList.add('hidden');
 						if (this.status >= 200 && this.status < 400) {
 							// Success!
 							var data = JSON.parse(this.response);
 						} else {
 							// We reached our target server, but it returned an error
+							error.classList.remove('hidden');
 						}
 					};
 
 					request.onerror = function() {
 						loader.classList.add('hidden');
-						// There was a connection error of some sort
 					};
 					request.send(JSON.stringify({'webm_url': url}));
 				});
