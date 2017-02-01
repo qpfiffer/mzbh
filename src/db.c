@@ -329,6 +329,8 @@ int add_post_to_db(const struct post_match *p_match, const char webm_key[static 
 	char post_key[MAX_KEY_SIZE] = {0};
 	create_post_key(p_match->board, p_match->post_date, post_key);
 
+	log_msg(LOG_INFO, "Creating post with key: %s", post_key);
+
 	post *existing_post = get_post(post_key);
 	if (existing_post != NULL) {
 		/* We already have this post saved. */
