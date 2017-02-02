@@ -1,0 +1,15 @@
+{"success": xXx @SUCCESS xXx,
+ "error": "xXx @ERROR xXx",
+ "data": [
+         xXx LOOP result RESULTS xXx
+             {
+                  "thread_id": "xXx @result.thread_id xXx",
+                  "board": "xXx @result.board xXx",
+                  "is_last": "xXx @result.is_last xXx",
+                  "filename": "xXx @result.filename xXx",
+                  "thumbnail": "XxX thumbnail_for_image xXx @result.thumbnail xXx XxX",
+                  "post_id": "xXx @result.post_id xXx"
+             }
+         xXx UNLESS NOT @result.is_last xXx,xXx ENDLESS xXx
+         xXx BBL xXx
+]}

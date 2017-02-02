@@ -52,10 +52,17 @@ size_t download_sent_webm_url(const char *url, const char filename[static MAX_IM
 	new_webm = fopen(outpath, "wb");
 	if (new_webm) {
 		curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, new_webm);
+		uint64_t http_code = 0;
 		curl_easy_perform(curl_handle);
+		curl_easy_getinfo(curl_handle, CURLINFO_RESPONSE_CODE, &http_code);
 
-		fseek(new_webm, 0L, SEEK_END);
-		written = ftell(new_webm);
+		if (http_code == 200) {
+			fseek(new_webm, 0L, SEEK_END);
+			written = ftell(new_webm);
+		} else {
+			written = 0;
+			unlink(outpath);
+		}
 
 		fclose(new_webm);
 	}

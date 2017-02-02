@@ -270,6 +270,7 @@ static int _api_failure(http_response *response, greshunkel_ctext *ctext, const 
 int url_search_handler(const http_request *request, http_response *response) {
 	greshunkel_ctext *ctext = gshkl_init_context();
 	gshkl_add_filter(ctext, "pretty_date", &pretty_date, &filter_cleanup);
+	gshkl_add_filter(ctext, "thumbnail_for_image", &thumbnail_for_image, &filter_cleanup);
 
 	/* All boards */
 	greshunkel_var boards = gshkl_add_array(ctext, "BOARDS");
@@ -307,10 +308,8 @@ int url_search_handler(const http_request *request, http_response *response) {
 	const size_t new_webm_size = download_sent_webm_url(webm_url, filename_to_write, out_filepath);
 	json_value_free(body_string);
 
-	if (new_webm_size == 0) {
-		json_value_free(body_string);
+	if (new_webm_size == 0)
 		return _api_failure(response, ctext, "Could not download webm.");
-	}
 
 	/* Hash the file. */
 	char image_hash[HASH_IMAGE_STR_SIZE] = {0};
@@ -321,26 +320,60 @@ int url_search_handler(const http_request *request, http_response *response) {
 	char alias_key[MAX_KEY_SIZE] = {0};
 	webm_alias *_alias = get_aliased_image(out_filepath, alias_key);
 
+	greshunkel_var results = gshkl_add_array(ctext, "RESULTS");
+
 	/* This code is fucking terrible. */
 	int found = 0;
 	if (_webm) {
 		found = 1;
-		if (_alias) {
-			/* This shouldn't happen, but whatever. */
-			free(_alias);
+
+		greshunkel_ctext *result = gshkl_init_context();
+		gshkl_add_string(result, "thumbnail", _webm->filename);
+		gshkl_add_string(result, "filename", _webm->filename);
+		post *_post = get_post(_webm->post);
+		if (_post) {
+			gshkl_add_string(result, "thread_id", _post->thread_key);
+			gshkl_add_string(result, "post_id", _post->post_id);
+			if (_post->body_content) {
+				gshkl_add_string(result, "post_content", _post->body_content);
+				free(_post->body_content);
+			} else {
+				gshkl_add_string(result, "post_content", "...");
+			}
+			vector_free(_post->replied_to_keys);
+		} else {
+			gshkl_add_string(result, "post_content", "...");
+			gshkl_add_string(result, "post_id", "...");
+			gshkl_add_string(result, "thread_id", "...");
 		}
-	} else if (_alias) {
-		found = 1;
-		free(_webm);
-		_webm = (webm *)_alias;
+		free(_post);
+		gshkl_add_string(result, "board", _webm->board);
+
+		gshkl_add_string(result, "is_last", "asdf");
+		gshkl_add_sub_context_to_loop(&results, result);
 	}
 
-	if (!found) {
-		/* Do something. */
-	} else {
+	if (_alias) {
+		found = 1;
+		/* TODO: Loop through webms and aliases here */
+		//greshunkel_ctext *result = gshkl_init_context();
+		//gshkl_add_string(result, "is_last", "asdf");
+		//gshkl_add_sub_context_to_loop(&results, result);
 	}
 
 	free(_webm);
+	free(_alias);
+
+	if (found) {
+		gshkl_add_string(ctext, "SUCCESS", "true");
+		gshkl_add_string(ctext, "ERROR", NULL);
+		return render_file(ctext, "./templates/response_with_results.json", response);
+	}
+
+	gshkl_add_string(ctext, "SUCCESS", "true");
+	gshkl_add_string(ctext, "ERROR", NULL);
+	gshkl_add_string(ctext, "DATA", "[]");
+
 	return render_file(ctext, "./templates/response.json", response);
 }
 
