@@ -6,3 +6,4 @@
 #include "common_defs.h"
 
 char *receive_chunked_http(const int request_fd);
+size_t download_sent_webm_url(const char *url, const char filename[static MAX_IMAGE_FILENAME_SIZE], char outpath[static MAX_IMAGE_FILENAME_SIZE]);

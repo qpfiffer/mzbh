@@ -28,6 +28,7 @@
 #include "db.h"
 #include "http.h"
 #include "parse.h"
+#include "parson.h"
 #include "models.h"
 #include "server.h"
 
@@ -257,6 +258,90 @@ int index_handler(const http_request *request, http_response *response) {
 	greshunkel_var boards = gshkl_add_array(ctext, "BOARDS");
 	_add_files_in_dir_to_arr(&boards, webm_location());
 	return render_file(ctext, "./templates/index.html", response);
+}
+
+static int _api_failure(http_response *response, greshunkel_ctext *ctext, const char *error) {
+	gshkl_add_string(ctext, "SUCCESS", "false");
+	gshkl_add_string(ctext, "ERROR", error);
+	gshkl_add_string(ctext, "DATA", "{}");
+	return render_file(ctext, "./templates/response.json", response);
+}
+
+int url_search_handler(const http_request *request, http_response *response) {
+	greshunkel_ctext *ctext = gshkl_init_context();
+	gshkl_add_filter(ctext, "pretty_date", &pretty_date, &filter_cleanup);
+
+	/* All boards */
+	greshunkel_var boards = gshkl_add_array(ctext, "BOARDS");
+	_add_files_in_dir_to_arr(&boards, webm_location());
+
+	const unsigned char *full_body = request->full_body;
+	JSON_Value *body_string = json_parse_string((const char *)full_body);
+	if (!body_string)
+		return _api_failure(response, ctext, "Could not parse JSON object.");
+
+	JSON_Object *webm_url_object = json_value_get_object(body_string);
+	if (!webm_url_object) {
+		json_value_free(body_string);
+		return _api_failure(response, ctext, "Could not get object from JSON.");
+	}
+
+	const char *webm_url = json_object_get_string(webm_url_object, "webm_url");
+
+	if (!webm_url) {
+		json_value_free(body_string);
+		return _api_failure(response, ctext, "'webm_url' is a required key.");
+	}
+
+	/* Download the file. */
+	const char *filename = strrchr(webm_url, '/');
+	if (filename == NULL) {
+		json_value_free(body_string);
+		return _api_failure(response, ctext, "Bogus filename in URL.");
+	}
+
+	char filename_to_write[MAX_IMAGE_FILENAME_SIZE] = {0};
+	char out_filepath[MAX_IMAGE_FILENAME_SIZE] = {0};
+	snprintf(filename_to_write, sizeof(filename_to_write), "%i_%s", rand(), filename + sizeof(char));
+
+	const size_t new_webm_size = download_sent_webm_url(webm_url, filename_to_write, out_filepath);
+	json_value_free(body_string);
+
+	if (new_webm_size == 0) {
+		json_value_free(body_string);
+		return _api_failure(response, ctext, "Could not download webm.");
+	}
+
+	/* Hash the file. */
+	char image_hash[HASH_IMAGE_STR_SIZE] = {0};
+	char webm_key[MAX_KEY_SIZE] = {0};
+	hash_file(out_filepath, image_hash);
+	webm *_webm = get_image(image_hash, webm_key);
+
+	char alias_key[MAX_KEY_SIZE] = {0};
+	webm_alias *_alias = get_aliased_image(out_filepath, alias_key);
+
+	/* This code is fucking terrible. */
+	int found = 0;
+	if (_webm) {
+		found = 1;
+		if (_alias) {
+			/* This shouldn't happen, but whatever. */
+			free(_alias);
+		}
+	} else if (_alias) {
+		found = 1;
+		free(_webm);
+		_webm = (webm *)_alias;
+	}
+
+	if (!found) {
+		/* Do something. */
+	} else {
+	}
+
+	free(_webm);
+	return render_file(ctext, "./templates/response.json", response);
 }
 
 int webm_handler(const http_request *request, http_response *response) {

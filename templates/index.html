@@ -47,7 +47,7 @@
 							<button id="search_button" class="btn btn-green">Search</button>
 						</span>
 					</p>
-					<p class="error hidden">Something went wrong. Try uploading the file manually.</p>
+					<p class="error hidden"></p>
 				</div>
 			</div>
 			<div class="row">
@@ -75,7 +75,7 @@
 					loader.classList.remove('hidden');
 					var url = searchFormURL.value;
 					var request = new XMLHttpRequest();
-					request.open('POST', '/search/url', true);
+					request.open('POST', '/search/url.json', true);
 					request.setRequestHeader('Content-Type', 'application/json');
 					request.onload = function() {
 						loader.classList.add('hidden');
@@ -83,9 +83,14 @@
 						if (this.status >= 200 && this.status < 400) {
 							// Success!
 							var data = JSON.parse(this.response);
+							if (data.success == false) {
+								error.classList.remove('hidden');
+								error.textContent = data.error;
+							}
 						} else {
 							// We reached our target server, but it returned an error
 							error.classList.remove('hidden');
+							error.textContent = "Something went wrong. Try uploading the file manually.";
 						}
 					};
 

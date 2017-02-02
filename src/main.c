@@ -10,6 +10,8 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 
+#include <curl/curl.h>
+
 #include <oleg-http/http.h>
 #include <38-moths/38-moths.h>
 
@@ -33,6 +35,7 @@ static const route all_routes[] = {
 	{"GET", "robots_txt", "^/robots.txt$", 0, &robots_handler, &mmap_cleanup},
 	{"GET", "favicon_ico", "^/favicon.ico$", 0, &favicon_handler, &mmap_cleanup},
 	{"GET", "generic_static", "^/static/[a-zA-Z0-9/_-]*\\.[a-zA-Z]*$", 0, &static_handler, &mmap_cleanup},
+	{"POST", "search_by_url", "^/search/url.json$", 0, &url_search_handler, &heap_cleanup},
 	{"GET", "board_handler_no_num", "^/chug/([a-zA-Z]*)$", 1, &board_handler, &heap_cleanup},
 	{"GET", "paged_board_handler", "^/chug/([a-zA-Z]*)/([0-9]*)$", 2, &paged_board_handler, &heap_cleanup},
 	{"GET", "webm_handler", "^/slurp/([a-zA-Z]*)/((.*)(.webm|.jpg))$", 2, &webm_handler, &heap_cleanup},
@@ -47,6 +50,8 @@ int main(int argc, char *argv[]) {
 	signal(SIGINT, term);
 	signal(SIGKILL, term);
 	signal(SIGCHLD, SIG_IGN);
+
+	curl_global_init(CURL_GLOBAL_ALL);
 
 	int num_threads = DEFAULT_NUM_THREADS;
 	int i;

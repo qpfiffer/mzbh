@@ -15,12 +15,54 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <curl/curl.h>
+
 #include <38-moths/logging.h>
 
 #include "utils.h"
 #include "http.h"
 #include "parse.h"
 #include "models.h"
+
+static size_t _write_webm_data(void *ptr, size_t size, size_t nmemb, void *stream) {
+	size_t written = fwrite(ptr, size, nmemb, (FILE *)stream);
+	return written;
+}
+
+size_t download_sent_webm_url(const char *url, const char filename[static MAX_IMAGE_FILENAME_SIZE],
+							  char outpath[static MAX_IMAGE_FILENAME_SIZE]) {
+	/* TODO: Get the filename. */
+	const char uploads_dir[] = "./user_uploaded";
+	size_t written = 0;
+	FILE *new_webm = NULL;
+
+	struct stat st = {0};
+	if (stat(uploads_dir, &st) == -1) {
+		log_msg(LOG_WARN, "Creating user uploaded directory %s.", uploads_dir);
+		mkdir(uploads_dir, 0755);
+	}
+
+	snprintf(outpath, MAX_IMAGE_FILENAME_SIZE, "%s/%s", uploads_dir, filename);
+
+	CURL *curl_handle = curl_easy_init();
+	curl_easy_setopt(curl_handle, CURLOPT_URL, url);
+	curl_easy_setopt(curl_handle, CURLOPT_NOPROGRESS, 1L);
+	curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, _write_webm_data);
+
+	new_webm = fopen(outpath, "wb");
+	if (new_webm) {
+		curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, new_webm);
+		curl_easy_perform(curl_handle);
+
+		fseek(new_webm, 0L, SEEK_END);
+		written = ftell(new_webm);
+
+		fclose(new_webm);
+	}
+
+	curl_easy_cleanup(curl_handle);
+	return written;
+}
 
 char *receive_chunked_http(const int request_fd) {
 	char *raw_buf = NULL;

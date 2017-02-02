@@ -21,3 +21,4 @@ int paged_board_handler(const http_request *request, http_response *response);
 int favicon_handler(const http_request *request, http_response *response);
 int robots_handler(const http_request *request, http_response *response);
 int by_thread_handler(const http_request *request, http_response *response);
+int url_search_handler(const http_request *request, http_response *response);
