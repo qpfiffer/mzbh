@@ -12,6 +12,7 @@ struct file_and_time {
 };
 
 int static_handler(const http_request *request, http_response *response);
+int user_thumbs_static_handler(const http_request *request, http_response *response);
 int board_static_handler(const http_request *request, http_response *response);
 int index_handler(const http_request *request, http_response *response);
 int webm_handler(const http_request *request, http_response *response);

@@ -185,11 +185,18 @@ static int _add_files_in_dir_to_arr(greshunkel_var *loop, const char *dir) {
 	return total;
 }
 
-/* Various handlers for our routes: */
 int static_handler(const http_request *request, http_response *response) {
 	/* Remove the leading slash: */
 	const char *file_path = request->resource + sizeof(char);
 	return mmap_file(file_path, response);
+}
+
+int user_thumbs_static_handler(const http_request *request, http_response *response) {
+	/* Remove the leading slash: */
+	const char *file_path = request->resource + sizeof(char);
+	char buf[256] = {0};
+	snprintf(buf, sizeof(buf), "./user_uploaded/t/%s", file_path);
+	return mmap_file(buf, response);
 }
 
 static void get_current_board(char current_board[static MAX_BOARD_NAME_SIZE], const http_request *request) {

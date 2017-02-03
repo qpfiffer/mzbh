@@ -15,6 +15,9 @@
 #include <inttypes.h>
 #include <unistd.h>
 
+#include <vpx/vpx_decoder.h>
+#undef UNUSED
+
 #include <38-moths/logging.h>
 
 #include "models.h"
@@ -263,4 +266,11 @@ char *get_full_path_for_webm(const char current_board[MAX_BOARD_NAME_SIZE],
 	snprintf(full_path, full_path_size, "%s/%s/%s", webm_loc, current_board, file_name_decoded);
 
 	return full_path;
+}
+
+size_t create_thumbnail_for_webm(const char webm_file_path[static MAX_IMAGE_FILENAME_SIZE], const char *out_filepath) {
+	FILE *webm_file_handle = NULL;
+	size_t written = 0;
+
+	return written;
 }

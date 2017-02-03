@@ -51,6 +51,9 @@ You can run this with:
 
 # Installation
 
+You'll need both `libcurl` and `libvpx` for downloading things and thumbnailing
+webms.
+
 1. `make`
 
 There is no installation. this will just build a handful of binaries you can use.
