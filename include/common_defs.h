@@ -17,3 +17,5 @@
 
 #define MAX_IMAGE_FILENAME_SIZE 255
 #define MAX_BOARD_NAME_SIZE 16
+
+#define USER_UPLOADS_DIR "./user_uploaded"

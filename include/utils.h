@@ -36,4 +36,6 @@ int hash_string_fnv1a(const unsigned char *string, const size_t siz, char outbuf
 char *get_full_path_for_webm(const char current_board[MAX_BOARD_NAME_SIZE], const char file_name_decoded[MAX_IMAGE_FILENAME_SIZE]);
 char *get_full_path_for_file(const char *dir, const char file_name[static MAX_IMAGE_FILENAME_SIZE]);
 
-size_t create_thumbnail_for_webm(const char webm_file_path[static MAX_IMAGE_FILENAME_SIZE], const char *out_filepath);
+size_t create_thumbnail_for_webm(const char webm_file_path[static MAX_IMAGE_FILENAME_SIZE],
+								 const char webm_filename[static MAX_IMAGE_FILENAME_SIZE],
+								 char out_filepath[static MAX_IMAGE_FILENAME_SIZE]);

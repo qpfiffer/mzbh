@@ -315,8 +315,13 @@ int url_search_handler(const http_request *request, http_response *response) {
 	const size_t new_webm_size = download_sent_webm_url(webm_url, filename_to_write, out_filepath);
 	json_value_free(body_string);
 
+	char thumbnail_out_filepath[MAX_IMAGE_FILENAME_SIZE] = {0};
 	if (new_webm_size == 0)
 		return _api_failure(response, ctext, "Could not download webm.");
+	else {
+		if (create_thumbnail_for_webm(out_filepath, filename_to_write, thumbnail_out_filepath) == 0)
+			log_msg(LOG_WARN, "Could not create thumbnail.");
+	}
 
 	/* Hash the file. */
 	char image_hash[HASH_IMAGE_STR_SIZE] = {0};

@@ -15,8 +15,9 @@
 #include <inttypes.h>
 #include <unistd.h>
 
-#include <vpx/vpx_decoder.h>
-#undef UNUSED
+#include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
+#include <libswscale/swscale.h>
 
 #include <38-moths/logging.h>
 
@@ -24,6 +25,16 @@
 #include "parse.h"
 #include "sha3api_ref.h"
 #include "utils.h"
+
+/* Kooky struct with a bunch of data in it. */
+typedef struct AVContext {
+	AVFormatContext *fmt_ctx;
+	AVCodecContext * video_dec_ctx;
+	int video_stream_idx;
+	AVFrame *frame;
+	AVPacket pkt;
+	AVCodec *dec;
+} AVContext;
 
 const char WEBMS_DIR_DEFAULT[] = "./webms";
 const char *WEBMS_DIR = NULL;
@@ -268,9 +279,200 @@ char *get_full_path_for_webm(const char current_board[MAX_BOARD_NAME_SIZE],
 	return full_path;
 }
 
-size_t create_thumbnail_for_webm(const char webm_file_path[static MAX_IMAGE_FILENAME_SIZE], const char *out_filepath) {
-	FILE *webm_file_handle = NULL;
-	size_t written = 0;
+static void _ensure_user_uploads_thumbs_dir() {
+	struct stat st = {0};
+	char buf[256] = {0};
+	snprintf(buf, sizeof(buf), "%s/t", USER_UPLOADS_DIR);
+	if (stat(USER_UPLOADS_DIR, &st) == -1) {
+		log_msg(LOG_WARN, "Creating directory %s.", USER_UPLOADS_DIR);
+		mkdir(USER_UPLOADS_DIR, 0755);
+	}
 
-	return written;
+	if (stat(buf, &st) == -1) {
+		log_msg(LOG_WARN, "Creating directory %s.", buf);
+		mkdir(buf, 0755);
+	}
+}
+
+static int dump_frame_to_jpeg(const AVContext *av, const char *thumbnail_filename) {
+	AVCodec *jpeg_codec = avcodec_find_encoder(AV_CODEC_ID_JPEG2000);
+	if (!jpeg_codec)
+		return -1;
+
+	AVCodecContext *jpeg_ctext = avcodec_alloc_context3(jpeg_codec);
+	if (!jpeg_ctext)
+		return -1;
+
+	jpeg_ctext->pix_fmt = av->video_dec_ctx->pix_fmt;
+	jpeg_ctext->height = av->frame->height;
+	jpeg_ctext->width = av->frame->width;
+	jpeg_ctext->sample_aspect_ratio = av->video_dec_ctx->sample_aspect_ratio;
+	jpeg_ctext->time_base = av->video_dec_ctx->time_base;
+	jpeg_ctext->compression_level = 100;
+	jpeg_ctext->thread_count = 1;
+	jpeg_ctext->prediction_method = 1;
+	jpeg_ctext->flags2 = 0;
+	jpeg_ctext->rc_max_rate = jpeg_ctext->rc_min_rate = jpeg_ctext->bit_rate = 80000000;
+
+	if (avcodec_open2(jpeg_ctext, jpeg_codec, NULL) < 0)
+		return -1;
+
+	int found_frame = 0;
+	AVPacket packet = {0};
+
+	av_init_packet(&packet);
+	/* av_dump_format(av->fmt_ctx, 0, "", 0); */
+
+	if (avcodec_encode_video2(jpeg_ctext, &packet, av->frame, &found_frame) < 0)
+		return -1;
+
+
+	FILE *JPEGFile = fopen(thumbnail_filename, "wb");
+	fwrite(packet.data, 1, packet.size, JPEGFile);
+	fclose(JPEGFile);
+
+	av_free_packet(&packet);
+	avcodec_close(jpeg_ctext);
+
+	return 0;
+}
+
+size_t create_thumbnail_for_webm(const char webm_file_path[static MAX_IMAGE_FILENAME_SIZE],
+								 const char webm_filename[static MAX_IMAGE_FILENAME_SIZE],
+								 char out_filepath[static MAX_IMAGE_FILENAME_SIZE]) {
+	FILE *thumbnail_handle = NULL;
+	size_t written = 0;
+	AVFormatContext *format_ctext = NULL;
+	int video_stream = -1;
+	AVCodec *codec = NULL;
+	AVCodecContext *codec_ctext = NULL;
+	AVFrame *frame = NULL;
+	AVFrame *frame_rgb = NULL;
+	AVPacket packet = {0};
+	int frame_finished = 0;
+	size_t num_bytes = 0;
+	uint8_t *buffer = NULL;
+
+	_ensure_user_uploads_thumbs_dir();
+
+	snprintf(out_filepath, MAX_IMAGE_FILENAME_SIZE, "%s/t/%s_thumb.jpg", USER_UPLOADS_DIR, webm_filename);
+
+	av_register_all();
+
+	if (av_open_input_file(&format_ctext, webm_file_path, NULL, 0, NULL) != 0) {
+		log_msg(LOG_ERR, "Thumbnailer: Could not open user uploaded webm for thumbnailing. File: %s", webm_file_path);
+		goto error;
+	}
+
+	if (av_find_stream_info(format_ctext) < 0) {
+		log_msg(LOG_ERR, "Thumbnailer: Could not find stream information");
+		goto error;
+	}
+
+	// Find the first video stream
+	int i = 0;
+	for (;i < format_ctext->nb_streams; i++) {
+		if (format_ctext->streams[i]->codec->codec_type == CODEC_TYPE_VIDEO) {
+			video_stream = i;
+			break;
+		}
+	}
+
+	if (video_stream == -1) {
+		log_msg(LOG_ERR, "Thumbnailer: WEBM has no video streams.");
+		goto error;
+	}
+
+	codec_ctext = format_ctx->streams[videoStream]->codec;
+
+	codec = avcodec_find_decoder(codec_ctext->codec_id);
+	if (codec == NULL) {
+		log_msg(LOG_ERR, "Thumbnailer: Could not find codec.");
+		goto error;
+	}
+
+	if (avcodec_open(codec_ctext, codec) < 0) {
+		log_msg(LOG_ERR, "Thumbnailer: Could not open codec.");
+		goto error;
+	}
+
+	frame = avcodec_alloc_frame();
+	frame_rgb = avcodec_alloc_frame();
+
+	if (frame_rgb == NULL) {
+		log_msg(LOG_ERR, "Thumbnailer: Could not allocate frame_rgb.");
+		goto error;
+	}
+
+	num_bytes = avpicture_get_size(PIX_FMT_RGB24, codec_ctext->width, codec_ctext->height);
+
+	buffer = malloc(num_bytes);
+	if (buffer == NULL) {
+		log_msg(LOG_ERR, "Thumbnailer: Could not allocate space for pixel buffer..");
+		goto error;
+	}
+
+	// Assign appropriate parts of buffer to image planes in pFrameRGB
+	avpicture_fill((AVPicture *)frame_rgb, buffer,
+				   PIX_FMT_RGB24, codec_ctx->width, codec_ctx->height);
+
+	i = 0;
+	while (av_read_frame(format_ctext, &packet) >= 0) {
+		if (packet.stream_index == video_stream) {
+			avcodec_decode_video(codec_ctext, frame, &frame_finished,
+								 packet.data, packet.size);
+
+			if (frameFinished) {
+				AVContext av = {
+					.fmt_ctx = format_ctext,
+					.video_dec_ctx = codec_ctext,
+					.frame = frame,
+					.pkg = packet,
+					.dec = codec
+				};
+				dump_frame_to_jpeg(&av, out_filepath);
+				/* static struct SwsContext *img_convert_ctx;
+
+				// Convert the image into YUV format that SDL uses
+				if(img_convert_ctx == NULL) {
+					int w = pCodecCtx->width;
+					int h = pCodecCtx->height;
+					
+					img_convert_ctx = sws_getContext(w, h, 
+									pCodecCtx->pix_fmt, 
+									w, h, PIX_FMT_RGB24, SWS_BICUBIC,
+									NULL, NULL, NULL);
+					if(img_convert_ctx == NULL) {
+						fprintf(stderr, "Cannot initialize the conversion context!\n");
+						exit(1);
+					}
+				}
+				int ret = sws_scale(img_convert_ctx, pFrame->data, pFrame->linesize, 0, 
+						  pCodecCtx->height, pFrameRGB->data, pFrameRGB->linesize);
+				if(i++<=5)
+					SaveFrame(pFrameRGB, pCodecCtx->width, pCodecCtx->height, i);
+				*/
+			}
+		}
+
+		av_free_packet(&packet);
+	}
+
+	free(buffer);
+	av_free(frame_rgb);
+	av_free(frame);
+	avcodec_close(codec_ctext);
+
+	av_close_input_file(format_ctext);
+
+	return 1;
+
+error:
+	free(buffer);
+	av_free(frame_rgb);
+	av_free(frame);
+	avcodec_close(codec_ctext);
+
+	av_close_input_file(format_ctext);
+	return 0;
 }

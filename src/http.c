@@ -31,18 +31,16 @@ static size_t _write_webm_data(void *ptr, size_t size, size_t nmemb, void *strea
 
 size_t download_sent_webm_url(const char *url, const char filename[static MAX_IMAGE_FILENAME_SIZE],
 							  char outpath[static MAX_IMAGE_FILENAME_SIZE]) {
-	/* TODO: Get the filename. */
-	const char uploads_dir[] = "./user_uploaded";
 	size_t written = 0;
 	FILE *new_webm = NULL;
 
 	struct stat st = {0};
-	if (stat(uploads_dir, &st) == -1) {
-		log_msg(LOG_WARN, "Creating user uploaded directory %s.", uploads_dir);
-		mkdir(uploads_dir, 0755);
+	if (stat(USER_UPLOADS_DIR, &st) == -1) {
+		log_msg(LOG_WARN, "Creating user uploaded directory %s.", USER_UPLOADS_DIR);
+		mkdir(USER_UPLOADS_DIR, 0755);
 	}
 
-	snprintf(outpath, MAX_IMAGE_FILENAME_SIZE, "%s/%s", uploads_dir, filename);
+	snprintf(outpath, MAX_IMAGE_FILENAME_SIZE, "%s/%s", USER_UPLOADS_DIR, filename);
 
 	CURL *curl_handle = curl_easy_init();
 	curl_easy_setopt(curl_handle, CURLOPT_URL, url);
