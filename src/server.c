@@ -247,8 +247,8 @@ int board_static_handler(const http_request *request, http_response *response) {
 	const size_t full_path_size = strlen(webm_loc) + strlen("/") +
 								  strlen(current_board) + strlen("/") +
 								  strlen(file_name_decoded) + 1;
-	char full_path[full_path_size];
-	memset(full_path, '\0', full_path_size);
+	char full_path[full_path_size + 1];
+	memset(full_path, '\0', sizeof(full_path));
 	snprintf(full_path, full_path_size, "%s/%s/%s", webm_loc, current_board, file_name_decoded);
 
 	return mmap_file(full_path, response);
