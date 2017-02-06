@@ -367,7 +367,6 @@ size_t create_thumbnail_for_webm(const char webm_file_path[static MAX_IMAGE_FILE
 		goto error;
 	}
 
-	// Find the first video stream
 	unsigned int i = 0;
 	for (;i < format_ctext->nb_streams; i++) {
 		if (format_ctext->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO) {
@@ -410,45 +409,23 @@ size_t create_thumbnail_for_webm(const char webm_file_path[static MAX_IMAGE_FILE
 		goto error;
 	}
 
-	// Assign appropriate parts of buffer to image planes in pFrameRGB
 	avpicture_fill((AVPicture *)frame_rgb, buffer,
 				   PIX_FMT_RGB24, codec_ctext->width, codec_ctext->height);
 
 	i = 0;
 	while (av_read_frame(format_ctext, &packet) >= 0) {
 		if (packet.stream_index == video_stream) {
-			avcodec_decode_video2(codec_ctext, frame, &frame_finished, &packet);
+			avcodec_decode_video2(codec_ctext, frame_rgb, &frame_finished, &packet);
 
 			if (frame_finished) {
 				AVContext av = {
 					.fmt_ctx = format_ctext,
 					.video_dec_ctx = codec_ctext,
-					.frame = frame,
+					.frame = frame_rgb,
 					.pkt = packet,
 					.dec = codec
 				};
 				dump_frame_to_jpeg(&av, out_filepath);
-				/* static struct SwsContext *img_convert_ctx;
-
-				// Convert the image into YUV format that SDL uses
-				if(img_convert_ctx == NULL) {
-					int w = pCodecCtx->width;
-					int h = pCodecCtx->height;
-					
-					img_convert_ctx = sws_getContext(w, h, 
-									pCodecCtx->pix_fmt, 
-									w, h, PIX_FMT_RGB24, SWS_BICUBIC,
-									NULL, NULL, NULL);
-					if(img_convert_ctx == NULL) {
-						fprintf(stderr, "Cannot initialize the conversion context!\n");
-						exit(1);
-					}
-				}
-				int ret = sws_scale(img_convert_ctx, pFrame->data, pFrame->linesize, 0, 
-						  pCodecCtx->height, pFrameRGB->data, pFrameRGB->linesize);
-				if(i++<=5)
-					SaveFrame(pFrameRGB, pCodecCtx->width, pCodecCtx->height, i);
-				*/
 			}
 		}
 
