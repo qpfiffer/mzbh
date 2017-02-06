@@ -340,8 +340,6 @@ static int dump_frame_to_jpeg(const AVContext *av, const char *thumbnail_filenam
 size_t create_thumbnail_for_webm(const char webm_file_path[static MAX_IMAGE_FILENAME_SIZE],
 								 const char webm_filename[static MAX_IMAGE_FILENAME_SIZE],
 								 char out_filepath[static MAX_IMAGE_FILENAME_SIZE]) {
-	FILE *thumbnail_handle = NULL;
-	size_t written = 0;
 	AVFormatContext *format_ctext = NULL;
 	int video_stream = -1;
 	AVCodec *codec = NULL;
@@ -359,20 +357,20 @@ size_t create_thumbnail_for_webm(const char webm_file_path[static MAX_IMAGE_FILE
 
 	av_register_all();
 
-	if (av_open_input_file(&format_ctext, webm_file_path, NULL, 0, NULL) != 0) {
+	if (avformat_open_input(&format_ctext, webm_file_path, NULL, NULL) != 0) {
 		log_msg(LOG_ERR, "Thumbnailer: Could not open user uploaded webm for thumbnailing. File: %s", webm_file_path);
 		goto error;
 	}
 
-	if (av_find_stream_info(format_ctext) < 0) {
+	if (avformat_find_stream_info(format_ctext, NULL) < 0) {
 		log_msg(LOG_ERR, "Thumbnailer: Could not find stream information");
 		goto error;
 	}
 
 	// Find the first video stream
-	int i = 0;
+	unsigned int i = 0;
 	for (;i < format_ctext->nb_streams; i++) {
-		if (format_ctext->streams[i]->codec->codec_type == CODEC_TYPE_VIDEO) {
+		if (format_ctext->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO) {
 			video_stream = i;
 			break;
 		}
@@ -383,7 +381,7 @@ size_t create_thumbnail_for_webm(const char webm_file_path[static MAX_IMAGE_FILE
 		goto error;
 	}
 
-	codec_ctext = format_ctx->streams[videoStream]->codec;
+	codec_ctext = format_ctext->streams[video_stream]->codec;
 
 	codec = avcodec_find_decoder(codec_ctext->codec_id);
 	if (codec == NULL) {
@@ -391,7 +389,7 @@ size_t create_thumbnail_for_webm(const char webm_file_path[static MAX_IMAGE_FILE
 		goto error;
 	}
 
-	if (avcodec_open(codec_ctext, codec) < 0) {
+	if (avcodec_open2(codec_ctext, codec, NULL) < 0) {
 		log_msg(LOG_ERR, "Thumbnailer: Could not open codec.");
 		goto error;
 	}
@@ -414,20 +412,19 @@ size_t create_thumbnail_for_webm(const char webm_file_path[static MAX_IMAGE_FILE
 
 	// Assign appropriate parts of buffer to image planes in pFrameRGB
 	avpicture_fill((AVPicture *)frame_rgb, buffer,
-				   PIX_FMT_RGB24, codec_ctx->width, codec_ctx->height);
+				   PIX_FMT_RGB24, codec_ctext->width, codec_ctext->height);
 
 	i = 0;
 	while (av_read_frame(format_ctext, &packet) >= 0) {
 		if (packet.stream_index == video_stream) {
-			avcodec_decode_video(codec_ctext, frame, &frame_finished,
-								 packet.data, packet.size);
+			avcodec_decode_video2(codec_ctext, frame, &frame_finished, &packet);
 
-			if (frameFinished) {
+			if (frame_finished) {
 				AVContext av = {
 					.fmt_ctx = format_ctext,
 					.video_dec_ctx = codec_ctext,
 					.frame = frame,
-					.pkg = packet,
+					.pkt = packet,
 					.dec = codec
 				};
 				dump_frame_to_jpeg(&av, out_filepath);
@@ -463,7 +460,7 @@ size_t create_thumbnail_for_webm(const char webm_file_path[static MAX_IMAGE_FILE
 	av_free(frame);
 	avcodec_close(codec_ctext);
 
-	av_close_input_file(format_ctext);
+	avformat_close_input(&format_ctext);
 
 	return 1;
 
@@ -473,6 +470,6 @@ error:
 	av_free(frame);
 	avcodec_close(codec_ctext);
 
-	av_close_input_file(format_ctext);
+	avformat_close_input(&format_ctext);
 	return 0;
 }

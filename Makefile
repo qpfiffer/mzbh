@@ -1,6 +1,6 @@
 CFLAGS=-Werror -Wno-missing-field-initializers -Wextra -Wall -O2 -g3
 INCLUDES=-pthread -I./include/
-LIBS=-l38moths -loleg-http -lvpx -lcurl -lm -lrt
+LIBS=-l38moths -loleg-http -lavformat -lavutil -lavcodec -lvpx -lcurl -lm -lrt
 NAME=waifu.xyz
 COMMON_OBJ=benchmark.o blue_midnight_wish.o http.o models.o db.o parson.o utils.o
 
