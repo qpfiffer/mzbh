@@ -10,6 +10,8 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 
+#include <curl/curl.h>
+
 #include <38-moths/38-moths.h>
 #include <oleg-http/http.h>
 
@@ -20,23 +22,11 @@
 #include "stack.h"
 #include "utils.h"
 
-const char *BOARDS[] = {"a", "b", "fit", "g", "gif", "e", "h", "r", "sci", "soc", "v", "wsg"};
+const char *BOARDS[] = {"a", "b", "fit", "g", "gif", "e", "h", "r", "s", "sci", "soc", "v", "wsg"};
 
 const char FOURCHAN_API_HOST[] = "a.4cdn.org";
 const char FOURCHAN_THUMBNAIL_HOST[] = "t.4cdn.org";
 const char FOURCHAN_IMAGE_HOST[] = "i.4cdn.org";
-
-const char CATALOG_REQUEST[] =
-	"GET /%s/catalog.json HTTP/1.1\r\n"
-	"User-Agent: Mozilla/5.0 (Windows NT 5.1; rv:31.0) Gecko/20100101 Firefox/31.0\r\n"
-	"Host: a.4cdn.org\r\n"
-	"Accept: application/json\r\n\r\n";
-
-const char THREAD_REQUEST[] =
-	"GET /%s/thread/%"PRIu64".json HTTP/1.1\r\n"
-	"User-Agent: Mozilla/5.0 (Windows NT 5.1; rv:31.0) Gecko/20100101 Firefox/31.0\r\n"
-	"Host: a.4cdn.org\r\n"
-	"Accept: application/json\r\n\r\n";
 
 const char IMAGE_REQUEST[] =
 	"GET /%s/%s%.*s HTTP/1.1\r\n"
@@ -49,6 +39,54 @@ const char THUMB_REQUEST[] =
 	"User-Agent: Mozilla/5.0 (Windows NT 5.1; rv:31.0) Gecko/20100101 Firefox/31.0\r\n"
 	"Host: t.4cdn.org\r\n"
 	"Accept: */*\r\n\r\n";
+
+struct MemoryStruct {
+	char *memory;
+	size_t size;
+};
+
+static size_t write_memory_callback(void *contents,size_t size,
+									size_t nmemb, void *userp) {
+	size_t realsize = size * nmemb;
+	struct MemoryStruct *mem = (struct MemoryStruct *)userp;
+
+	mem->memory = realloc(mem->memory, mem->size + realsize + 1);
+	if(mem->memory == NULL) {
+		log_msg(LOG_ERR, "Not enough memory (realloc returned NULL)");
+		return 0;
+	}
+
+	memcpy(&(mem->memory[mem->size]), contents, realsize);
+	mem->size += realsize;
+	mem->memory[mem->size] = 0;
+
+	return realsize;
+}
+
+char *get_json(const char *url) {
+	CURL *curl_handle;
+	CURLcode res;
+
+	struct MemoryStruct chunk;
+
+	chunk.memory = malloc(1);
+	chunk.size = 0;
+
+	curl_handle = curl_easy_init();
+	curl_easy_setopt(curl_handle, CURLOPT_URL, url);
+	curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, write_memory_callback);
+	curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, (void *)&chunk);
+	curl_easy_setopt(curl_handle, CURLOPT_USERAGENT, "libcurl-agent/1.0");
+	res = curl_easy_perform(curl_handle);
+
+	if (res != CURLE_OK) {
+		log_msg(LOG_WARN, "Could not receive chunked HTTP from board.");
+		free(chunk.memory);
+		return NULL;
+	}
+
+	return chunk.memory;
+}
 
 static ol_stack *build_thread_index() {
 	int request_fd = 0;
@@ -69,19 +107,12 @@ static ol_stack *build_thread_index() {
 	for (i = 0; i < (sizeof(BOARDS)/sizeof(BOARDS[0])); i++) {
 		const char *current_board = BOARDS[i];
 
-		const size_t api_request_siz = strlen(CATALOG_REQUEST) + strnlen(current_board, MAX_BOARD_NAME_SIZE);
-		char new_api_request[api_request_siz];
-		memset(new_api_request, '\0', api_request_siz);
-
-		snprintf(new_api_request, api_request_siz, CATALOG_REQUEST, current_board);
-		unsigned int rc = send(request_fd, new_api_request, strlen(new_api_request), 0);
-		if (strlen(new_api_request) != rc)
-			goto error;
-
-		log_msg(LOG_INFO, "Sent request to %s.", FOURCHAN_API_HOST);
-		char *all_json = receive_chunked_http(request_fd);
+		char buf[128] = {0};
+		snprintf(buf, sizeof(buf), "http://a.4cdn.org/%s/catalog.json", current_board);
+		char *all_json = get_json(buf);
 		if (all_json == NULL) {
-			log_msg(LOG_WARN, "Could not receive chunked HTTP from board for /%s/.", current_board);
+			log_msg(LOG_WARN, "Could not receive HTTP from board for /%s/.", current_board);
+			free(all_json);
 			continue;
 		}
 
@@ -94,24 +125,12 @@ static ol_stack *build_thread_index() {
 
 			log_msg(LOG_INFO, "/%s/ - Requesting thread %i...", current_board, match->thread_num);
 
-			/* Template out a request to the 4chan API for it */
-			/* (The 30 is because I don't want to find the length of the
-			 * integer thread number) */
-			const size_t thread_req_size = sizeof(THREAD_REQUEST) + strnlen(match->board, MAX_BOARD_NAME_SIZE) + 30;
-			char templated_req[thread_req_size];
-			memset(templated_req, '\0', thread_req_size);
+			char templated_req[128] = {0};
 
-			snprintf(templated_req, thread_req_size, THREAD_REQUEST,
+			snprintf(templated_req, sizeof(templated_req), "http://a.4cdn.org/%s/thread/%"PRIu64".json",
 					match->board, match->thread_num);
 
-			/* Send that shit over the wire */
-			rc = send(request_fd, templated_req, strlen(templated_req), 0);
-			if (rc != strlen(templated_req)) {
-				log_msg(LOG_ERR, "Could not send all of request.");
-				continue;
-			}
-
-			char *thread_json = receive_chunked_http(request_fd);
+			char *thread_json = get_json(templated_req);
 			if (thread_json == NULL) {
 				log_msg(LOG_WARN, "Could not receive chunked HTTP for thread. continuing.");
 				/* Reopen and manipulate the socket. */
