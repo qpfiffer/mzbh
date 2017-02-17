@@ -318,7 +318,7 @@ static int _insert_post(const char key[static MAX_KEY_SIZE], const post *to_save
 
 	int ret = store_data_in_db(&oleg_conn, key, (unsigned char *)serialized, strlen(serialized));
 	if (ret != 0) {
-		log_msg(LOG_ERR, "Could not store post in database.");
+		log_msg(LOG_ERR, "Could not store post in database. Ret code: %i", ret);
 	}
 	free(serialized);
 
