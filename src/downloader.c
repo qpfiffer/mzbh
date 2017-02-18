@@ -89,14 +89,7 @@ char *get_json(const char *url) {
 }
 
 static ol_stack *build_thread_index() {
-	int request_fd = 0;
 	ol_stack *images_to_download = NULL;
-	request_fd = connect_to_host(FOURCHAN_API_HOST);
-	if (request_fd < 0) {
-		log_msg(LOG_ERR, "Could not connect to %s.", FOURCHAN_API_HOST);
-		goto error;
-	}
-	log_msg(LOG_INFO, "Connected to %s.", FOURCHAN_API_HOST);
 
 	/* This is where we'll queue up images to be downloaded. */
 	images_to_download = malloc(sizeof(ol_stack));
@@ -133,9 +126,6 @@ static ol_stack *build_thread_index() {
 			char *thread_json = get_json(templated_req);
 			if (thread_json == NULL) {
 				log_msg(LOG_WARN, "Could not receive chunked HTTP for thread. continuing.");
-				/* Reopen and manipulate the socket. */
-				close(request_fd);
-				request_fd = connect_to_host(FOURCHAN_API_HOST);
 				free(match);
 				continue;
 			}
@@ -176,8 +166,6 @@ static ol_stack *build_thread_index() {
 
 		free(all_json);
 	}
-	/* We don't need the API socket anymore. */
-	close(request_fd);
 
 	return images_to_download;
 
@@ -189,7 +177,6 @@ error:
 		}
 		free(images_to_download);
 	}
-	close(request_fd);
 	return NULL;
 }
 
