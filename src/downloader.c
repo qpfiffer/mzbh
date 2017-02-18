@@ -168,16 +168,6 @@ static ol_stack *build_thread_index() {
 	}
 
 	return images_to_download;
-
-error:
-	if (images_to_download != NULL) {
-		while (images_to_download->next != NULL) {
-			post_match *_match = (post_match *)spop(&images_to_download);
-			free(_match);
-		}
-		free(images_to_download);
-	}
-	return NULL;
 }
 
 int download_image(const post_match *p_match, char webm_key[static MAX_KEY_SIZE]) {
