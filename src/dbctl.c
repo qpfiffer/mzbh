@@ -8,8 +8,8 @@
 #include <stdio.h>
 #include <sys/stat.h>
 
+#include <hiredis/hiredis.h>
 #include <38-moths/logging.h>
-#include <oleg-http/oleg-http.h>
 
 #include "common_defs.h"
 #include "db.h"

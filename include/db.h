@@ -1,16 +1,22 @@
 // vim: noet ts=4 sw=4
 #pragma once
-#include <oleg-http/oleg-http.h>
+#include <hiredis/hiredis.h>
 #include "common_defs.h"
 
 #define DB_HOST "localhost"
 #define DB_PORT "38080"
 
 /* Global oleg connection for this project. */
-static const struct db_conn oleg_conn = {
+struct db_conn {
+	char host[255];
+	char port[64];
+	struct timeval timeout;
+};
+
+static const struct db_conn redis_conn = {
 	.host = DB_HOST,
 	.port = DB_PORT,
-	.db_name = WAIFU_NMSPC
+	.timeout = {2, 500000} /* 2.5 seconds */
 };
 
 /* Gets an aliased image from the DB. */

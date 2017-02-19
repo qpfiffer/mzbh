@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <oleg-http/oleg-http.h>
 #include <38-moths/logging.h>
 
 #include "db.h"
@@ -70,6 +69,7 @@ char *serialize_webm(const webm *to_serialize) {
 }
 
 static unsigned int x_count(const char prefix[static MAX_KEY_SIZE]) {
+	// EVAL "return #redis.pcall('keys', 'abc:*')" 0
 	unsigned int num = fetch_num_matches_from_db(&oleg_conn, prefix);
 	return num;
 }

@@ -11,7 +11,6 @@
 #include <sys/stat.h>
 
 #include <38-moths/38-moths.h>
-#include <oleg-http/http.h>
 
 #include "db.h"
 #include "http.h"
