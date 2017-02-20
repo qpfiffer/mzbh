@@ -1,0 +1,2 @@
+olegdb-python==0.1.4
+redis==2.10.5
