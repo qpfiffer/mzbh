@@ -69,8 +69,11 @@ char *serialize_webm(const webm *to_serialize) {
 }
 
 static unsigned int x_count(const char prefix[static MAX_KEY_SIZE]) {
-	// EVAL "return #redis.pcall('keys', 'abc:*')" 0
-	unsigned int num = fetch_num_matches_from_db(&oleg_conn, prefix);
+	unsigned int num = 0;
+	redisContext *c = redisConnectWithTimeout(redis_conn.host, redis_conn.port, redis_conn.timeout);
+	redisReply *reply = redisCommand(c, "EVAL \"return #redis.pcall('keys', '%s:*')\" 0", prefix);
+	num = atoi(reply->str);
+	freeReplyObject(reply);
 	return num;
 }
 

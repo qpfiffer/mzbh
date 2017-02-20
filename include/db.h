@@ -4,12 +4,12 @@
 #include "common_defs.h"
 
 #define DB_HOST "localhost"
-#define DB_PORT "38080"
+#define DB_PORT 6379
 
 /* Global oleg connection for this project. */
 struct db_conn {
 	char host[255];
-	char port[64];
+	unsigned int port;
 	struct timeval timeout;
 };
 
