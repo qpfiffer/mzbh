@@ -220,6 +220,10 @@ static void get_webm_from_board(char file_name_decoded[static MAX_IMAGE_FILENAME
 	for (;i < strnlen(file_name, MAX_IMAGE_FILENAME_SIZE); i++) {
 		/* TODO: Handle " as well. */
 		if (file_name_decoded_first_pass[i] == '\'') {
+			if (j + 6 > sizeof(file_name_decoded)) {
+				file_name_decoded[j++] = '\0';
+				break;
+			}
 			/* &#039; */
 			file_name_decoded[j++] = '&';
 			file_name_decoded[j++] = '#';
