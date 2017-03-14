@@ -210,7 +210,8 @@ static void get_webm_from_board(char file_name_decoded[static MAX_IMAGE_FILENAME
 	char file_name_decoded_first_pass[MAX_IMAGE_FILENAME_SIZE] = {0};
 	const size_t file_name_len = request->matches[2].rm_eo - request->matches[2].rm_so;
 	const size_t fname_bgr = sizeof(file_name) > file_name_len ? file_name_len : sizeof(file_name);
-	strncpy(file_name, request->resource + request->matches[2].rm_so, fname_bgr);
+	const size_t safe = fname_bgr > sizeof(file_name) ? sizeof(file_name) : fname_bgr;
+	strncpy(file_name, request->resource + request->matches[2].rm_so, safe);
 
 	url_decode(file_name, file_name_len, file_name_decoded_first_pass);
 	/* Fuck it. */
