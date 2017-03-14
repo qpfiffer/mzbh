@@ -178,12 +178,18 @@ void modify_aliased_file(const char *file_path, const webm *_old_webm, const tim
 		goto update_time;
 	}
 
+	if (get_file_creation_date(real_fpath) == 0) {
+		log_msg(LOG_WARN, "Cowardly refusing to symlink file to broken file.");
+		goto update_time;
+	}
+
 	log_msg(LOG_WARN, "Unlinking and creating a symlink from '%s' to '%s'.",
 			real_fpath, real_old_fpath);
 
 	/* Unlink new file. */
 	if (unlink(real_fpath) == -1)
 		log_msg(LOG_ERR, "Could not delete '%s'.", real_fpath);
+
 	/* Symlink to old file. */
 	if (symlink(real_old_fpath, real_fpath) == -1)
 		log_msg(LOG_ERR, "Could not create symlink from '%s' to '%s'.",
