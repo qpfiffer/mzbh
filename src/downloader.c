@@ -80,11 +80,14 @@ char *get_json(const char *url) {
 	res = curl_easy_perform(curl_handle);
 
 	if (res != CURLE_OK) {
-		log_msg(LOG_WARN, "Could not receive chunked HTTP from board.");
+		const char *err = curl_easy_strerror(res);
+		log_msg(LOG_WARN, "Could not receive chunked HTTP from board: %s", err);
 		free(chunk.memory);
+		curl_easy_cleanup(curl_handle);
 		return NULL;
 	}
 
+	curl_easy_cleanup(curl_handle);
 	return chunk.memory;
 }
 
