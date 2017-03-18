@@ -378,7 +378,7 @@ int main(int argc, char *argv[]) {
 		if (download_images() != 0) {
 			log_msg(LOG_WARN, "Something went wrong while downloading images.");
 		}
-		sleep(12000); /* 20 Minutes */
+		sleep(1200); /* 20 Minutes */
 	}
 
 	return 0;
