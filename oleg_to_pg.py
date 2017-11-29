@@ -16,7 +16,11 @@ def insert_webm(conn, oconn, okey, od, should_commit):
     cur.execute("""INSERT INTO webms
         (created_at, oleg_key, filename, file_hash, board,
         file_path, size)
-        VALUES (to_timestamp('%s'), %s, %s, %s, %s, %s, %s);""", webm_data)
+        VALUES (to_timestamp('%s'), %s, %s, %s, %s, %s, %s) RETURNING id;""", webm_data)
+    post_id = webm_loaded.get("post", None)
+    if post_id and len(post_id):
+        webm_id = cur.fetchone()[0]
+        cur.execute("UPDATE webms SET post_id = (SELECT id FROM posts WHERE oleg_key = %s) WHERE webms.id = %s", [post_id, webm_id])
     if should_commit:
         conn.commit()
 
@@ -25,11 +29,14 @@ def insert_alias(conn, oconn, okey, od, should_commit):
     webm_loaded = json.loads(od)
     webm_data = (webm_loaded['created_at'], okey, webm_loaded['filename'],
             webm_loaded['file_hash'], webm_loaded['board'],
-            webm_loaded['file_path'])
+            webm_loaded['file_path'], webm_loaded['file_hash'])
     cur.execute("""INSERT INTO webm_aliases
-        (created_at, oleg_key, filename, file_hash, board,
-        file_path)
-        VALUES (to_timestamp('%s'), %s, %s, %s, %s, %s);""", webm_data)
+        (created_at, oleg_key, filename, file_hash, board, file_path, webm_id)
+        VALUES (to_timestamp('%s'), %s, %s, %s, %s, %s, (SELECT id FROM webms WHERE file_hash = %s)) RETURNING id;""", webm_data)
+    post_id = webm_loaded.get("post", None)
+    if post_id and len(post_id):
+        webm_alias_id = cur.fetchone()[0]
+        cur.execute("UPDATE webm_aliases SET post_id = (SELECT id FROM posts WHERE oleg_key = %s) WHERE webm_aliases.id = %s", [post_id, webm_alias_id])
     if should_commit:
         conn.commit()
 
@@ -55,7 +62,7 @@ def insert_thread(conn, oconn, okey, od, should_commit):
                 thread_id)
         cur.execute("""INSERT INTO posts
             (created_at, oleg_key, fourchan_post_no, fourchan_post_id, board, body_content, replied_to_keys, thread_id)
-            VALUES (to_timestamp('%s'), %s, %s, %s, %s, %s, %s, %s);""", pdata)
+            VALUES (to_timestamp('%s'), %s, %s, %s, %s, %s, %s, %s) RETURNING id;""", pdata)
 
     if should_commit:
         conn.commit()
@@ -64,7 +71,7 @@ def create_tables(conn):
     cur = conn.cursor()
     cur.execute("""CREATE TABLE threads (
         id SERIAL PRIMARY KEY,
-        oleg_key TEXT,
+        oleg_key TEXT UNIQUE,
         board TEXT,
         subject TEXT,
         created_at TIMESTAMPTZ DEFAULT now());""")
@@ -72,11 +79,10 @@ def create_tables(conn):
 
     cur.execute("""CREATE TABLE posts (
         id SERIAL PRIMARY KEY,
-        oleg_key TEXT,
+        oleg_key TEXT UNIQUE,
         fourchan_post_id BIGINT, -- The date of the post (unsignedix timestamp)
         fourchan_post_no BIGINT, -- The actual post ID on 4chan
         thread_id INTEGER REFERENCES threads,
-        -- webm_id INTEGER REFERENCES webms,
         board TEXT,
         body_content TEXT,
         replied_to_keys JSONB, -- JSON list of posts replied to ITT
@@ -85,28 +91,27 @@ def create_tables(conn):
 
     cur.execute("""CREATE TABLE webms (
         id SERIAL PRIMARY KEY,
-        oleg_key TEXT,
-        file_hash TEXT,
+        oleg_key TEXT UNIQUE,
+        file_hash TEXT UNIQUE NOT NULL,
         filename TEXT,
         board TEXT,
         file_path TEXT,
         post_id INTEGER REFERENCES posts,
         created_at TIMESTAMPTZ DEFAULT now(),
         size INTEGER);""")
-    cur.execute("ALTER TABLE posts ADD COLUMN webm_id INTEGER REFERENCES webms;")
     cur.execute("CREATE INDEX webms_oleg_key ON webms (oleg_key)")
     cur.execute("CREATE INDEX webms_file_hash_idx ON webms (file_hash)")
     cur.execute("CREATE INDEX webms_filename_idx ON webms (filename)")
 
     cur.execute("""CREATE TABLE webm_aliases (
         id SERIAL PRIMARY KEY,
-        oleg_key TEXT,
-        file_hash TEXT,
+        oleg_key TEXT UNIQUE,
+        file_hash TEXT NOT NULL,
         filename TEXT,
         board TEXT,
         file_path TEXT,
         post_id INTEGER REFERENCES posts,
-        alias_of_id INTEGER REFERENCES webms,
+        webm_id INTEGER REFERENCES webms,
         created_at TIMESTAMPTZ DEFAULT now());""")
     cur.execute("CREATE INDEX webm_aliases_oleg_key ON webms (oleg_key)")
     cur.execute("CREATE INDEX webm_aliases_file_hash_idx ON webms (file_hash)")
@@ -116,7 +121,7 @@ def create_tables(conn):
 namespaces = (
     ("THRD", insert_thread),
     ("webm", insert_webm),
-    ("alias", insert_alias)
+    ("alias", insert_alias),
 )
 
 def main():
