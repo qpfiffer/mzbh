@@ -4,7 +4,7 @@
 
 Originally all of the web-app frameworky garbage in this app was custom from the
 ground up, but all of that has been spun-off into [38-Moths](https://github.com/qpfiffer/38-Moths).
-[OlegDB](https://olegdb.org/) is also required.
+[OlegDB](https://olegdb.org/) is also required. Also PostgreSQL.
 `waifu.xyz`'s  job is pretty simple: Collect and host `.webm` files.
 It was built with the following goals in mind:
 
@@ -12,6 +12,7 @@ It was built with the following goals in mind:
 * Should be able to run indefinitely (no memory leaks)
 * Should be pretty fast
 * Should be able to run on a cheapo, $5.00 a month 32-bit VPS with no issues.
+* Should be fault tolerant and fall-back to different failure modes
 
 ## Webserver
 
@@ -81,7 +82,8 @@ of environment variables you can set to affect where the program will keep files
 
 You'll need to download and install [OlegDB](https://olegdb.org/). `waifu.xyz`
 by default expects the database to be running on `localhost:38080`. Just make
-sure this is the case.
+sure this is the case. I'm moving this over to PostgreSQL so you'll need that,
+too.
 
 ## Running Raw
 
