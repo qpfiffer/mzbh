@@ -220,7 +220,7 @@ static void get_webm_from_board(char file_name_decoded[static MAX_IMAGE_FILENAME
 	for (;i < strnlen(file_name, MAX_IMAGE_FILENAME_SIZE); i++) {
 		/* TODO: Handle " as well. */
 		if (file_name_decoded_first_pass[i] == '\'') {
-			if (j + 6 > sizeof(file_name_decoded)) {
+			if (j + 6 > strnlen(file_name_decoded, MAX_IMAGE_FILENAME_SIZE)) {
 				file_name_decoded[j++] = '\0';
 				break;
 			}
@@ -327,7 +327,7 @@ int url_search_handler(const http_request *request, http_response *response) {
 	char image_hash[HASH_IMAGE_STR_SIZE] = {0};
 	char webm_key[MAX_KEY_SIZE] = {0};
 	hash_file(out_filepath, image_hash);
-	webm *_webm = get_image(image_hash, webm_key);
+	webm *_webm = get_image_by_oleg_key(image_hash, webm_key);
 
 	char alias_key[MAX_KEY_SIZE] = {0};
 	webm_alias *_alias = get_aliased_image(out_filepath, alias_key);
@@ -414,7 +414,7 @@ int webm_handler(const http_request *request, http_response *response) {
 
 	char webm_key[MAX_KEY_SIZE] = {0};
 	hash_file(full_path, image_hash);
-	webm *_webm = get_image(image_hash, webm_key);
+	webm *_webm = get_image_by_oleg_key(image_hash, webm_key);
 
 	char alias_key[MAX_KEY_SIZE] = {0};
 	webm_alias *_alias = get_aliased_image(full_path, alias_key);

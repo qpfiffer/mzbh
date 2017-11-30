@@ -1,4 +1,5 @@
 *.o
+.gdb_history
 *.swp
 waifu.xyz
 dbctl

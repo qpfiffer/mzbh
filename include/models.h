@@ -1,7 +1,10 @@
 // vim: noet ts=4 sw=4
 #pragma once
-#include <38-moths/vector.h>
 #include <time.h>
+
+#include <38-moths/vector.h>
+#include <libpq-fe.h>
+
 #include "common_defs.h"
 
 /* The unsigned chars in the struct are used to null terminate the
@@ -30,6 +33,7 @@ typedef struct webm {
 void create_webm_key(const char file_hash[static HASH_IMAGE_STR_SIZE], char outbuf[static MAX_KEY_SIZE]);
 char *serialize_webm(const webm *to_serialize);
 webm *deserialize_webm(const char *json);
+webm *deserialize_webm_from_tuples(const PGresult *res);
 unsigned int webm_count();
 
 /* Aliases of webms have the same file hash but different names, boards, etc. Mostly metadata. */

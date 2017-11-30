@@ -1,6 +1,6 @@
 CFLAGS=-Werror -Wno-missing-field-initializers -Wextra -Wall -O2 -g3
-INCLUDES=-pthread -I./include/
-LIBS=-l38moths -loleg-http -lcurl -lm -lrt
+INCLUDES=-pthread -I./include/ `pkg-config --cflags libpq`
+LIBS=-l38moths -loleg-http -lcurl -lm -lrt `pkg-config --libs libpq`
 NAME=waifu.xyz
 COMMON_OBJ=benchmark.o blue_midnight_wish.o http.o models.o db.o parson.o utils.o
 

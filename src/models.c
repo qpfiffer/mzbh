@@ -4,8 +4,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <oleg-http/oleg-http.h>
 #include <38-moths/logging.h>
+#include <oleg-http/oleg-http.h>
 
 #include "db.h"
 #include "models.h"
@@ -14,6 +14,34 @@
 
 void create_webm_key(const char file_hash[static HASH_IMAGE_STR_SIZE], char outbuf[static MAX_KEY_SIZE]) {
 	snprintf(outbuf, MAX_KEY_SIZE, "%s%s", WEBM_NMSPC, file_hash);
+}
+
+webm *deserialize_webm_from_tuples(const PGresult *res) {
+	if (!res)
+		return NULL;
+
+	if (PQntuples(res) <= 0) {
+		log_msg(LOG_WARN, "No tuples in PG result for webm_from_tuples.");
+		return NULL;
+	}
+
+	webm *to_return = calloc(1, sizeof(webm));
+
+	const int file_hash_col = PQfnumber(res, "file_hash");
+	const int filename_col = PQfnumber(res, "filename");
+	const int board_col = PQfnumber(res, "board");
+	const int file_path_col = PQfnumber(res, "file_path");
+	const int size_col = PQfnumber(res, "size");
+	// const int created_at_col = PQfnumber(res, "created_at");
+	/* TODO: created_at, post_key ("post" in the webm struct) */
+
+	strncpy(to_return->file_hash, PQgetvalue(res, 0, file_hash_col), sizeof(to_return->file_hash));
+	strncpy(to_return->file_path, PQgetvalue(res, 0, file_path_col), sizeof(to_return->file_path));
+	strncpy(to_return->filename, PQgetvalue(res, 0, filename_col), sizeof(to_return->filename));
+	strncpy(to_return->board, PQgetvalue(res, 0, board_col), sizeof(to_return->board));
+	to_return->size = (size_t)PQgetvalue(res, 0, size_col);
+
+	return to_return;
 }
 
 webm *deserialize_webm(const char *json) {

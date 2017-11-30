@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include <38-moths/logging.h>
+#include <libpq-fe.h>
 
 #include "db.h"
 #include "benchmark.h"
@@ -17,20 +18,62 @@
 #include "parse.h"
 #include "utils.h"
 
-/* Webm get/set stuff */
-webm *get_image(const char image_hash[static HASH_ARRAY_SIZE], char out_key[static MAX_KEY_SIZE]) {
-	create_webm_key(image_hash, out_key);
+static PGconn *_get_pg_connection() {
+	PGconn *conn = PQconnectdb(DB_PG_CONNECTION_INFO);
 
-	size_t json_size = 0;
-	char *json = (char *)fetch_data_from_db(&oleg_conn, out_key, &json_size);
-	/* log_msg(LOG_INFO, "Json from DB: %s", json); */
-
-	if (json == NULL)
+	if (PQstatus(conn) != CONNECTION_OK) {
+		log_msg(LOG_ERR, "Could not connect to Postgres: %s", PQerrorMessage(conn));
 		return NULL;
+	}
 
-	webm *deserialized = deserialize_webm(json);
-	free(json);
+	return conn;
+}
+
+static void _finish_pg_connection(PGconn *conn) {
+	if (conn)
+		PQfinish(conn);
+}
+
+/* Webm get/set stuff */
+webm *get_image_by_oleg_key(const char image_hash[static HASH_ARRAY_SIZE], char out_key[static MAX_KEY_SIZE]) {
+	PGresult *res = NULL;
+	PGconn *conn = NULL;
+
+	create_webm_key(image_hash, out_key);
+	const char *param_values[] = {image_hash};
+
+	conn = _get_pg_connection();
+	if (!conn)
+		goto error;
+
+	res = PQexecParams(conn,
+					  "SELECT * FROM webms WHERE file_hash = $1",
+					  1,
+					  NULL,
+					  param_values,
+					  NULL,
+					  NULL,
+					  1); /* <-- binary setting */
+
+	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+		log_msg(LOG_ERR, "SELECT failed: %s", PQerrorMessage(conn));
+		goto error;
+	}
+
+	webm *deserialized = deserialize_webm_from_tuples(res);
+	if (!deserialized)
+		goto error;
+
+	PQclear(res);
+	_finish_pg_connection(conn);
+
 	return deserialized;
+
+error:
+	if (res)
+		PQclear(res);
+	_finish_pg_connection(conn);
+	return NULL;
 }
 
 int set_image(const webm *webm) {
@@ -221,7 +264,7 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 		return 0;
 	}
 
-	webm *_old_webm = get_image(image_hash, out_webm_key);
+	webm *_old_webm = get_image_by_oleg_key(image_hash, out_webm_key);
 
 	if (!_old_webm) {
 		int rc = _insert_webm(file_path, filename, image_hash, board, post_key);
