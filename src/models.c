@@ -98,23 +98,23 @@ char *serialize_webm(const webm *to_serialize) {
 }
 
 static unsigned int x_count(const char prefix[static MAX_KEY_SIZE]) {
-	unsigned int num = fetch_num_matches_from_db(&oleg_conn, prefix);
+	unsigned int num = get_record_count_in_table(prefix);
 	return num;
 }
 
 unsigned int webm_count() {
-	char prefix[MAX_KEY_SIZE] = WEBM_NMSPC;
-	return x_count(prefix);
+	char query[MAX_KEY_SIZE] = "SELECT count(*) FROM webms;";
+	return x_count(query);
 }
 
 unsigned int webm_alias_count() {
-	char prefix[MAX_KEY_SIZE] = ALIAS_NMSPC;
-	return x_count(prefix);
+	char query[MAX_KEY_SIZE] = "SELECT count(*) FROM webm_aliases;";
+	return x_count(query);
 }
 
 unsigned int post_count() {
-	char prefix[MAX_KEY_SIZE] = POST_NMSPC;
-	return x_count(prefix);
+	char query[MAX_KEY_SIZE] = "SELECT count(*) FROM posts;";
+	return x_count(query);
 }
 
 void create_alias_key(const char file_path[static MAX_IMAGE_FILENAME_SIZE], char outbuf[static MAX_KEY_SIZE]) {

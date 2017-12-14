@@ -25,6 +25,9 @@ struct webm_to_alias *get_webm_to_alias(const char image_hash[static HASH_ARRAY_
 /* Similar to get_aliased_image(2), but by key directly. */
 struct webm_alias *get_aliased_image_with_key(const char key[static MAX_KEY_SIZE]);
 
+/* Get the number of records in a table. */
+unsigned int get_record_count_in_table(const char *query_command);
+
 /* Attempts to add an image to the database.
  * Returns 0 on success.
  */

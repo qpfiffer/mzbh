@@ -34,6 +34,44 @@ static void _finish_pg_connection(PGconn *conn) {
 		PQfinish(conn);
 }
 
+unsigned int get_record_count_in_table(const char *query_command) {
+	PGresult *res = NULL;
+	PGconn *conn = NULL;
+	unsigned int ret = 0;
+
+	conn = _get_pg_connection();
+	if (!conn)
+		goto error;
+
+	res = PQexecParams(conn,
+					  query_command,
+					  0,
+					  NULL,
+					  NULL,
+					  NULL,
+					  NULL,
+					  1);
+
+	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+		log_msg(LOG_ERR, "SELECT failed: %s", PQerrorMessage(conn));
+		goto error;
+	}
+
+	char *bytes = PQgetvalue(res, 0, 0);
+	(void) bytes;
+	ret = *((int *)PQgetvalue(res, 0, PQfnumber(res, "count")));
+
+	_finish_pg_connection(conn);
+
+	return ret;
+
+error:
+	if (res)
+		PQclear(res);
+	_finish_pg_connection(conn);
+	return 0;
+}
+
 /* Webm get/set stuff */
 webm *get_image_by_oleg_key(const char image_hash[static HASH_ARRAY_SIZE], char out_key[static MAX_KEY_SIZE]) {
 	PGresult *res = NULL;

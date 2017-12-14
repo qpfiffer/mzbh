@@ -15,5 +15,10 @@
 #define POST_NMSPC "PST"
 #define THREAD_NMSPC "THRD"
 
+#define WEBMS_TABLE "webms"
+#define ALIASES_TABLE "webm_slises"
+#define POSTS_TABLE "posts"
+#define THREADS_TABLE "threads"
+
 #define MAX_IMAGE_FILENAME_SIZE 255
 #define MAX_BOARD_NAME_SIZE 16
