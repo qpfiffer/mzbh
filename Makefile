@@ -1,4 +1,4 @@
-CFLAGS=-Werror -Wno-missing-field-initializers -Wextra -Wall -O2 -g3
+CFLAGS=-Werror -Wno-format-truncation -Wno-missing-field-initializers -Wextra -Wall -O2 -g3
 INCLUDES=-pthread -I./include/
 LIBS=-l38moths -loleg-http -lcurl -lm -lrt
 NAME=waifu.xyz
