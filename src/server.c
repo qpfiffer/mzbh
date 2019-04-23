@@ -32,7 +32,7 @@
 #include "models.h"
 #include "server.h"
 
-#define RESULTS_PER_PAGE 80
+#define RESULTS_PER_PAGE 160
 #define OFFSET_FOR_PAGE(x) x * RESULTS_PER_PAGE
 
 static char *pretty_date(const char *argument) {
