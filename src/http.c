@@ -38,7 +38,7 @@ size_t download_sent_webm_url(const char *url, const char filename[static MAX_IM
 
 	struct stat st = {0};
 	if (stat(uploads_dir, &st) == -1) {
-		log_msg(LOG_WARN, "Creating user uploaded directory %s.", uploads_dir);
+		m38_log_msg(LOG_WARN, "Creating user uploaded directory %s.", uploads_dir);
 		mkdir(uploads_dir, 0755);
 	}
 
@@ -111,20 +111,20 @@ char *receive_chunked_http(const int request_fd) {
 
 		int recvd = recv(request_fd, raw_buf + old_offset, count, 0);
 		if (recvd != count) {
-			log_msg(LOG_WARN, "Could not receive entire message.");
+			m38_log_msg(LOG_WARN, "Could not receive entire message.");
 		}
 	}
 	/* printf("Full message is %s\n.", raw_buf); */
 	/* Check for a 200: */
 	if (raw_buf == NULL || strstr(raw_buf, "200") == NULL) {
-		log_msg(LOG_WARN, "Chunked: Could not find 200 return code in response.");
+		m38_log_msg(LOG_WARN, "Chunked: Could not find 200 return code in response.");
 		goto error;
 	}
 
 	/* 4Chan throws us data as chunk-encoded HTTP. Rad. */
 	char *header_end = strstr(raw_buf, "\r\n\r\n");
 	if (header_end == NULL) {
-		log_msg(LOG_ERR, "Could not find end of header in initial chunk.");
+		m38_log_msg(LOG_ERR, "Could not find end of header in initial chunk.");
 		goto error;
 	}
 	char *cursor_pos = header_end  + (sizeof(char) * 4);
@@ -137,7 +137,7 @@ char *receive_chunked_http(const int request_fd) {
 		char *chunk_size_start = cursor_pos;
 		char *chunk_size_end = strstr(chunk_size_start, "\r\n");
 		if (chunk_size_end == NULL) {
-			log_msg(LOG_ERR, "Could not find '\r\n' in chunk.");
+			m38_log_msg(LOG_ERR, "Could not find '\r\n' in chunk.");
 			goto error;
 		}
 		const int chunk_size_end_oft = chunk_size_end - chunk_size_start;
@@ -148,7 +148,7 @@ char *receive_chunked_http(const int request_fd) {
 		const long chunk_size = strtol(chunk_size_start, NULL, 16);
 
 		if ((chunk_size == LONG_MIN || chunk_size == LONG_MAX) && errno == ERANGE) {
-			log_msg(LOG_ERR, "Could not parse out chunk size.");
+			m38_log_msg(LOG_ERR, "Could not parse out chunk size.");
 			goto error;
 		}
 

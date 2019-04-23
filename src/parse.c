@@ -15,7 +15,7 @@ ol_stack *parse_catalog_json(const char *all_json, const char board[MAX_BOARD_NA
 	JSON_Value *catalog = json_parse_string(all_json);
 
 	if (json_value_get_type(catalog) != JSONArray)
-		log_msg(LOG_WARN, "Well, the root isn't a JSONArray.");
+		m38_log_msg(LOG_WARN, "Well, the root isn't a JSONArray.");
 
 	ol_stack *matches = NULL;
 	matches = calloc(1, sizeof(ol_stack));
@@ -26,7 +26,7 @@ ol_stack *parse_catalog_json(const char *all_json, const char board[MAX_BOARD_NA
 	const int page_count = json_array_get_count(all_objects);
 	for (i = 0; i < page_count; i++) {
 		JSON_Object *obj = json_array_get_object(all_objects, i);
-		log_msg(LOG_INFO, "/%s/ - Checking Page: %lu/%i", board, (long)json_object_get_number(obj, "page"), page_count);
+		m38_log_msg(LOG_INFO, "/%s/ - Checking Page: %lu/%i", board, (long)json_object_get_number(obj, "page"), page_count);
 
 		JSON_Array *threads = json_object_get_array(obj, "threads");
 		unsigned int j;
@@ -44,7 +44,7 @@ ol_stack *parse_catalog_json(const char *all_json, const char board[MAX_BOARD_NA
 				JSON_Object *thread_reply = json_array_get_object(thread_replies, k);
 				const char *file_ext_reply = json_object_get_string(thread_reply, "ext");
 				if (file_ext_reply != NULL && strstr(file_ext_reply, "webm")) {
-					log_msg(LOG_INFO, "/%s/ - Found webm in reply. Adding to threads to look through.", board);
+					m38_log_msg(LOG_INFO, "/%s/ - Found webm in reply. Adding to threads to look through.", board);
 					found_webm_in_reply = 1;
 					break;
 				}
@@ -54,7 +54,7 @@ ol_stack *parse_catalog_json(const char *all_json, const char board[MAX_BOARD_NA
 				(file_ext != NULL && strstr(file_ext, "webm")) ||
 				(post != NULL && strcasestr(post, "webm")) ||
 				(post != NULL && strcasestr(post, "gif"))) {
-				log_msg(LOG_INFO, "/%s/ - Thread %i may have some webm. Ext: %s", board, thread_num, file_ext);
+				m38_log_msg(LOG_INFO, "/%s/ - Thread %i may have some webm. Ext: %s", board, thread_num, file_ext);
 
 				thread_match *match = malloc(sizeof(thread_match));
 				match->thread_num = thread_num;
@@ -121,7 +121,7 @@ ol_stack *parse_thread_json(const char *all_json, const thread_match *match) {
 
 		/* We download the whole thread, but we only download certain files. */
 		if (strstr(file_ext, "webm")) {
-			log_msg(LOG_INFO, "/%s/ Hit: (%"PRIu64") %s%s.", match->board, _tim, filename, file_ext);
+			m38_log_msg(LOG_INFO, "/%s/ Hit: (%"PRIu64") %s%s.", match->board, _tim, filename, file_ext);
 			p_match->should_download_image = 1;
 		}
 	}

@@ -55,7 +55,7 @@ void ensure_directory_for_board(const char *board) {
 
 	struct stat st = {0};
 	if (stat(to_create, &st) == -1) {
-		log_msg(LOG_WARN, "Creating directory %s.", to_create);
+		m38_log_msg(LOG_WARN, "Creating directory %s.", to_create);
 		mkdir(to_create, 0755);
 	}
 }
@@ -77,10 +77,10 @@ int get_non_colliding_image_file_path(char fname[static MAX_IMAGE_FILENAME_SIZE]
 	if (fsize == 0) {
 		return 0;
 	} else if (fsize == p_match->size) {
-		log_msg(LOG_INFO, "Skipping %s.", fname);
+		m38_log_msg(LOG_INFO, "Skipping %s.", fname);
 		return 1;
 	} else if (fsize != p_match->size) {
-		log_msg(LOG_WARN, "Found duplicate filename for %s with incorrect size. Bad download?",
+		m38_log_msg(LOG_WARN, "Found duplicate filename for %s with incorrect size. Bad download?",
 				fname);
 		return 0;
 	}
@@ -94,7 +94,7 @@ void ensure_thumb_directory(const post_match *p_match) {
 
 	struct stat st = {0};
 	if (stat(thumb_dir, &st) == -1) {
-		log_msg(LOG_WARN, "Creating thumb directory %s.", thumb_dir);
+		m38_log_msg(LOG_WARN, "Creating thumb directory %s.", thumb_dir);
 		mkdir(thumb_dir, 0755);
 	}
 }
@@ -197,7 +197,7 @@ int hash_file(const char *file_path, char outbuf[static HASH_IMAGE_STR_SIZE]) {
 	unsigned char *data_ptr = NULL;
 	int fd = open(file_path, O_RDONLY);
 	if (fd < 0) {
-		log_msg(LOG_ERR, "Could not open file for hashing.");
+		m38_log_msg(LOG_ERR, "Could not open file for hashing.");
 		perror("hash_file");
 		goto error;
 	}

@@ -11,15 +11,15 @@ struct file_and_time {
 	const time_t ctime;
 };
 
-int static_handler(const http_request *request, http_response *response);
-int user_thumbs_static_handler(const http_request *request, http_response *response);
-int board_static_handler(const http_request *request, http_response *response);
-int index_handler(const http_request *request, http_response *response);
-int webm_handler(const http_request *request, http_response *response);
-int by_alias_handler(const http_request *request, http_response *response);
-int board_handler(const http_request *request, http_response *response);
-int paged_board_handler(const http_request *request, http_response *response);
-int favicon_handler(const http_request *request, http_response *response);
-int robots_handler(const http_request *request, http_response *response);
-int by_thread_handler(const http_request *request, http_response *response);
-int url_search_handler(const http_request *request, http_response *response);
+int static_handler(const m38_http_request *request, m38_http_response *response);
+int user_thumbs_static_handler(const m38_http_request *request, m38_http_response *response);
+int board_static_handler(const m38_http_request *request, m38_http_response *response);
+int index_handler(const m38_http_request *request, m38_http_response *response);
+int webm_handler(const m38_http_request *request, m38_http_response *response);
+int by_alias_handler(const m38_http_request *request, m38_http_response *response);
+int board_handler(const m38_http_request *request, m38_http_response *response);
+int paged_board_handler(const m38_http_request *request, m38_http_response *response);
+int favicon_handler(const m38_http_request *request, m38_http_response *response);
+int robots_handler(const m38_http_request *request, m38_http_response *response);
+int by_thread_handler(const m38_http_request *request, m38_http_response *response);
+int url_search_handler(const m38_http_request *request, m38_http_response *response);
