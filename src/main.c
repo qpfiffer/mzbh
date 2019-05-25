@@ -31,19 +31,19 @@ void term(int signum) {
 	exit(1);
 }
 
-static const route all_routes[] = {
-	{"GET", "robots_txt", "^/robots.txt$", 0, &robots_handler, &mmap_cleanup},
-	{"GET", "favicon_ico", "^/favicon.ico$", 0, &favicon_handler, &mmap_cleanup},
-	{"GET", "generic_static", "^/static/[a-zA-Z0-9/_-]*\\.[a-zA-Z]*$", 0, &static_handler, &mmap_cleanup},
-	{"GET", "user_uploaded_thumbs", "^/static/user_thumbs/[a-zA-Z0-9/_-]*\\.[a-zA-Z]*$", 0, &user_thumbs_static_handler, &mmap_cleanup},
-	{"POST", "search_by_url", "^/search/url.json$", 0, &url_search_handler, &heap_cleanup},
-	{"GET", "board_handler_no_num", "^/chug/([a-zA-Z]*)$", 1, &board_handler, &heap_cleanup},
-	{"GET", "paged_board_handler", "^/chug/([a-zA-Z]*)/([0-9]*)$", 2, &paged_board_handler, &heap_cleanup},
-	{"GET", "webm_handler", "^/slurp/([a-zA-Z]*)/((.*)(.webm|.jpg))$", 2, &webm_handler, &heap_cleanup},
-	{"GET", "board_static_handler", "^/chug/([a-zA-Z]*)/((.*)(.webm|.jpg))$", 2, &board_static_handler, &mmap_cleanup},
-	{"GET", "by_alias_handler", "^/by/alias/([0-9]*)$", 1, &by_alias_handler, &heap_cleanup},
-	{"GET", "by_thread_handler", "^/by/thread/([A-Z]*[a-z]*[0-9]*)$", 1, &by_thread_handler, &heap_cleanup},
-	{"GET", "root_handler", "^/$", 0, &index_handler, &heap_cleanup},
+static const m38_route all_routes[] = {
+	{"GET", "robots_txt", "^/robots.txt$", 0, &robots_handler, &m38_mmap_cleanup},
+	{"GET", "favicon_ico", "^/favicon.ico$", 0, &favicon_handler, &m38_mmap_cleanup},
+	{"GET", "generic_static", "^/static/[a-zA-Z0-9/_-]*\\.[a-zA-Z]*$", 0, &static_handler, &m38_mmap_cleanup},
+	{"GET", "user_uploaded_thumbs", "^/static/user_thumbs/[a-zA-Z0-9/_-]*\\.[a-zA-Z]*$", 0, &user_thumbs_static_handler, &m38_mmap_cleanup},
+	{"POST", "search_by_url", "^/search/url.json$", 0, &url_search_handler, &m38_heap_cleanup},
+	{"GET", "board_handler_no_num", "^/chug/([a-zA-Z]*)$", 1, &board_handler, &m38_heap_cleanup},
+	{"GET", "paged_board_handler", "^/chug/([a-zA-Z]*)/([0-9]*)$", 2, &paged_board_handler, &m38_heap_cleanup},
+	{"GET", "webm_handler", "^/slurp/([a-zA-Z]*)/((.*)(.webm|.jpg))$", 2, &webm_handler, &m38_heap_cleanup},
+	{"GET", "board_static_handler", "^/chug/([a-zA-Z]*)/((.*)(.webm|.jpg))$", 2, &board_static_handler, &m38_mmap_cleanup},
+	{"GET", "by_alias_handler", "^/by/alias/([0-9]*)$", 1, &by_alias_handler, &m38_heap_cleanup},
+	{"GET", "by_thread_handler", "^/by/thread/([A-Z]*[a-z]*[0-9]*)$", 1, &by_thread_handler, &m38_heap_cleanup},
+	{"GET", "root_handler", "^/$", 0, &index_handler, &m38_heap_cleanup},
 };
 
 int main(int argc, char *argv[]) {
@@ -62,11 +62,11 @@ int main(int argc, char *argv[]) {
 			if ((i + 1) < argc) {
 				num_threads = strtol(argv[++i], NULL, 10);
 				if (num_threads <= 0) {
-					log_msg(LOG_ERR, "Thread count must be at least 1.");
+					m38_log_msg(LOG_ERR, "Thread count must be at least 1.");
 					return -1;
 				}
 			} else {
-				log_msg(LOG_ERR, "Not enough arguments to -t.");
+				m38_log_msg(LOG_ERR, "Not enough arguments to -t.");
 				return -1;
 			}
 		}
@@ -74,9 +74,9 @@ int main(int argc, char *argv[]) {
 
 	int rc = 0;
 	const size_t num_routes = sizeof(all_routes)/sizeof(all_routes[0]);
-	if ((rc = http_serve(&main_sock_fd, 8080, num_threads, all_routes, num_routes)) != 0) {
+	if ((rc = m38_http_serve(&main_sock_fd, 8080, num_threads, all_routes, num_routes)) != 0) {
 		term(SIGTERM);
-		log_msg(LOG_ERR, "Could not start HTTP service.");
+		m38_log_msg(LOG_ERR, "Could not start HTTP service.");
 		return rc;
 	}
 	return 0;

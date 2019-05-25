@@ -149,11 +149,11 @@ int can_get_header_values() {
 		"Date: Wed, 31 Dec 2014 23:44:08 GMT\r\n"
 		"Content-Type: text/plain; charset=utf-8\r\n\r\n";
 
-	char *num_matches = get_header_value(header, strlen(header), "X-Olegdb-Num-Matches");
+	char *num_matches = m38_get_header_value_raw(header, strlen(header), "X-Olegdb-Num-Matches");
 	assert(num_matches != NULL);
 	free(num_matches);
 
-	char *clength = get_header_value(header, strlen(header), "Content-Length");
+	char *clength = m38_get_header_value_raw(header, strlen(header), "Content-Length");
 	assert(clength != NULL);
 	free(clength);
 
@@ -171,7 +171,7 @@ int can_serialize_w2a() {
 	};
 
 	char *json = serialize_webm_to_alias(&_test);
-	log_msg(LOG_FUN, "json: %s", json);
+	m38_log_msg(LOG_FUN, "json: %s", json);
 	assert(json);
 
 	webm_to_alias *deserialized = deserialize_webm_to_alias(json);
@@ -214,13 +214,13 @@ int can_parse_range_query() {
 	const char b[] = "bytes=0-1234567";
 	const char c[] = "bytes=12345-586868";
 
-	range_header a_p = parse_range_header(a);
+	m38_range_header a_p = m38_parse_range_header(a);
 	assert(a_p.limit == 0 && a_p.offset == 0);
 
-	range_header b_p = parse_range_header(b);
+	m38_range_header b_p = m38_parse_range_header(b);
 	assert(b_p.limit == 1234567 && b_p.offset == 0);
 
-	range_header c_p = parse_range_header(c);
+	m38_range_header c_p = m38_parse_range_header(c);
 	assert(c_p.limit == 586868 && c_p.offset == 12345);
 
 	return 1;

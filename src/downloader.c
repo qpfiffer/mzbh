@@ -22,7 +22,7 @@
 #include "stack.h"
 #include "utils.h"
 
-const char *BOARDS[] = {"a", "b", "fit", "g", "gif", "e", "h", "r", "s", "sci", "soc", "v", "wsg"};
+const char *BOARDS[] = {"a", "b", "fit", "g", "gif", "e", "h", "o", "n", "r", "s", "sci", "soc", "v", "wsg"};
 
 const char FOURCHAN_API_HOST[] = "a.4cdn.org";
 const char FOURCHAN_THUMBNAIL_HOST[] = "t.4cdn.org";
@@ -52,7 +52,7 @@ static size_t write_memory_callback(void *contents,size_t size,
 
 	mem->memory = realloc(mem->memory, mem->size + realsize + 1);
 	if(mem->memory == NULL) {
-		log_msg(LOG_ERR, "Not enough memory (realloc returned NULL)");
+		m38_log_msg(LOG_ERR, "Not enough memory (realloc returned NULL)");
 		return 0;
 	}
 
@@ -81,7 +81,7 @@ char *get_json(const char *url) {
 
 	if (res != CURLE_OK) {
 		const char *err = curl_easy_strerror(res);
-		log_msg(LOG_WARN, "Could not receive chunked HTTP from board: %s", err);
+		m38_log_msg(LOG_WARN, "Could not receive chunked HTTP from board: %s", err);
 		free(chunk.memory);
 		curl_easy_cleanup(curl_handle);
 		return NULL;
@@ -107,7 +107,7 @@ static ol_stack *build_thread_index() {
 		snprintf(buf, sizeof(buf), "http://a.4cdn.org/%s/catalog.json", current_board);
 		char *all_json = get_json(buf);
 		if (all_json == NULL) {
-			log_msg(LOG_WARN, "Could not receive HTTP from board for /%s/.", current_board);
+			m38_log_msg(LOG_WARN, "Could not receive HTTP from board for /%s/.", current_board);
 			free(all_json);
 			continue;
 		}
@@ -119,7 +119,7 @@ static ol_stack *build_thread_index() {
 			thread_match *match = (thread_match*) spop(&matches);
 			ensure_directory_for_board(match->board);
 
-			log_msg(LOG_INFO, "/%s/ - Requesting thread %i...", current_board, match->thread_num);
+			m38_log_msg(LOG_INFO, "/%s/ - Requesting thread %i...", current_board, match->thread_num);
 
 			char templated_req[128] = {0};
 
@@ -128,7 +128,7 @@ static ol_stack *build_thread_index() {
 
 			char *thread_json = get_json(templated_req);
 			if (thread_json == NULL) {
-				log_msg(LOG_WARN, "Could not receive chunked HTTP for thread. continuing.");
+				m38_log_msg(LOG_WARN, "Could not receive chunked HTTP for thread. continuing.");
 				free(match);
 				continue;
 			}
@@ -151,7 +151,7 @@ static ol_stack *build_thread_index() {
 				char key[MAX_KEY_SIZE] = {0};
 				webm_alias *existing = get_aliased_image(fname, key);
 				if (existing) {
-					log_msg(LOG_INFO, "Found alias for '%s', skipping.", fname);
+					m38_log_msg(LOG_INFO, "Found alias for '%s', skipping.", fname);
 					free(p_match->body_content);
 					free(p_match);
 					free(existing);
@@ -186,13 +186,13 @@ int download_image(const post_match *p_match, char webm_key[static MAX_KEY_SIZE]
 
 	thumb_request_fd = connect_to_host(FOURCHAN_THUMBNAIL_HOST);
 	if (thumb_request_fd < 0) {
-		log_msg(LOG_ERR, "Could not connect to thumbnail host.");
+		m38_log_msg(LOG_ERR, "Could not connect to thumbnail host.");
 		goto error;
 	}
 
 	image_request_fd = connect_to_host(FOURCHAN_IMAGE_HOST);
 	if (image_request_fd < 0) {
-		log_msg(LOG_ERR, "Could not connect to image host.");
+		m38_log_msg(LOG_ERR, "Could not connect to image host.");
 		goto error;
 	}
 
@@ -210,7 +210,7 @@ int download_image(const post_match *p_match, char webm_key[static MAX_KEY_SIZE]
 	ensure_thumb_directory(p_match);
 	get_thumb_filename(thumb_filename, p_match);
 
-	log_msg(LOG_INFO, "Downloading %s%.*s...", p_match->filename, 5, p_match->file_ext);
+	m38_log_msg(LOG_INFO, "Downloading %s%.*s...", p_match->filename, 5, p_match->file_ext);
 
 	/* Build and send the thumbnail request. */
 	char thumb_request[256] = {0};
@@ -218,7 +218,7 @@ int download_image(const post_match *p_match, char webm_key[static MAX_KEY_SIZE]
 			p_match->board, p_match->post_date);
 	unsigned int rc = send(thumb_request_fd, thumb_request, strlen(thumb_request), 0);
 	if (rc != strlen(thumb_request)) {
-		log_msg(LOG_ERR, "Could not send all bytes to host while requesting thumbnail. Sent (%i/%i).", rc, strlen(thumb_request));
+		m38_log_msg(LOG_ERR, "Could not send all bytes to host while requesting thumbnail. Sent (%i/%i).", rc, strlen(thumb_request));
 		goto error;
 	}
 
@@ -228,7 +228,7 @@ int download_image(const post_match *p_match, char webm_key[static MAX_KEY_SIZE]
 			p_match->board, p_match->post_date, (int)sizeof(p_match->file_ext), p_match->file_ext);
 	rc = send(image_request_fd, image_request, strlen(image_request), 0);
 	if (rc != strlen(image_request)) {
-		log_msg(LOG_ERR, "Could not send all bytes to host while requesting image.");
+		m38_log_msg(LOG_ERR, "Could not send all bytes to host while requesting image.");
 		goto error;
 	}
 
@@ -241,31 +241,31 @@ int download_image(const post_match *p_match, char webm_key[static MAX_KEY_SIZE]
 		close(thumb_request_fd);
 		free(raw_thumb_resp);
 		free(raw_image_resp);
-		log_msg(LOG_ERR, "Thumb or image size was zero bytes.");
+		m38_log_msg(LOG_ERR, "Thumb or image size was zero bytes.");
 		return 0;
 	}
 
 	if (raw_thumb_resp == NULL) {
-		log_msg(LOG_ERR, "No thumbnail received.");
+		m38_log_msg(LOG_ERR, "No thumbnail received.");
 		goto error;
 	}
 
 	if (raw_image_resp == NULL) {
-		log_msg(LOG_ERR, "No image received.");
+		m38_log_msg(LOG_ERR, "No image received.");
 		goto error;
 	}
 
 	/* Write thumbnail to disk. */
 	thumb_file = fopen(thumb_filename, "wb");
 	if (!thumb_file || ferror(thumb_file)) {
-		log_msg(LOG_ERR, "Could not open thumbnail file: %s", thumb_filename);
+		m38_log_msg(LOG_ERR, "Could not open thumbnail file: %s", thumb_filename);
 		perror(NULL);
 		goto error;
 	}
 	const size_t rt_written = fwrite(raw_thumb_resp, 1, thumb_size, thumb_file);
-	log_msg(LOG_INFO, "Wrote %i bytes of thumbnail to disk.", rt_written);
+	m38_log_msg(LOG_INFO, "Wrote %i bytes of thumbnail to disk.", rt_written);
 	if (rt_written <= 0 || ferror(thumb_file)) {
-		log_msg(LOG_WARN, "Could not write thumbnail to disk: %s", thumb_filename);
+		m38_log_msg(LOG_WARN, "Could not write thumbnail to disk: %s", thumb_filename);
 		perror(NULL);
 		goto error;
 	}
@@ -274,17 +274,17 @@ int download_image(const post_match *p_match, char webm_key[static MAX_KEY_SIZE]
 
 	image_file = fopen(image_filename, "wb");
 	if (!image_file || ferror(image_file)) {
-		log_msg(LOG_ERR, "Could not open image file: %s", image_filename);
+		m38_log_msg(LOG_ERR, "Could not open image file: %s", image_filename);
 		perror(NULL);
 		goto error;
 	}
 	const size_t iwritten = fwrite(raw_image_resp, 1, image_size, image_file);
 	if (iwritten <= 0 || ferror(image_file)) {
-		log_msg(LOG_WARN, "Could not write image to disk: %s", image_filename);
+		m38_log_msg(LOG_WARN, "Could not write image to disk: %s", image_filename);
 		perror(NULL);
 		goto error;
 	}
-	log_msg(LOG_INFO, "Wrote %i bytes of image to disk.", iwritten);
+	m38_log_msg(LOG_INFO, "Wrote %i bytes of image to disk.", iwritten);
 	fclose(image_file);
 	image_file = 0;
 
@@ -297,7 +297,7 @@ int download_image(const post_match *p_match, char webm_key[static MAX_KEY_SIZE]
 	/* image_filename is the full path, fname_plus_extension is the file name. */
 	int added = add_image_to_db(image_filename, fname_plus_extension, p_match->board, post_key, webm_key);
 	if (!added) {
-		log_msg(LOG_WARN, "Could not add image to database. Continuing...");
+		m38_log_msg(LOG_WARN, "Could not add image to database. Continuing...");
 	}
 
 	/* Don't need the post match anymore: */
@@ -309,7 +309,7 @@ int download_image(const post_match *p_match, char webm_key[static MAX_KEY_SIZE]
 	close(thumb_request_fd);
 	close(image_request_fd);
 
-	log_msg(LOG_INFO, "Downloaded %s%.*s...", p_match->filename, 5, p_match->file_ext);
+	m38_log_msg(LOG_INFO, "Downloaded %s%.*s...", p_match->filename, 5, p_match->file_ext);
 
 end:
 	return 1;
@@ -334,14 +334,14 @@ error:
 int download_images() {
 	struct stat st = {0};
 	if (stat(webm_location(), &st) == -1) {
-		log_msg(LOG_WARN, "Creating webms directory %s.", webm_location());
+		m38_log_msg(LOG_WARN, "Creating webms directory %s.", webm_location());
 		mkdir(webm_location(), 0755);
 	}
 
 	ol_stack *images_to_download = NULL;
 	images_to_download = build_thread_index();
 	if (images_to_download == NULL) {
-		log_msg(LOG_WARN, "No images to download.");
+		m38_log_msg(LOG_WARN, "No images to download.");
 		return -1;
 	}
 
@@ -351,11 +351,11 @@ int download_images() {
 
 		char webm_key[MAX_KEY_SIZE] = {0};
 		if (!download_image(p_match, webm_key))
-			log_msg(LOG_WARN, "Could not download image.");
+			m38_log_msg(LOG_WARN, "Could not download image.");
 
 		int added = add_post_to_db(p_match, webm_key);
 		if (added != 0)
-			log_msg(LOG_WARN, "Could not add post %s to database.", p_match->post_date);
+			m38_log_msg(LOG_WARN, "Could not add post %s to database.", p_match->post_date);
 
 
 		free(p_match->body_content);
@@ -363,7 +363,7 @@ int download_images() {
 	}
 
 	free(images_to_download);
-	log_msg(LOG_INFO, "Downloaded all images.");
+	m38_log_msg(LOG_INFO, "Downloaded all images.");
 
 	return 0;
 }
@@ -373,10 +373,10 @@ int main(int argc, char *argv[]) {
 	UNUSED(argc);
 	UNUSED(argv);
 
-	log_msg(LOG_INFO, "Downloader started.");
+	m38_log_msg(LOG_INFO, "Downloader started.");
 	while (1) {
 		if (download_images() != 0) {
-			log_msg(LOG_WARN, "Something went wrong while downloading images.");
+			m38_log_msg(LOG_WARN, "Something went wrong while downloading images.");
 		}
 		sleep(1200); /* 20 Minutes */
 	}

@@ -32,7 +32,7 @@
 #include "models.h"
 #include "server.h"
 
-#define RESULTS_PER_PAGE 80
+#define RESULTS_PER_PAGE 160
 #define OFFSET_FOR_PAGE(x) x * RESULTS_PER_PAGE
 
 static char *pretty_date(const char *argument) {
@@ -84,17 +84,12 @@ static int _add_webms_in_dir_by_date(greshunkel_var *loop, const char *dir,
 	if (stat(dir, &dir_st) == -1)
 		return 0;
 
-	size_t dirent_siz = offsetof(struct dirent, d_name) +
-							  pathconf(dir, _PC_NAME_MAX) + 1;
-	struct dirent *dirent_thing = calloc(1, dirent_siz);
-
 	DIR *dirstream = opendir(dir);
 	unsigned int total = 0;
 	vector *webm_vec = vector_new(sizeof(struct file_and_time), 2048);
 
 	while (1) {
-		struct dirent *result = NULL;
-		readdir_r(dirstream, dirent_thing, &result);
+		struct dirent *result = readdir(dirstream);
 		if (!result)
 			break;
 
@@ -102,7 +97,7 @@ static int _add_webms_in_dir_by_date(greshunkel_var *loop, const char *dir,
 			struct stat st = {0};
 			char *full_path = get_full_path_for_file(dir, result->d_name);
 			if (stat(full_path, &st) == -1) {
-				log_msg(LOG_ERR, "Could not stat file: %s", result->d_name);
+				m38_log_msg(LOG_ERR, "Could not stat file: %s", result->d_name);
 				free(full_path);
 				continue;
 			}
@@ -118,7 +113,6 @@ static int _add_webms_in_dir_by_date(greshunkel_var *loop, const char *dir,
 		}
 	}
 	closedir(dirstream);
-	free(dirent_thing);
 
 	if (webm_vec->count <= 0) {
 		vector_free(webm_vec);
@@ -145,19 +139,12 @@ static int _add_webms_in_dir_by_date(greshunkel_var *loop, const char *dir,
 }
 
 static int _add_files_in_dir_to_arr(greshunkel_var *loop, const char *dir) {
-	/* Apparently readdir_r can be stack-smashed so we do it on the heap
-	 * instead.
-	 */
-	size_t dirent_siz = offsetof(struct dirent, d_name) +
-							  pathconf(dir, _PC_NAME_MAX) + 1;
-	struct dirent *dirent_thing = calloc(1, dirent_siz);
 	vector *alphabetical_vec = vector_new(MAX_IMAGE_FILENAME_SIZE, 16);
 
 	DIR *dirstream = opendir(dir);
 	unsigned int total = 0;
 	while (1) {
-		struct dirent *result = NULL;
-		readdir_r(dirstream, dirent_thing, &result);
+		struct dirent *result = readdir(dirstream);
 		if (!result)
 			break;
 
@@ -167,7 +154,6 @@ static int _add_files_in_dir_to_arr(greshunkel_var *loop, const char *dir) {
 		}
 	}
 	closedir(dirstream);
-	free(dirent_thing);
 
 	if (alphabetical_vec->count <= 0) {
 		vector_free(alphabetical_vec);
@@ -185,27 +171,27 @@ static int _add_files_in_dir_to_arr(greshunkel_var *loop, const char *dir) {
 	return total;
 }
 
-int static_handler(const http_request *request, http_response *response) {
+int static_handler(const m38_http_request *request, m38_http_response *response) {
 	/* Remove the leading slash: */
 	const char *file_path = request->resource + sizeof(char);
-	return mmap_file(file_path, response);
+	return m38_mmap_file(file_path, response);
 }
 
-int user_thumbs_static_handler(const http_request *request, http_response *response) {
+int user_thumbs_static_handler(const m38_http_request *request, m38_http_response *response) {
 	/* Remove the leading slash: */
 	const char *file_path = request->resource + sizeof(char);
 	char buf[256] = {0};
 	snprintf(buf, sizeof(buf), "./user_uploaded/t/%s", file_path);
-	return mmap_file(buf, response);
+	return m38_mmap_file(buf, response);
 }
 
-static void get_current_board(char current_board[static MAX_BOARD_NAME_SIZE], const http_request *request) {
+static void get_current_board(char current_board[static MAX_BOARD_NAME_SIZE], const m38_http_request *request) {
 	const size_t board_len = request->matches[1].rm_eo - request->matches[1].rm_so;
 	const size_t bgr = MAX_BOARD_NAME_SIZE > board_len ? board_len : MAX_BOARD_NAME_SIZE;
 	strncpy(current_board, request->resource + request->matches[1].rm_so, bgr);
 }
 
-static void get_webm_from_board(char file_name_decoded[static MAX_IMAGE_FILENAME_SIZE], const http_request *request) {
+static void get_webm_from_board(char file_name_decoded[static MAX_IMAGE_FILENAME_SIZE], const m38_http_request *request) {
 	char file_name[MAX_IMAGE_FILENAME_SIZE] = {0};
 	char file_name_decoded_first_pass[MAX_IMAGE_FILENAME_SIZE] = {0};
 	const size_t file_name_len = request->matches[2].rm_eo - request->matches[2].rm_so;
@@ -237,7 +223,7 @@ static void get_webm_from_board(char file_name_decoded[static MAX_IMAGE_FILENAME
 	}
 }
 
-int board_static_handler(const http_request *request, http_response *response) {
+int board_static_handler(const m38_http_request *request, m38_http_response *response) {
 	const char *webm_loc = webm_location();
 
 	/* Current board */
@@ -256,10 +242,10 @@ int board_static_handler(const http_request *request, http_response *response) {
 	memset(full_path, '\0', sizeof(full_path));
 	snprintf(full_path, full_path_size, "%s/%s/%s", webm_loc, current_board, file_name_decoded);
 
-	return mmap_file(full_path, response);
+	return m38_mmap_file(full_path, response);
 }
 
-int index_handler(const http_request *request, http_response *response) {
+int index_handler(const m38_http_request *request, m38_http_response *response) {
 	UNUSED(request);
 	/* Render that shit */
 	greshunkel_ctext *ctext = gshkl_init_context();
@@ -269,20 +255,20 @@ int index_handler(const http_request *request, http_response *response) {
 
 	greshunkel_var boards = gshkl_add_array(ctext, "BOARDS");
 	_add_files_in_dir_to_arr(&boards, webm_location());
-	return render_file(ctext, "./templates/index.html", response);
+	return m38_render_file(ctext, "./templates/index.html", response);
 }
 
-static int _api_failure(http_response *response, greshunkel_ctext *ctext, const char *error) {
+static int _api_failure(m38_http_response *response, greshunkel_ctext *ctext, const char *error) {
 	gshkl_add_string(ctext, "SUCCESS", "false");
 	gshkl_add_string(ctext, "ERROR", error);
 	gshkl_add_string(ctext, "DATA", "{}");
-	return render_file(ctext, "./templates/response.json", response);
+	return m38_render_file(ctext, "./templates/response.json", response);
 }
 
-int url_search_handler(const http_request *request, http_response *response) {
+int url_search_handler(const m38_http_request *request, m38_http_response *response) {
 	greshunkel_ctext *ctext = gshkl_init_context();
-	gshkl_add_filter(ctext, "pretty_date", &pretty_date, &filter_cleanup);
-	gshkl_add_filter(ctext, "thumbnail_for_image", &thumbnail_for_image, &filter_cleanup);
+	gshkl_add_filter(ctext, "pretty_date", &pretty_date, &gshkl_filter_cleanup);
+	gshkl_add_filter(ctext, "thumbnail_for_image", &thumbnail_for_image, &gshkl_filter_cleanup);
 
 	/* All boards */
 	greshunkel_var boards = gshkl_add_array(ctext, "BOARDS");
@@ -379,23 +365,23 @@ int url_search_handler(const http_request *request, http_response *response) {
 	if (found) {
 		gshkl_add_string(ctext, "SUCCESS", "true");
 		gshkl_add_string(ctext, "ERROR", NULL);
-		return render_file(ctext, "./templates/response_with_results.json", response);
+		return m38_render_file(ctext, "./templates/response_with_results.json", response);
 	}
 
 	gshkl_add_string(ctext, "SUCCESS", "true");
 	gshkl_add_string(ctext, "ERROR", NULL);
 	gshkl_add_string(ctext, "DATA", "[]");
 
-	return render_file(ctext, "./templates/response.json", response);
+	return m38_render_file(ctext, "./templates/response.json", response);
 }
 
-int webm_handler(const http_request *request, http_response *response) {
+int webm_handler(const m38_http_request *request, m38_http_response *response) {
 	char current_board[MAX_BOARD_NAME_SIZE] = {0};
 	get_current_board(current_board, request);
 
 	greshunkel_ctext *ctext = gshkl_init_context();
 	gshkl_add_string(ctext, "current_board", current_board);
-	gshkl_add_filter(ctext, "pretty_date", &pretty_date, &filter_cleanup);
+	gshkl_add_filter(ctext, "pretty_date", &pretty_date, &gshkl_filter_cleanup);
 
 	/* All boards */
 	greshunkel_var boards = gshkl_add_array(ctext, "BOARDS");
@@ -479,8 +465,8 @@ int webm_handler(const http_request *request, http_response *response) {
 					gshkl_add_string_to_loop(&aliases, buf);
 					free(walias);
 				} else {
-					log_msg(LOG_WARN, "Bad alias string: %s", alias);
-					log_msg(LOG_WARN, "Bad alias on: %s%s", WEBM_NMSPC, image_hash);
+					m38_log_msg(LOG_WARN, "Bad alias string: %s", alias);
+					m38_log_msg(LOG_WARN, "Bad alias on: %s%s", WEBM_NMSPC, image_hash);
 					gshkl_add_string_to_loop(&aliases, alias);
 				}
 			}
@@ -495,15 +481,15 @@ int webm_handler(const http_request *request, http_response *response) {
 
 	free(_webm);
 	free(full_path);
-	return render_file(ctext, "./templates/webm.html", response);
+	return m38_render_file(ctext, "./templates/webm.html", response);
 }
 
-static int _board_handler(const http_request *request, http_response *response, const unsigned int page) {
+static int _board_handler(const m38_http_request *request, m38_http_response *response, const unsigned int page) {
 	char current_board[MAX_BOARD_NAME_SIZE] = {0};
 	get_current_board(current_board, request);
 
 	greshunkel_ctext *ctext = gshkl_init_context();
-	gshkl_add_filter(ctext, "thumbnail_for_image", thumbnail_for_image, filter_cleanup);
+	gshkl_add_filter(ctext, "thumbnail_for_image", thumbnail_for_image, gshkl_filter_cleanup);
 	gshkl_add_string(ctext, "current_board", current_board);
 	greshunkel_var images = gshkl_add_array(ctext, "IMAGES");
 
@@ -541,7 +527,7 @@ static int _board_handler(const http_request *request, http_response *response, 
 
 	gshkl_add_int(ctext, "total", total);
 
-	return render_file(ctext, "./templates/board.html", response);
+	return m38_render_file(ctext, "./templates/board.html", response);
 }
 
 static unsigned int _add_sorted_by_aliases(greshunkel_var *images) {
@@ -595,7 +581,7 @@ static db_key_match *create_match_keys_from_vector(const vector *vec) {
 	return cur;
 }
 
-int by_thread_handler(const http_request *request, http_response *response) {
+int by_thread_handler(const m38_http_request *request, m38_http_response *response) {
 	char thread_id[256] = {0};
 	strncpy(thread_id, request->resource + request->matches[1].rm_so, sizeof(thread_id));
 
@@ -608,8 +594,8 @@ int by_thread_handler(const http_request *request, http_response *response) {
 
 	greshunkel_ctext *ctext = gshkl_init_context();
 	gshkl_add_string(ctext, "thread_id", thread_id);
-	gshkl_add_filter(ctext, "pretty_date", pretty_date, filter_cleanup);
-	gshkl_add_filter(ctext, "thumbnail_for_image", thumbnail_for_image, filter_cleanup);
+	gshkl_add_filter(ctext, "pretty_date", pretty_date, gshkl_filter_cleanup);
+	gshkl_add_filter(ctext, "thumbnail_for_image", thumbnail_for_image, gshkl_filter_cleanup);
 
 	greshunkel_var posts = gshkl_add_array(ctext, "POSTS");
 
@@ -732,14 +718,14 @@ int by_thread_handler(const http_request *request, http_response *response) {
 
 	gshkl_add_int(ctext, "total", total);
 
-	return render_file(ctext, "./templates/by_thread.html", response);
+	return m38_render_file(ctext, "./templates/by_thread.html", response);
 }
 
-int by_alias_handler(const http_request *request, http_response *response) {
+int by_alias_handler(const m38_http_request *request, m38_http_response *response) {
 	const unsigned int page = strtol(request->resource + request->matches[1].rm_so, NULL, 10);
 
 	greshunkel_ctext *ctext = gshkl_init_context();
-	gshkl_add_filter(ctext, "thumbnail_for_image", thumbnail_for_image, filter_cleanup);
+	gshkl_add_filter(ctext, "thumbnail_for_image", thumbnail_for_image, gshkl_filter_cleanup);
 	greshunkel_var images = gshkl_add_array(ctext, "IMAGES");
 	int total = _add_sorted_by_aliases(&images);
 	if (total == 0) {
@@ -768,24 +754,24 @@ int by_alias_handler(const http_request *request, http_response *response) {
 	_add_files_in_dir_to_arr(&boards, webm_location());
 
 	gshkl_add_int(ctext, "total", total);
-	return render_file(ctext, "./templates/sorted_by_aliases.html", response);
+	return m38_render_file(ctext, "./templates/sorted_by_aliases.html", response);
 }
 
-int board_handler(const http_request *request, http_response *response) {
+int board_handler(const m38_http_request *request, m38_http_response *response) {
 	return _board_handler(request, response, 0);
 }
 
-int paged_board_handler(const http_request *request, http_response *response) {
+int paged_board_handler(const m38_http_request *request, m38_http_response *response) {
 	const unsigned int page = strtol(request->resource + request->matches[2].rm_so, NULL, 10);
 	return _board_handler(request, response, page);
 }
 
-int favicon_handler(const http_request *request, http_response *response) {
+int favicon_handler(const m38_http_request *request, m38_http_response *response) {
 	UNUSED(request);
-	return mmap_file("./static/favicon.ico", response);
+	return m38_mmap_file("./static/favicon.ico", response);
 }
 
-int robots_handler(const http_request *request, http_response *response) {
+int robots_handler(const m38_http_request *request, m38_http_response *response) {
 	UNUSED(request);
-	return mmap_file("./static/robots.txt", response);
+	return m38_mmap_file("./static/robots.txt", response);
 }

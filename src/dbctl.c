@@ -20,13 +20,10 @@
 static const char *WEBMS_LOCATION = NULL;
 
 static int _add_directory(const char *directory_to_open, const char board[MAX_BOARD_NAME_SIZE]) {
-	struct dirent dirent_thing = {0};
-
 	DIR *dirstream = opendir(directory_to_open);
 	int total = 0;
 	while (1) {
-		struct dirent *result = NULL;
-		readdir_r(dirstream, &dirent_thing, &result);
+		struct dirent *result = readdir(dirstream);
 		if (!result)
 			break;
 		if (result->d_name[0] != '.' && endswith(result->d_name, ".webm")) {
@@ -43,7 +40,7 @@ static int _add_directory(const char *directory_to_open, const char board[MAX_BO
 				if (rc)
 					break;
 				else {
-					log_msg(LOG_WARN, "(%i/%i) Could not add image to db. Retrying...",
+					m38_log_msg(LOG_WARN, "(%i/%i) Could not add image to db. Retrying...",
 						attempts+1, max_attempts);
 				}
 				total++;
@@ -56,19 +53,16 @@ static int _add_directory(const char *directory_to_open, const char board[MAX_BO
 }
 
 static int full_scan() {
-	struct dirent dirent_thing = {0};
-
 	DIR *dirstream = opendir(webm_location());
 	int total = 0;
 	while (1) {
-		struct dirent *result = NULL;
-		readdir_r(dirstream, &dirent_thing, &result);
+		struct dirent *result = readdir(dirstream);
 		if (!result)
 			break;
 		/* We have to use stat here because d_type isn't supported on all filesystems. */
-		char dir_name[64] = {0};
+		char dir_name[255] = {0};
 
-		sprintf(dir_name, "%s/%s", webm_location(), result->d_name);
+		snprintf(dir_name, sizeof(dir_name), "%s/%s", webm_location(), result->d_name);
 		struct stat st = {0};
 		stat(dir_name, &st);
 
@@ -91,12 +85,12 @@ static int full_scan() {
 }
 
 static int _webm_count() {
-	log_msg(LOG_INFO, "Num-matches: %i", webm_count());
+	m38_log_msg(LOG_INFO, "Num-matches: %i", webm_count());
 	return 1;
 }
 
 static int _alias_count() {
-	log_msg(LOG_INFO, "Num-matches: %i", webm_alias_count());
+	m38_log_msg(LOG_INFO, "Num-matches: %i", webm_alias_count());
 	return 1;
 }
 
@@ -107,7 +101,7 @@ static int _print_alias_matches() {
 	db_key_match *current = matches;
 	while (current) {
 		db_key_match *next = current->next;
-		log_msg(LOG_FUN, "%s", current->key);
+		m38_log_msg(LOG_FUN, "%s", current->key);
 		free(current);
 		current = next;
 	}
@@ -120,7 +114,7 @@ static inline int _f_ds_webms(const unsigned char *data, const size_t dsize, con
 	UNUSED(e);
 	UNUSED(*extradata);
 	webm *_webm = deserialize_webm((char *)data);
-	log_msg(LOG_FUN, "%s", _webm->filename);
+	m38_log_msg(LOG_FUN, "%s", _webm->filename);
 	free(_webm);
 	return 1;
 }
@@ -134,7 +128,7 @@ static inline int _dead_webms(const unsigned char *data, const size_t dsize, con
 	char *file_path = get_full_path_for_webm(_webm->board, _webm->filename);
 	struct stat st = {0};
 	if (stat(file_path, &st) == -1)
-		log_msg(LOG_FUN, "'%s' does not exist.", file_path);
+		m38_log_msg(LOG_FUN, "'%s' does not exist.", file_path);
 	free(file_path);
 	free(_webm);
 	return 1;
@@ -184,10 +178,10 @@ const cmd commands[] = {
 };
 
 static void usage(const char *program_name) {
-	log_msg(LOG_ERR, "Usage: %s <command>", program_name);
+	m38_log_msg(LOG_ERR, "Usage: %s <command>", program_name);
 	unsigned int i;
 	for (i = 0; i < sizeof(commands)/sizeof(commands[0]); i++) {
-		log_msg(LOG_ERR, "%s	--	%s", commands[i].cmd, commands[i].help);
+		m38_log_msg(LOG_ERR, "%s	--	%s", commands[i].cmd, commands[i].help);
 	}
 }
 
@@ -200,7 +194,7 @@ int main(int argc, char *argv[]) {
 
 	WEBMS_LOCATION = webm_location();
 
-	log_msg(LOG_INFO, "Using webms dir: %s", WEBMS_LOCATION);
+	m38_log_msg(LOG_INFO, "Using webms dir: %s", WEBMS_LOCATION);
 
 	int i = 1;
 	for (;i < argc; i++) {

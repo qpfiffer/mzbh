@@ -41,7 +41,7 @@ inline void end_benchmark(const struct bmark x) {
 
 	diff = ms - x.start;
 
-	log_msg(LOG_DB, "%s complete in %ims", x.name, diff);
+	m38_log_msg(LOG_DB, "%s complete in %ims", x.name, diff);
 #else
 	UNUSED(x);
 #endif

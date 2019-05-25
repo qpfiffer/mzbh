@@ -119,7 +119,7 @@ int set_image(const webm *webm) {
 	create_webm_key(webm->file_hash, key);
 
 	char *serialized = serialize_webm(webm);
-	log_msg(LOG_INFO, "Serialized: %s", serialized);
+	m38_log_msg(LOG_INFO, "Serialized: %s", serialized);
 
 	int ret = store_data_in_db(&oleg_conn, key, (unsigned char *)serialized, strlen(serialized));
 	free(serialized);
@@ -166,7 +166,7 @@ int set_aliased_image(const webm_alias *alias) {
 	create_alias_key(alias->file_path, key);
 
 	char *serialized = serialize_alias(alias);
-	/* log_msg(LOG_INFO, "Serialized: %s", serialized); */
+	/* m38_log_msg(LOG_INFO, "Serialized: %s", serialized); */
 
 	int ret = store_data_in_db(&oleg_conn, key, (unsigned char *)serialized, strlen(serialized));
 	free(serialized);
@@ -179,13 +179,13 @@ static int _insert_webm(const char *file_path, const char filename[static MAX_IM
 						const char post_key[MAX_KEY_SIZE]) {
 	time_t modified_time = get_file_creation_date(file_path);
 	if (modified_time == 0) {
-		log_msg(LOG_ERR, "IWMT: '%s' does not exist.", file_path);
+		m38_log_msg(LOG_ERR, "IWMT: '%s' does not exist.", file_path);
 		return 0;
 	}
 
 	size_t size = get_file_size(file_path);
 	if (size == 0) {
-		log_msg(LOG_ERR, "IWFS: '%s' does not exist.", file_path);
+		m38_log_msg(LOG_ERR, "IWFS: '%s' does not exist.", file_path);
 		return 0;
 	}
 
@@ -213,13 +213,13 @@ static int _insert_aliased_webm(const char *file_path,
 								const char post_key[MAX_KEY_SIZE]) {
 	time_t modified_time = get_file_creation_date(file_path);
 	if (modified_time == 0) {
-		log_msg(LOG_ERR, "IAWMT: '%s' does not exist.", file_path);
+		m38_log_msg(LOG_ERR, "IAWMT: '%s' does not exist.", file_path);
 		return 0;
 	}
 
 	size_t size = get_file_size(file_path);
 	if (size == 0) {
-		log_msg(LOG_ERR, "IAWFS: '%s' does not exist.", file_path);
+		m38_log_msg(LOG_ERR, "IAWFS: '%s' does not exist.", file_path);
 		return 0;
 	}
 
@@ -247,7 +247,7 @@ void modify_aliased_file(const char *file_path, const webm *_old_webm, const tim
 	real_old_fpath = realpath(_old_webm->file_path, NULL);
 
 	if (!real_fpath || !real_old_fpath) {
-		log_msg(LOG_WARN, "One or both files to be linked does not exist.");
+		m38_log_msg(LOG_WARN, "One or both files to be linked does not exist.");
 		return;
 	}
 
@@ -255,25 +255,25 @@ void modify_aliased_file(const char *file_path, const webm *_old_webm, const tim
 			strlen(real_fpath) : strlen(real_old_fpath);
 
 	if (strncmp(real_fpath, real_old_fpath, bigger) == 0) {
-		log_msg(LOG_WARN, "Cowardly refusing to {un,sym}link the same file to itself.");
+		m38_log_msg(LOG_WARN, "Cowardly refusing to {un,sym}link the same file to itself.");
 		goto update_time;
 	}
 
 	if (get_file_creation_date(real_fpath) == 0) {
-		log_msg(LOG_WARN, "Cowardly refusing to symlink file to broken file.");
+		m38_log_msg(LOG_WARN, "Cowardly refusing to symlink file to broken file.");
 		goto update_time;
 	}
 
-	log_msg(LOG_WARN, "Unlinking and creating a symlink from '%s' to '%s'.",
+	m38_log_msg(LOG_WARN, "Unlinking and creating a symlink from '%s' to '%s'.",
 			real_fpath, real_old_fpath);
 
 	/* Unlink new file. */
 	if (unlink(real_fpath) == -1)
-		log_msg(LOG_ERR, "Could not delete '%s'.", real_fpath);
+		m38_log_msg(LOG_ERR, "Could not delete '%s'.", real_fpath);
 
 	/* Symlink to old file. */
 	if (symlink(real_old_fpath, real_fpath) == -1)
-		log_msg(LOG_ERR, "Could not create symlink from '%s' to '%s'.",
+		m38_log_msg(LOG_ERR, "Could not create symlink from '%s' to '%s'.",
 				real_fpath, real_old_fpath);
 
 update_time: ; /* Yes the semicolon is necessary. Fucking C. */
@@ -287,7 +287,7 @@ update_time: ; /* Yes the semicolon is necessary. Fucking C. */
 	/* POSIX is fucking weird, man: */
 	const struct timeval _new_times[] = { _new_time, _new_time };
 	if (lutimes(real_fpath, _new_times) != 0) {
-		log_msg(LOG_WARN, "Unable to set timesteamp on new symlink.");
+		m38_log_msg(LOG_WARN, "Unable to set timesteamp on new symlink.");
 		perror("Alias symlink timestamp update");
 	}
 
@@ -298,7 +298,7 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 		const char post_key[MAX_KEY_SIZE], char out_webm_key[static MAX_KEY_SIZE]) {
 	char image_hash[HASH_IMAGE_STR_SIZE] = {0};
 	if (!hash_file(file_path, image_hash)) {
-		log_msg(LOG_ERR, "Could not hash '%s'.", file_path);
+		m38_log_msg(LOG_ERR, "Could not hash '%s'.", file_path);
 		return 0;
 	}
 
@@ -307,7 +307,7 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 	if (!_old_webm) {
 		int rc = _insert_webm(file_path, filename, image_hash, board, post_key);
 		if (!rc)
-			log_msg(LOG_ERR, "Something went wrong inserting webm.");
+			m38_log_msg(LOG_ERR, "Something went wrong inserting webm.");
 		return rc;
 	} else {
 		/* This is the wrong key, we're going to use a different one. */
@@ -334,9 +334,9 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 	 */
 	if (_old_alias == NULL) {
 		rc = _insert_aliased_webm(file_path, filename, image_hash, board, post_key);
-		log_msg(LOG_FUN, "%s (%s) is a new alias of %s (%s).", filename, board, _old_webm->filename, _old_webm->board);
+		m38_log_msg(LOG_FUN, "%s (%s) is a new alias of %s (%s).", filename, board, _old_webm->filename, _old_webm->board);
 	} else {
-		log_msg(LOG_WARN, "%s is already marked as an alias of %s. Old alias is: '%s'",
+		m38_log_msg(LOG_WARN, "%s is already marked as an alias of %s. Old alias is: '%s'",
 				file_path, _old_webm->filename, _old_alias->filename);
 	}
 
@@ -351,7 +351,7 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 		if (_old_alias == NULL) {
 			time_t new_stamp = get_file_creation_date(file_path);
 			if (new_stamp == 0) {
-				log_msg(LOG_ERR, "Could not stat new alias.");
+				m38_log_msg(LOG_ERR, "Could not stat new alias.");
 			}
 
 			modify_aliased_file(file_path, _old_webm, new_stamp);
@@ -359,7 +359,7 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 			modify_aliased_file(file_path, _old_webm, _old_alias->created_at);
 		}
 	} else
-		log_msg(LOG_ERR, "Something went wrong when adding image to db.");
+		m38_log_msg(LOG_ERR, "Something went wrong when adding image to db.");
 	free(_old_alias);
 	free(_old_webm);
 	return rc;
@@ -391,7 +391,7 @@ struct post *get_post(const char key[static MAX_KEY_SIZE]) {
 
 static int _insert_thread(const char key[static MAX_KEY_SIZE], const thread *to_save) {
 	char *serialized = serialize_thread(to_save);
-	log_msg(LOG_INFO, "Serialized thread: %s", serialized);
+	m38_log_msg(LOG_INFO, "Serialized thread: %s", serialized);
 
 	int ret = store_data_in_db(&oleg_conn, key, (unsigned char *)serialized, strlen(serialized));
 	free(serialized);
@@ -401,11 +401,11 @@ static int _insert_thread(const char key[static MAX_KEY_SIZE], const thread *to_
 
 static int _insert_post(const char key[static MAX_KEY_SIZE], const post *to_save) {
 	char *serialized = serialize_post(to_save);
-	log_msg(LOG_INFO, "Serialized post: %s", serialized);
+	m38_log_msg(LOG_INFO, "Serialized post: %s", serialized);
 
 	int ret = store_data_in_db(&oleg_conn, key, (unsigned char *)serialized, strlen(serialized));
 	if (ret != 1) {
-		log_msg(LOG_ERR, "Could not store post in database. Ret code: %i", ret);
+		m38_log_msg(LOG_ERR, "Could not store post in database. Ret code: %i", ret);
 	}
 	free(serialized);
 
@@ -419,7 +419,7 @@ int add_post_to_db(const struct post_match *p_match, const char webm_key[static 
 	char post_key[MAX_KEY_SIZE] = {0};
 	create_post_key(p_match->board, p_match->post_date, post_key);
 
-	log_msg(LOG_INFO, "Creating post with key: %s", post_key);
+	m38_log_msg(LOG_INFO, "Creating post with key: %s", post_key);
 
 	post *existing_post = get_post(post_key);
 	if (existing_post != NULL) {
@@ -521,13 +521,13 @@ int associate_alias_with_webm(const webm *webm, const char alias_key[static MAX_
 
 		const char *serialized = serialize_webm_to_alias(&_new_m2m);
 		if (!serialized) {
-			log_msg(LOG_ERR, "Could not serialize new webm_to_alias.");
+			m38_log_msg(LOG_ERR, "Could not serialize new webm_to_alias.");
 			vector_free(aliases);
 			return 0;
 		}
 
 		if (!store_data_in_db(&oleg_conn, key, (unsigned char *)serialized, strlen(serialized))) {
-			log_msg(LOG_ERR, "Could not store new webm_to_alias.");
+			m38_log_msg(LOG_ERR, "Could not store new webm_to_alias.");
 			free((char *)serialized);
 			vector_free(aliases);
 			return 0;
@@ -543,7 +543,7 @@ int associate_alias_with_webm(const webm *webm, const char alias_key[static MAX_
 	free(w2a_json);
 
 	if (!deserialized) {
-		log_msg(LOG_ERR, "Could not deserialize webm_to_alias.");
+		m38_log_msg(LOG_ERR, "Could not deserialize webm_to_alias.");
 		return 0;
 	}
 
@@ -570,12 +570,12 @@ int associate_alias_with_webm(const webm *webm, const char alias_key[static MAX_
 	free(deserialized);
 
 	if (!new_serialized) {
-		log_msg(LOG_ERR, "Could not serialize webm_to_alias.");
+		m38_log_msg(LOG_ERR, "Could not serialize webm_to_alias.");
 		return 0;
 	}
 
 	if (!store_data_in_db(&oleg_conn, key, (unsigned char *)new_serialized, strlen(new_serialized))) {
-		log_msg(LOG_ERR, "Could not store updated webm_to_alias.");
+		m38_log_msg(LOG_ERR, "Could not store updated webm_to_alias.");
 		free(new_serialized);
 		return 0;
 	}
