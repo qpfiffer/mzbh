@@ -21,7 +21,7 @@ webm *deserialize_webm_from_tuples(const PGresult *res) {
 		return NULL;
 
 	if (PQntuples(res) <= 0) {
-		log_msg(LOG_WARN, "No tuples in PG result for webm_from_tuples.");
+		m38_log_msg(LOG_WARN, "No tuples in PG result for webm_from_tuples.");
 		return NULL;
 	}
 

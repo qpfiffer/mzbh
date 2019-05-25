@@ -1,11 +1,9 @@
-#!/usr/bin/env python2
-from olegdb import OlegDB
+#!/usr/bin/env python
+from olegdb.oleg import OlegDB
 import json, psycopg2, time
 
 # Left to do:
-# 1. Associate posts with webms or webm_aliases
-# 2. Associate aliases with webms
-# 3. Check that files exist when we insert webms and aliases
+# 1. Check that files exist when we insert webms and aliases
 
 def insert_webm(conn, oconn, okey, od, should_commit):
     cur = conn.cursor()
@@ -43,10 +41,11 @@ def insert_alias(conn, oconn, okey, od, should_commit):
 def insert_thread(conn, oconn, okey, od, should_commit):
     cur = conn.cursor()
     try:
-        thread_loaded = json.loads(od, strict=False)
+        str_od = od.decode()
+        thread_loaded = json.loads(str_od, strict=False)
     except ValueError as e:
-        print "Could not load Thread {}.".format(okey)
-        print "Raw Data: {}".format(od)
+        print("Could not load Thread {}.".format(okey))
+        print("Raw Data: {}".format(od))
         raise e
     threaddata = (thread_loaded['board'], okey, time.time())
     cur.execute("""INSERT INTO threads
@@ -55,9 +54,13 @@ def insert_thread(conn, oconn, okey, od, should_commit):
     thread_id = cur.fetchone()[0]
     bulk_posts = oconn.get_many(thread_loaded['post_keys'])
     for post_key, post_value in bulk_posts.items():
-        pl = json.loads(post_value, strict=False)
+        pl = json.loads(post_value.decode(), strict=False)
         body_content = pl.get('body_content', None)
-        pdata = (time.time(), post_key, int(pl['post_no']), int(pl['post_id']),
+        post_no = pl.get('post_no', None)
+        if post_no:
+            post_no = int(post_no)
+
+        pdata = (time.time(), post_key, post_no, int(pl['post_id']),
                 pl['board'], body_content, json.dumps(pl['replied_to_keys']),
                 thread_id)
         cur.execute("""INSERT INTO posts
@@ -127,10 +130,10 @@ namespaces = (
 def main():
     should_commit = True
     if not should_commit:
-        print "Dry run, not commiting..."
+        print("Dry run, not commiting...")
 
     conn = psycopg2.connect("dbname=waifu user=quinlan")
-    create_tables(conn)
+    #create_tables(conn)
     olegdb_c = OlegDB(db_name="waifu")
     for namespace, namespace_handler in namespaces:
         values = olegdb_c.get_many(olegdb_c.get_by_prefix(namespace))

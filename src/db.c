@@ -22,7 +22,7 @@ static PGconn *_get_pg_connection() {
 	PGconn *conn = PQconnectdb(DB_PG_CONNECTION_INFO);
 
 	if (PQstatus(conn) != CONNECTION_OK) {
-		log_msg(LOG_ERR, "Could not connect to Postgres: %s", PQerrorMessage(conn));
+		m38_log_msg(LOG_ERR, "Could not connect to Postgres: %s", PQerrorMessage(conn));
 		return NULL;
 	}
 
@@ -53,7 +53,7 @@ unsigned int get_record_count_in_table(const char *query_command) {
 					  1);
 
 	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
-		log_msg(LOG_ERR, "SELECT failed: %s", PQerrorMessage(conn));
+		m38_log_msg(LOG_ERR, "SELECT failed: %s", PQerrorMessage(conn));
 		goto error;
 	}
 
@@ -94,7 +94,7 @@ webm *get_image_by_oleg_key(const char image_hash[static HASH_ARRAY_SIZE], char 
 					  1); /* <-- binary setting */
 
 	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
-		log_msg(LOG_ERR, "SELECT failed: %s", PQerrorMessage(conn));
+		m38_log_msg(LOG_ERR, "SELECT failed: %s", PQerrorMessage(conn));
 		goto error;
 	}
 
