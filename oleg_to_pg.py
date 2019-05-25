@@ -7,7 +7,7 @@ import json, psycopg2, time
 
 def insert_webm(conn, oconn, okey, od, should_commit):
     cur = conn.cursor()
-    webm_loaded = json.loads(od)
+    webm_loaded = json.loads(od.decode())
     webm_data = (webm_loaded['created_at'], okey, webm_loaded['filename'],
             webm_loaded['file_hash'], webm_loaded['board'],
             webm_loaded['file_path'], webm_loaded['size'])
