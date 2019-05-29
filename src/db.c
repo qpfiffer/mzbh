@@ -43,14 +43,7 @@ unsigned int get_record_count_in_table(const char *query_command) {
 	if (!conn)
 		goto error;
 
-	res = PQexecParams(conn,
-					  query_command,
-					  0,
-					  NULL,
-					  NULL,
-					  NULL,
-					  NULL,
-					  1);
+	res = PQexec(conn, query_command);
 
 	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
 		m38_log_msg(LOG_ERR, "SELECT failed: %s", PQerrorMessage(conn));
@@ -58,8 +51,7 @@ unsigned int get_record_count_in_table(const char *query_command) {
 	}
 
 	char *bytes = PQgetvalue(res, 0, 0);
-	(void) bytes;
-	ret = *((int *)PQgetvalue(res, 0, PQfnumber(res, "count")));
+	ret = atoi(bytes);
 
 	_finish_pg_connection(conn);
 

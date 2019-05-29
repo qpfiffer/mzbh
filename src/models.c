@@ -97,8 +97,8 @@ char *serialize_webm(const webm *to_serialize) {
 	return serialized_string;
 }
 
-static unsigned int x_count(const char prefix[static MAX_KEY_SIZE]) {
-	unsigned int num = get_record_count_in_table(prefix);
+static unsigned int x_count(const char query[static MAX_KEY_SIZE]) {
+	unsigned int num = get_record_count_in_table(query);
 	return num;
 }
 
