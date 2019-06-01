@@ -32,14 +32,14 @@ unsigned int get_record_count_in_table(const char *query_command);
  * Returns 0 on success.
  */
 int add_image_to_db(const char *file_path, const char *filename, const char board[MAX_BOARD_NAME_SIZE],
-		const char post_key[MAX_KEY_SIZE], char out_webm_key[static MAX_KEY_SIZE]);
+		const unsigned int post_id, char out_webm_key[static MAX_KEY_SIZE]);
 
 /* Attempts to add a new post to the database.
  * Returns 0 on success.
  */
 struct post_match;
-int add_post_to_db(const struct post_match *p_match, const char webm_key[static MAX_KEY_SIZE]);
-struct post *get_post(const char key[static MAX_KEY_SIZE]);
+int add_post_to_db(const struct post_match *p_match);
+struct post *get_post(const unsigned int id);
 struct thread *get_thread(const char key[static MAX_KEY_SIZE]);
 
 /* Associates a webm with an alias.

@@ -328,7 +328,7 @@ int url_search_handler(const m38_http_request *request, m38_http_response *respo
 		greshunkel_ctext *result = gshkl_init_context();
 		gshkl_add_string(result, "thumbnail", _webm->filename);
 		gshkl_add_string(result, "filename", _webm->filename);
-		post *_post = get_post(_webm->post);
+		post *_post = get_post(_webm->post_id);
 		if (_post) {
 			gshkl_add_string(result, "thread_id", _post->thread_key);
 			gshkl_add_string(result, "post_id", _post->post_id);
@@ -425,7 +425,7 @@ int webm_handler(const m38_http_request *request, m38_http_response *response) {
 		gshkl_add_string(ctext, "post_id", NULL);
 		gshkl_add_string(ctext, "thread_id", NULL);
 	} else {
-		post *_post = get_post(_webm->post);
+		post *_post = get_post(_webm->post_id);
 		if (_post) {
 			gshkl_add_string(ctext, "thread_id", _post->thread_key);
 			gshkl_add_string(ctext, "post_id", _post->post_id);

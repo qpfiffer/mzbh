@@ -166,9 +166,9 @@ int set_aliased_image(const webm_alias *alias) {
 	return ret;
 }
 
-static int _insert_webm(const char *file_path, const char filename[static MAX_IMAGE_FILENAME_SIZE], 
+static int _insert_webm(const char *file_path, const char filename[static MAX_IMAGE_FILENAME_SIZE],
 						const char image_hash[static HASH_IMAGE_STR_SIZE], const char board[static MAX_BOARD_NAME_SIZE],
-						const char post_key[MAX_KEY_SIZE]) {
+						const unsigned int post_id) {
 	time_t modified_time = get_file_creation_date(file_path);
 	if (modified_time == 0) {
 		m38_log_msg(LOG_ERR, "IWMT: '%s' does not exist.", file_path);
@@ -187,13 +187,12 @@ static int _insert_webm(const char *file_path, const char filename[static MAX_IM
 		.board = {0},
 		.created_at = modified_time,
 		.size = size,
-		.post = {0}
+		.post_id = post_id
 	};
 	memcpy(to_insert.file_hash, image_hash, sizeof(to_insert.file_hash));
 	memcpy(to_insert.file_path, file_path, sizeof(to_insert.file_path));
 	memcpy(to_insert.filename, filename, sizeof(to_insert.filename));
 	memcpy(to_insert.board, board, sizeof(to_insert.board));
-	memcpy(to_insert.post, post_key, sizeof(to_insert.post));
 
 	return set_image(&to_insert);
 }
@@ -202,7 +201,7 @@ static int _insert_aliased_webm(const char *file_path,
 								const char *filename,
 								const char image_hash[static HASH_IMAGE_STR_SIZE],
 								const char board[static MAX_BOARD_NAME_SIZE],
-								const char post_key[MAX_KEY_SIZE]) {
+								const unsigned int post_id) {
 	time_t modified_time = get_file_creation_date(file_path);
 	if (modified_time == 0) {
 		m38_log_msg(LOG_ERR, "IAWMT: '%s' does not exist.", file_path);
@@ -221,14 +220,13 @@ static int _insert_aliased_webm(const char *file_path,
 		.filename = {0},
 		.board = {0},
 		.created_at = modified_time,
-		.post = {0}
+		.post_id = post_id
 	};
 
 	memcpy(to_insert.file_hash, image_hash, sizeof(to_insert.file_hash));
 	memcpy(to_insert.filename, filename, sizeof(to_insert.filename));
 	memcpy(to_insert.file_path, file_path, sizeof(to_insert.file_path));
 	memcpy(to_insert.board, board, sizeof(to_insert.board));
-	memcpy(to_insert.post, post_key, sizeof(to_insert.post));
 
 	return set_aliased_image(&to_insert);
 }
@@ -287,7 +285,7 @@ update_time: ; /* Yes the semicolon is necessary. Fucking C. */
 	free(real_old_fpath);
 }
 int add_image_to_db(const char *file_path, const char *filename, const char board[MAX_BOARD_NAME_SIZE],
-		const char post_key[MAX_KEY_SIZE], char out_webm_key[static MAX_KEY_SIZE]) {
+		const unsigned int post_id, char out_webm_key[static MAX_KEY_SIZE]) {
 	char image_hash[HASH_IMAGE_STR_SIZE] = {0};
 	if (!hash_file(file_path, image_hash)) {
 		m38_log_msg(LOG_ERR, "Could not hash '%s'.", file_path);
@@ -297,7 +295,7 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 	webm *_old_webm = get_image_by_oleg_key(image_hash, out_webm_key);
 
 	if (!_old_webm) {
-		int rc = _insert_webm(file_path, filename, image_hash, board, post_key);
+		int rc = _insert_webm(file_path, filename, image_hash, board, post_id);
 		if (!rc)
 			m38_log_msg(LOG_ERR, "Something went wrong inserting webm.");
 		return rc;
@@ -325,7 +323,7 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 	 * an alias is it's filename.
 	 */
 	if (_old_alias == NULL) {
-		rc = _insert_aliased_webm(file_path, filename, image_hash, board, post_key);
+		rc = _insert_aliased_webm(file_path, filename, image_hash, board, post_id);
 		m38_log_msg(LOG_FUN, "%s (%s) is a new alias of %s (%s).", filename, board, _old_webm->filename, _old_webm->board);
 	} else {
 		m38_log_msg(LOG_WARN, "%s is already marked as an alias of %s. Old alias is: '%s'",
@@ -369,42 +367,166 @@ struct thread *get_thread(const char key[static MAX_KEY_SIZE]) {
 	return _thread;
 }
 
-struct post *get_post(const char key[static MAX_KEY_SIZE]) {
-	size_t json_size = 0;
-	char *json = (char *)fetch_data_from_db(&oleg_conn, key, &json_size);
+//struct post *get_post(const char key[static MAX_KEY_SIZE]) {
+//	size_t json_size = 0;
+//	char *json = (char *)fetch_data_from_db(&oleg_conn, key, &json_size);
+//
+//	if (json == NULL)
+//		return NULL;
+//
+//	post *_post = deserialize_post(json);
+//	free(json);
+//	return _post;
+//}
 
-	if (json == NULL)
-		return NULL;
+struct post *get_post(const unsigned int post_id) {
+	PGresult *res = NULL;
+	PGconn *conn = NULL;
 
-	post *_post = deserialize_post(json);
-	free(json);
-	return _post;
-}
+	conn = _get_pg_connection();
+	if (!conn)
+		goto error;
 
-static int _insert_thread(const char key[static MAX_KEY_SIZE], const thread *to_save) {
-	char *serialized = serialize_thread(to_save);
-	m38_log_msg(LOG_INFO, "Serialized thread: %s", serialized);
+	char post_id_buf[64] = {0};
+	snprintf(post_id_buf, sizeof(post_id_buf), "%d", post_id);
+	const char *param_values[] = {post_id_buf};
+	res = PQexecParams(conn,
+					  "SELECT * FROM posts WHERE id = $1",
+					  1,
+					  NULL,
+					  param_values,
+					  NULL,
+					  NULL,
+					  1); /* <-- binary setting */
 
-	int ret = store_data_in_db(&oleg_conn, key, (unsigned char *)serialized, strlen(serialized));
-	free(serialized);
-
-	return ret;
-}
-
-static int _insert_post(const char key[static MAX_KEY_SIZE], const post *to_save) {
-	char *serialized = serialize_post(to_save);
-	m38_log_msg(LOG_INFO, "Serialized post: %s", serialized);
-
-	int ret = store_data_in_db(&oleg_conn, key, (unsigned char *)serialized, strlen(serialized));
-	if (ret != 1) {
-		m38_log_msg(LOG_ERR, "Could not store post in database. Ret code: %i", ret);
+	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+		m38_log_msg(LOG_ERR, "SELECT failed: %s", PQerrorMessage(conn));
+		goto error;
 	}
-	free(serialized);
 
-	return ret;
+	post *deserialized = deserialize_post_from_tuples(res);
+	if (!deserialized)
+		goto error;
+
+	PQclear(res);
+	_finish_pg_connection(conn);
+
+	return deserialized;
+
+error:
+	if (res)
+		PQclear(res);
+	_finish_pg_connection(conn);
+	return NULL;
 }
 
-int add_post_to_db(const struct post_match *p_match, const char webm_key[static MAX_KEY_SIZE]) {
+static unsigned int post_exists(const char post_key[static MAX_KEY_SIZE]) {
+	PGresult *res = NULL;
+	PGconn *conn = NULL;
+
+	conn = _get_pg_connection();
+	if (!conn)
+		goto error;
+
+	const char *param_values[] = {post_key};
+	res = PQexecParams(conn,
+					  "SELECT count(*) FROM posts WHERE oleg_key = $1",
+					  1,
+					  NULL,
+					  param_values,
+					  NULL,
+					  NULL,
+					  1);
+
+	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+		m38_log_msg(LOG_ERR, "SELECT failed: %s", PQerrorMessage(conn));
+		goto error;
+	}
+
+	if (atoi(PQgetvalue(res, 0, 0)) <= 0)
+		goto error; // Not actually an error
+
+	PQclear(res);
+	_finish_pg_connection(conn);
+
+	return 1;
+
+error:
+	if (res)
+		PQclear(res);
+	_finish_pg_connection(conn);
+	return 0;
+}
+
+static unsigned int get_thread_id_for_oleg_key(const char key[static MAX_KEY_SIZE]) {
+	PGresult *res = NULL;
+	PGconn *conn = NULL;
+
+	conn = _get_pg_connection();
+	if (!conn)
+		goto error;
+
+	const char *param_values[] = {key};
+	res = PQexecParams(conn,
+					  "SELECT id FROM threads WHERE oleg_key = $1",
+					  1,
+					  NULL,
+					  param_values,
+					  NULL,
+					  NULL,
+					  1);
+
+	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+		m38_log_msg(LOG_ERR, "SELECT failed: %s", PQerrorMessage(conn));
+		goto error;
+	}
+
+	unsigned int id = atoi(PQgetvalue(res, 0, 0));
+
+	PQclear(res);
+	_finish_pg_connection(conn);
+
+	return id;
+
+error:
+	if (res)
+		PQclear(res);
+	_finish_pg_connection(conn);
+	return 0;
+}
+
+
+
+static int _insert_thread(const thread *to_save) {
+	UNUSED(to_save);
+	m38_log_msg(LOG_ERR, "_insert_thread stub");
+	return -1;
+	// char *serialized = serialize_thread(to_save);
+	// m38_log_msg(LOG_INFO, "Serialized thread: %s", serialized);
+	//
+	// int ret = store_data_in_db(&oleg_conn, key, (unsigned char *)serialized, strlen(serialized));
+	// free(serialized);
+	//
+	// return ret;
+}
+
+static int _insert_post(const post *to_save) {
+	UNUSED(to_save);
+	m38_log_msg(LOG_ERR, "_insert_post stub");
+	return -1;
+	// char *serialized = serialize_post(to_save);
+	// m38_log_msg(LOG_INFO, "Serialized post: %s", serialized);
+	//
+	// int ret = store_data_in_db(&oleg_conn, key, (unsigned char *)serialized, strlen(serialized));
+	// if (ret != 1) {
+	// 	m38_log_msg(LOG_ERR, "Could not store post in database. Ret code: %i", ret);
+	// }
+	// free(serialized);
+	//
+	// return ret;
+}
+
+int add_post_to_db(const struct post_match *p_match) {
 	if (!p_match)
 		return 1;
 
@@ -413,13 +535,8 @@ int add_post_to_db(const struct post_match *p_match, const char webm_key[static 
 
 	m38_log_msg(LOG_INFO, "Creating post with key: %s", post_key);
 
-	post *existing_post = get_post(post_key);
-	if (existing_post != NULL) {
+	if (post_exists(post_key)) {
 		/* We already have this post saved. */
-		vector_free(existing_post->replied_to_keys);
-		free(existing_post->body_content);
-		free(existing_post);
-
 		return 0;
 	}
 
@@ -428,66 +545,57 @@ int add_post_to_db(const struct post_match *p_match, const char webm_key[static 
 	create_thread_key(p_match->board, p_match->thread_number, thread_key);
 
 	/* 2. Check database for existing thread */
-	thread *existing_thread = get_thread(thread_key);
-	if (existing_thread == NULL) {
+	unsigned int thread_id = get_thread_id_for_oleg_key(thread_key);
+	if (!thread_id) {
 		/* 3. Create it if it doesn't exist */
 		thread _new_thread = {
+			.id = 0,
 			.board = {0},
 			._null_term_hax_1 = 0,
-			.post_keys = vector_new(MAX_KEY_SIZE, 2)
+			.oleg_key = {0},
+			._null_term_hax_2 = 0,
+			.subject = NULL,
+			.created_at = 0
 		};
 
-		existing_thread = malloc(sizeof(struct thread));
 		strncpy(_new_thread.board, p_match->board, sizeof(_new_thread.board));
-		memcpy(existing_thread, &_new_thread, sizeof(struct thread));
+		strncpy(_new_thread.oleg_key, thread_key, sizeof(_new_thread.oleg_key));
+		_new_thread.subject = strdup(p_match->subject);
+
+		thread_id = _insert_thread(&_new_thread);
+
+		free(_new_thread.subject);
 	}
 
 	/* 4. There is no 4. */
-	/* 5. Add new post key to thread foreign keys */
-	unsigned int i;
-	int found = 0;
-	for (i = 0; i < existing_thread->post_keys->count; i++) {
-		const char *existing = vector_get(existing_thread->post_keys, i);
-		if (strncmp(existing, post_key, MAX_KEY_SIZE) == 0) {
-			found = 1;
-			break;
-		}
-	}
-	if (!found) {
-		vector_append(existing_thread->post_keys, post_key, sizeof(post_key));
-		/* 6. Save thread object */
-		_insert_thread(thread_key, existing_thread);
-	}
-	vector_free(existing_thread->post_keys);
-	free(existing_thread);
 
 	/* 7. Create post, Add thread key to post */
 	post to_insert = {
-		.post_id = {0},
-		._null_term_hax_1 = 0,
-		.thread_key = {0},
-		._null_term_hax_2 = 0,
 		.board = {0},
-		._null_term_hax_3 = 0,
-		.webm_key = {0},
-		._null_term_hax_4 = 0,
-		.post_no = {0},
-		._null_term_hax_5 = 0,
+		._null_term_hax_1 = 0,
+		.oleg_key = {0},
+		._null_term_hax_2 = 0,
+		.fourchan_post_no = 0,
+		.fourchan_post_id = 0,
 		.body_content = NULL,
-		.replied_to_keys = vector_new(MAX_KEY_SIZE, 2)
+		.replied_to_keys = vector_new(MAX_KEY_SIZE, 2),
+		.id = 0,
+		.thread_id = thread_id,
+		.created_at = 0
 	};
 
-	strncpy(to_insert.post_id, p_match->post_date, sizeof(to_insert.post_id));
-	strncpy(to_insert.post_no, p_match->post_no, sizeof(to_insert.post_no));
-	strncpy(to_insert.thread_key, thread_key, sizeof(to_insert.thread_key));
+	to_insert.fourchan_post_id = atoi(p_match->post_date);
+	to_insert.fourchan_post_no = atoi(p_match->post_no);
 	strncpy(to_insert.board, p_match->board, sizeof(to_insert.board));
-	strncpy(to_insert.webm_key, webm_key, sizeof(to_insert.webm_key));
+	strncpy(to_insert.oleg_key, post_key, sizeof(to_insert.oleg_key));
+	//strncpy(to_insert.webm_key, webm_key, sizeof(to_insert.webm_key));
 
 	if (p_match->body_content != NULL)
 		to_insert.body_content = strdup(p_match->body_content);
 
 	/* 8. Save post object */
-	_insert_post(post_key, &to_insert);
+	_insert_post(&to_insert);
+
 	free(to_insert.body_content);
 	vector_free(to_insert.replied_to_keys);
 	return 0;
