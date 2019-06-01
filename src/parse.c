@@ -89,8 +89,6 @@ ol_stack *parse_thread_json(const char *all_json, const thread_match *match) {
 		const char *body_content = json_object_get_string(post, "com");
 		const char *subject = json_object_get_string(post, "sub");
 
-
-
 		if (file_ext == NULL)
 			continue;
 

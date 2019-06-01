@@ -330,8 +330,8 @@ int url_search_handler(const m38_http_request *request, m38_http_response *respo
 		gshkl_add_string(result, "filename", _webm->filename);
 		post *_post = get_post(_webm->post_id);
 		if (_post) {
-			gshkl_add_string(result, "thread_id", _post->thread_key);
-			gshkl_add_string(result, "post_id", _post->post_id);
+			gshkl_add_int(result, "thread_id", _post->thread_id);
+			gshkl_add_int(result, "post_id", _post->fourchan_post_id);
 			if (_post->body_content) {
 				gshkl_add_string(result, "post_content", _post->body_content);
 				free(_post->body_content);
@@ -427,8 +427,8 @@ int webm_handler(const m38_http_request *request, m38_http_response *response) {
 	} else {
 		post *_post = get_post(_webm->post_id);
 		if (_post) {
-			gshkl_add_string(ctext, "thread_id", _post->thread_key);
-			gshkl_add_string(ctext, "post_id", _post->post_id);
+			gshkl_add_int(ctext, "thread_id", _post->thread_id);
+			gshkl_add_int(ctext, "post_id", _post->fourchan_post_id);
 			if (_post->body_content) {
 				gshkl_add_string(ctext, "post_content", _post->body_content);
 				free(_post->body_content);
@@ -559,78 +559,35 @@ static unsigned int _add_sorted_by_aliases(greshunkel_var *images) {
 	return 0;
 }
 
-static db_key_match *create_match_keys_from_vector(const vector *vec) {
-	db_key_match *cur = NULL;
-	unsigned int i;
-	for (i = 0; i < vec->count; i++) {
-		db_key_match _stack = {
-			.key = {0},
-			.next = cur
-		};
-
-		const char *_key = vector_get(vec, i);
-		size_t larger = strlen(_key) > MAX_KEY_SIZE ? MAX_KEY_SIZE : strlen(_key);
-		strncpy((char *)_stack.key, _key, larger);
-
-		db_key_match *new = calloc(1, sizeof(db_key_match));
-		memcpy(new, &_stack, sizeof(db_key_match));
-
-		cur = new;
-	}
-
-	return cur;
-}
-
 int by_thread_handler(const m38_http_request *request, m38_http_response *response) {
-	char thread_id[256] = {0};
-	strncpy(thread_id, request->resource + request->matches[1].rm_so, sizeof(thread_id));
+	char thread_key[256] = {0};
+	strncpy(thread_key, request->resource + request->matches[1].rm_so, sizeof(thread_key));
 
-	if (thread_id == NULL || request->resource + request->matches[1].rm_so == 0)
+	if (thread_key == NULL || request->resource + request->matches[1].rm_so == 0)
 		return 404;
 
-	thread *_thread = get_thread(thread_id);
+	thread *_thread = get_thread_by_key(thread_key);
 	if (_thread == NULL)
 		return 404;
 
 	greshunkel_ctext *ctext = gshkl_init_context();
-	gshkl_add_string(ctext, "thread_id", thread_id);
+	gshkl_add_string(ctext, "thread_id", thread_key);
 	gshkl_add_filter(ctext, "pretty_date", pretty_date, gshkl_filter_cleanup);
 	gshkl_add_filter(ctext, "thumbnail_for_image", thumbnail_for_image, gshkl_filter_cleanup);
 
 	greshunkel_var posts = gshkl_add_array(ctext, "POSTS");
 
-	db_key_match *cur = create_match_keys_from_vector(_thread->post_keys);
-
-	/* So this is kind of fucked because we're going to be getting back both
-	 * webms and webm_aliases from the DB, but we're going to deserialize them
-	 * all to webm_alias objects. This will work because a webm_alias is a subset
-	 * of a webm.
-	 */
-	vector *_webms_from_posts = vector_new(MAX_KEY_SIZE, 32);
-	/* This is another vector of all of the greshunkel contexts we're going to modify
-	 * to add our webm content to once we've looped through once.
-	 * That probably didn't make any sense.
-	 */
-	vector *_post_context_objs = vector_new(sizeof(struct greshunkel_ctext), 32);
-
-	unsigned int total = 0;
-	unsigned int i = 0;
-	if (cur != NULL) {
-		db_match *matches = fetch_bulk_from_db(&oleg_conn, cur, 1);
-
-		/* So here we iterate through both loops, the matches and the keys. */
-		db_match *current = matches;
-
-		while (current) {
-			db_match *next = current->next;
-
-			post *dsrlzd = deserialize_post((char *)current->data);
-			free((unsigned char *)current->data);
-			free(current);
+	PGresult *res = get_posts_by_thread_key(thread_key);
+	unsigned int total_rows = 0;
+	if (res) {
+		unsigned int i = 0;
+		total_rows = PQntuples(res);
+		for (i = 0; i < total_rows; i++) {
+			post *dsrlzd = deserialize_post_from_tuples(res, i);
 
 			if (dsrlzd) {
 				greshunkel_ctext *_post_sub = gshkl_init_context();
-				gshkl_add_string(_post_sub, "date", dsrlzd->post_id);
+				gshkl_add_int(_post_sub, "date", dsrlzd->fourchan_post_id);
 				gshkl_add_string(_post_sub, "board", dsrlzd->board);
 
 				if (dsrlzd->body_content)
@@ -638,21 +595,20 @@ int by_thread_handler(const m38_http_request *request, m38_http_response *respon
 				else
 					gshkl_add_string(_post_sub, "content", "");
 
-				if (dsrlzd->post_no)
-					gshkl_add_string(_post_sub, "post_no", dsrlzd->post_no);
+				if (dsrlzd->fourchan_post_no)
+					gshkl_add_int(_post_sub, "post_no", dsrlzd->fourchan_post_no);
 				else
 					gshkl_add_string(_post_sub, "post_no", "");
 
-				if (dsrlzd->webm_key && strlen(dsrlzd->webm_key) > 0) {
-					gshkl_add_string(_post_sub, "webm_key", dsrlzd->webm_key);
-					/* Add the _webm_key and context to the relevant vectors for later modification
-					 * after a bulk_get.
-					 */
-					vector_append(_webms_from_posts, dsrlzd->webm_key, sizeof(dsrlzd->webm_key));
+				const char *w_filename = PQgetvalue(res, i, PQfnumber(res, "w.filename"));
+				const char *wa_filename = PQgetvalue(res, i, PQfnumber(res, "wa.filename"));
+				if (w_filename && strlen(w_filename)) {
+					gshkl_add_string(_post_sub, "image", w_filename);
+				} else if (wa_filename && strlen(wa_filename)) {
+					gshkl_add_string(_post_sub, "image", wa_filename);
 				} else {
-					vector_append(_webms_from_posts, NULL, 0);
+					gshkl_add_string(_post_sub, "image", NULL);
 				}
-				vector_append(_post_context_objs, _post_sub, sizeof(struct greshunkel_ctext));
 
 				gshkl_add_sub_context_to_loop(&posts, _post_sub);
 
@@ -661,54 +617,11 @@ int by_thread_handler(const m38_http_request *request, m38_http_response *respon
 			}
 
 			free(dsrlzd);
-			total++;
-			i++;
-
-			current = next;
 		}
 	}
 
-	if (_webms_from_posts->count > 0) {
-		db_key_match *_all_webm_keys = create_match_keys_from_vector(_webms_from_posts);
+	PQclear(res);
 
-		db_match *matches = fetch_bulk_from_db(&oleg_conn, _all_webm_keys, 1);
-
-		db_match *current = matches;
-		//db_match *end = NULL;
-		//while (current) {
-		//	end = current;
-		//	current = current->next;
-		//}
-		//current = end;
-
-		while (current) {
-			/* The matches are backwards so we have to reverse it. */
-			//db_match *prev = current->prev;
-			i--;
-			db_match *next = current->next;
-			struct greshunkel_ctext *post_ctext = (struct greshunkel_ctext *)vector_get(_post_context_objs, i);
-
-			if (current->data == NULL) {
-				gshkl_add_string(post_ctext, "image", NULL);
-			} else {
-				webm_alias *dsrlzd = deserialize_alias((char *)current->data);
-				free((unsigned char *)current->data);
-
-				if (dsrlzd && dsrlzd->file_path)
-					gshkl_add_string(post_ctext, "image", dsrlzd->filename);
-
-				free(dsrlzd);
-			}
-
-			free(current);
-			//current = prev;
-			current = next;
-		}
-	}
-
-	vector_free(_webms_from_posts);
-	vector_free(_post_context_objs);
-	vector_free(_thread->post_keys);
 	free(_thread);
 
 	greshunkel_var boards = gshkl_add_array(ctext, "BOARDS");
@@ -716,7 +629,7 @@ int by_thread_handler(const m38_http_request *request, m38_http_response *respon
 
 	vector_reverse(posts.arr);
 
-	gshkl_add_int(ctext, "total", total);
+	gshkl_add_int(ctext, "total", total_rows);
 
 	return m38_render_file(ctext, "./templates/by_thread.html", response);
 }

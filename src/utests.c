@@ -11,122 +11,6 @@
 #include "parse.h"
 #include "models.h"
 
-int webm_serialization() {
-	webm to_test = {
-		.file_hash = "47C81F590352D9F95C4CDC4FC7985195D5BD45317728A61791F1D9D9EE530E15",
-		._null_term_hax_1 = 0,
-		.filename = "walrus_eating_cake.webm",
-		._null_term_hax_2 = 0,
-		.board = "b",
-		._null_term_hax_3 = 0,
-		.post = "POST129382983",
-		._null_term_hax_4 = 0,
-		.created_at = 1419626658,
-		.size = 123000
-	};
-
-	char *serialized = serialize_webm(&to_test);
-	webm *deserialized = deserialize_webm(serialized);
-
-	assert(memcmp(&to_test, deserialized, sizeof(webm)) == 0);
-	free(serialized);
-	free(deserialized);
-
-	return 1;
-}
-
-int webm_alias_serialization() {
-	webm_alias to_test = {
-		.file_hash = "47C81F590352D9F95C4CDC4FC7985195D5BD45317728A61791F1D9D9EE530E15",
-		._null_term_hax_1 = 0,
-		.filename = "walrus_eating_cake.webm",
-		._null_term_hax_2 = 0,
-		.board = "b",
-		._null_term_hax_3 = 0,
-		.created_at = 1419626658,
-		.post = "POST129382983",
-		._null_term_hax_4 = 0,
-	};
-
-	char *serialized = serialize_alias(&to_test);
-	webm_alias *deserialized = deserialize_alias(serialized);
-
-	assert(memcmp(&to_test, deserialized, sizeof(webm_alias)) == 0);
-	free(serialized);
-	free(deserialized);
-
-	return 1;
-}
-
-int thread_serialization() {
-	thread to_test = {
-		.board = "b",
-		._null_term_hax_1 = 0,
-		.post_keys = vector_new(sizeof(char) * MAX_KEY_SIZE, 16)
-	};
-
-	unsigned int i;
-	for (i = 0; i < 3; i++)
-		vector_append(to_test.post_keys, "TEST_KEY", strlen("TEST_KEY"));
-
-	char *serialized = serialize_thread(&to_test);
-	thread *deserialized = deserialize_thread(serialized);
-
-	assert(memcmp(to_test.board, deserialized->board, sizeof(to_test.board)) == 0);
-	assert(to_test.post_keys->count == deserialized->post_keys->count);
-	for (i = 0; i < deserialized->post_keys->count; i++)
-		assert(strncmp(vector_get(to_test.post_keys, i), vector_get(deserialized->post_keys, i), MAX_KEY_SIZE) == 0);
-
-	vector_free(to_test.post_keys);
-	vector_free(deserialized->post_keys);
-	free(serialized);
-	free(deserialized);
-
-	return 1;
-}
-
-int post_serialization() {
-	post to_test = {
-		.post_id = "145685859304",
-		._null_term_hax_1 = 0,
-		.thread_key = "THRD",
-		._null_term_hax_2 = 0,
-		.board = "/b/",
-		._null_term_hax_3 = 0,
-		.webm_key = "FakeWebmKeyLol",
-		._null_term_hax_4 = 0,
-		.body_content = malloc(strlen("Hello!")),
-		.replied_to_keys = vector_new(sizeof(char) * MAX_KEY_SIZE, 16)
-	};
-	strncpy(to_test.body_content, "Hello!", strlen("Hello!"));
-
-	unsigned int i;
-	for (i = 0; i < 3; i++)
-		vector_append(to_test.replied_to_keys, "TEST_KEY", strlen("TEST_KEY"));
-
-	char *serialized = serialize_post(&to_test);
-	post *deserialized = deserialize_post(serialized);
-
-	assert(memcmp(to_test.post_id, deserialized->post_id, sizeof(to_test.post_id)) == 0);
-	assert(memcmp(to_test.thread_key, deserialized->thread_key, sizeof(to_test.thread_key)) == 0);
-	assert(memcmp(to_test.board, deserialized->board, sizeof(to_test.board)) == 0);
-	assert(memcmp(to_test.webm_key, deserialized->webm_key, sizeof(to_test.webm_key)) == 0);
-	assert(memcmp(to_test.body_content, deserialized->body_content, strlen(to_test.body_content)) == 0);
-
-	assert(to_test.replied_to_keys->count == deserialized->replied_to_keys->count);
-	for (i = 0; i < deserialized->replied_to_keys->count; i++)
-		assert(strncmp(vector_get(to_test.replied_to_keys, i), vector_get(deserialized->replied_to_keys, i), MAX_KEY_SIZE) == 0);
-
-	vector_free(to_test.replied_to_keys);
-	vector_free(deserialized->replied_to_keys);
-	free(to_test.body_content);
-	free(deserialized->body_content);
-	free(serialized);
-	free(deserialized);
-
-	return 1;
-}
-
 int hash_stuff() {
 	char outbuf[HASH_IMAGE_STR_SIZE] = {0};
 	char hash_key[MAX_KEY_SIZE] = "3000655_blitzbang2.webm";
@@ -227,9 +111,6 @@ int can_parse_range_query() {
 }
 
 int run_tests() {
-	webm_serialization();
-	webm_alias_serialization();
-	thread_serialization();
 	hash_stuff();
 	can_get_header_values();
 	can_serialize_w2a();

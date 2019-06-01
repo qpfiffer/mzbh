@@ -173,7 +173,7 @@ static ol_stack *build_thread_index() {
 	return images_to_download;
 }
 
-int download_image(const post_match *p_match, char webm_key[static MAX_KEY_SIZE]) {
+int download_image(const post_match *p_match, const unsigned int post_id) {
 	int thumb_request_fd = 0;
 	int image_request_fd = 0;
 	unsigned char *raw_thumb_resp = NULL;
@@ -295,7 +295,7 @@ int download_image(const post_match *p_match, char webm_key[static MAX_KEY_SIZE]
 	create_post_key(p_match->board, p_match->post_date, post_key);
 
 	/* image_filename is the full path, fname_plus_extension is the file name. */
-	int added = add_image_to_db(image_filename, fname_plus_extension, p_match->board, post_key, webm_key);
+	int added = add_image_to_db(image_filename, fname_plus_extension, p_match->board, post_id);
 	if (!added) {
 		m38_log_msg(LOG_WARN, "Could not add image to database. Continuing...");
 	}
@@ -349,13 +349,12 @@ int download_images() {
 	while (images_to_download->next != NULL) {
 		post_match *p_match = (post_match *)spop(&images_to_download);
 
-		char webm_key[MAX_KEY_SIZE] = {0};
-		if (!download_image(p_match, webm_key))
-			m38_log_msg(LOG_WARN, "Could not download image.");
-
-		int added = add_post_to_db(p_match, webm_key);
-		if (added != 0)
+		unsigned int post_id = add_post_to_db(p_match);
+		if (!post_id)
 			m38_log_msg(LOG_WARN, "Could not add post %s to database.", p_match->post_date);
+
+		if (!download_image(p_match, post_id))
+			m38_log_msg(LOG_WARN, "Could not download image.");
 
 
 		free(p_match->body_content);

@@ -1,6 +1,7 @@
 // vim: noet ts=4 sw=4
 #pragma once
 #include <oleg-http/oleg-http.h>
+#include <libpq-fe.h>
 #include "common_defs.h"
 
 #define DB_PG_CONNECTION_INFO "postgresql:///waifu"
@@ -32,15 +33,16 @@ unsigned int get_record_count_in_table(const char *query_command);
  * Returns 0 on success.
  */
 int add_image_to_db(const char *file_path, const char *filename, const char board[MAX_BOARD_NAME_SIZE],
-		const unsigned int post_id, char out_webm_key[static MAX_KEY_SIZE]);
+		const unsigned int post_id);
 
 /* Attempts to add a new post to the database.
  * Returns 0 on success.
  */
 struct post_match;
-int add_post_to_db(const struct post_match *p_match);
+unsigned int add_post_to_db(const struct post_match *p_match);
 struct post *get_post(const unsigned int id);
-struct thread *get_thread(const char key[static MAX_KEY_SIZE]);
+PGresult *get_posts_by_thread_key(const char key[static MAX_KEY_SIZE]);
+struct thread *get_thread_by_key(const char key[static MAX_KEY_SIZE]);
 
 /* Associates a webm with an alias.
  * Returns 1 on success.

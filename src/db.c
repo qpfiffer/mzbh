@@ -64,6 +64,49 @@ error:
 	return 0;
 }
 
+PGresult *get_posts_by_thread_key(const char key[static MAX_KEY_SIZE]) {
+	PGresult *res = NULL;
+	PGconn *conn = NULL;
+
+	const char *param_values[] = {key};
+
+	conn = _get_pg_connection();
+	if (!conn)
+		goto error;
+
+	res = PQexecParams(conn,
+					  "SELECT p.*, w.filename, wa.filename FROM posts AS p "
+						"JOIN threads AS t ON p.thread_id = t.id"
+						"JOIN webms AS w ON w.post_id = p.id"
+						"JOIN webm_aliases AS wa ON wa.post_id = p.id"
+						"WHERE t.oleg_key = $1",
+					  1,
+					  NULL,
+					  param_values,
+					  NULL,
+					  NULL,
+					  1);
+
+	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+		m38_log_msg(LOG_ERR, "SELECT failed: %s", PQerrorMessage(conn));
+		goto error;
+	}
+
+	webm *deserialized = deserialize_webm_from_tuples(res);
+	if (!deserialized)
+		goto error;
+
+	_finish_pg_connection(conn);
+
+	return res;
+
+error:
+	if (res)
+		PQclear(res);
+	_finish_pg_connection(conn);
+	return NULL;
+}
+
 /* Webm get/set stuff */
 webm *get_image_by_oleg_key(const char image_hash[static HASH_ARRAY_SIZE], char out_key[static MAX_KEY_SIZE]) {
 	PGresult *res = NULL;
@@ -83,7 +126,7 @@ webm *get_image_by_oleg_key(const char image_hash[static HASH_ARRAY_SIZE], char 
 					  param_values,
 					  NULL,
 					  NULL,
-					  1); /* <-- binary setting */
+					  1);
 
 	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
 		m38_log_msg(LOG_ERR, "SELECT failed: %s", PQerrorMessage(conn));
@@ -285,13 +328,14 @@ update_time: ; /* Yes the semicolon is necessary. Fucking C. */
 	free(real_old_fpath);
 }
 int add_image_to_db(const char *file_path, const char *filename, const char board[MAX_BOARD_NAME_SIZE],
-		const unsigned int post_id, char out_webm_key[static MAX_KEY_SIZE]) {
+		const unsigned int post_id) {
 	char image_hash[HASH_IMAGE_STR_SIZE] = {0};
 	if (!hash_file(file_path, image_hash)) {
 		m38_log_msg(LOG_ERR, "Could not hash '%s'.", file_path);
 		return 0;
 	}
 
+	char out_webm_key[MAX_KEY_SIZE] = {0};
 	webm *_old_webm = get_image_by_oleg_key(image_hash, out_webm_key);
 
 	if (!_old_webm) {
@@ -355,7 +399,7 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 	return rc;
 }
 
-struct thread *get_thread(const char key[static MAX_KEY_SIZE]) {
+struct thread *get_thread_by_key(const char key[static MAX_KEY_SIZE]) {
 	size_t json_size = 0;
 	char *json = (char *)fetch_data_from_db(&oleg_conn, key, &json_size);
 
@@ -397,14 +441,14 @@ struct post *get_post(const unsigned int post_id) {
 					  param_values,
 					  NULL,
 					  NULL,
-					  1); /* <-- binary setting */
+					  1);
 
 	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
 		m38_log_msg(LOG_ERR, "SELECT failed: %s", PQerrorMessage(conn));
 		goto error;
 	}
 
-	post *deserialized = deserialize_post_from_tuples(res);
+	post *deserialized = deserialize_post_from_tuples(res, 0);
 	if (!deserialized)
 		goto error;
 
@@ -526,7 +570,7 @@ static int _insert_post(const post *to_save) {
 	// return ret;
 }
 
-int add_post_to_db(const struct post_match *p_match) {
+unsigned int add_post_to_db(const struct post_match *p_match) {
 	if (!p_match)
 		return 1;
 
@@ -594,11 +638,11 @@ int add_post_to_db(const struct post_match *p_match) {
 		to_insert.body_content = strdup(p_match->body_content);
 
 	/* 8. Save post object */
-	_insert_post(&to_insert);
+	const unsigned int post_id = _insert_post(&to_insert);
 
 	free(to_insert.body_content);
 	vector_free(to_insert.replied_to_keys);
-	return 0;
+	return post_id;
 }
 
 int associate_alias_with_webm(const webm *webm, const char alias_key[static MAX_KEY_SIZE]) {

@@ -46,7 +46,7 @@ webm *deserialize_webm_from_tuples(const PGresult *res) {
 	return to_return;
 }
 
-post *deserialize_post_from_tuples(const PGresult *res) {
+post *deserialize_post_from_tuples(const PGresult *res, const unsigned int idx) {
 	if (!res)
 		return NULL;
 
@@ -67,23 +67,23 @@ post *deserialize_post_from_tuples(const PGresult *res) {
 	const int replied_to_keys_col = PQfnumber(res, "replied_to_keys");
 	const int created_at_col = PQfnumber(res, "created_at");
 
-	to_return->fourchan_post_id = atoi(PQgetvalue(res, 0, fourchan_post_id_col));
-	to_return->fourchan_post_no = atoi(PQgetvalue(res, 0, fourchan_post_no_col));
-	to_return->thread_id = atoi(PQgetvalue(res, 0, thread_id_col));
-	to_return->id = atoi(PQgetvalue(res, 0, id_col));
-	to_return->created_at = (time_t)atoi(PQgetvalue(res, 0, created_at_col));
+	to_return->fourchan_post_id = atoi(PQgetvalue(res, idx, fourchan_post_id_col));
+	to_return->fourchan_post_no = atoi(PQgetvalue(res, idx, fourchan_post_no_col));
+	to_return->thread_id = atoi(PQgetvalue(res, idx, thread_id_col));
+	to_return->id = atoi(PQgetvalue(res, idx, id_col));
+	to_return->created_at = (time_t)atoi(PQgetvalue(res, idx, created_at_col));
 
-	strncpy(to_return->oleg_key, PQgetvalue(res, 0, oleg_key_col), sizeof(to_return->oleg_key));
-	strncpy(to_return->board, PQgetvalue(res, 0, board_col), sizeof(to_return->board));
+	strncpy(to_return->oleg_key, PQgetvalue(res, idx, oleg_key_col), sizeof(to_return->oleg_key));
+	strncpy(to_return->board, PQgetvalue(res, idx, board_col), sizeof(to_return->board));
 
-	const char *b_content = PQgetvalue(res, 0, body_col);
+	const char *b_content = PQgetvalue(res, idx, body_col);
 	if (b_content) {
 		to_return->body_content = strdup(b_content);
 	} else {
 		to_return->body_content = NULL;
 	}
 
-	const char *r_content = PQgetvalue(res, 0, replied_to_keys_col);
+	const char *r_content = PQgetvalue(res, idx, replied_to_keys_col);
 	if (r_content) {
 		/* TODO: When I have more than one hand, extract this into a function that does
 		 * vector -> json and vice versa.
