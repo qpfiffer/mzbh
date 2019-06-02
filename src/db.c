@@ -16,6 +16,7 @@
 #include "http.h"
 #include "models.h"
 #include "parse.h"
+#include "parson.h"
 #include "utils.h"
 
 static PGconn *_get_pg_connection() {
@@ -64,11 +65,14 @@ error:
 	return 0;
 }
 
-PGresult *get_posts_by_thread_key(const char key[static MAX_KEY_SIZE]) {
+PGresult *get_posts_by_thread_id(const unsigned int id) {
 	PGresult *res = NULL;
 	PGconn *conn = NULL;
 
-	const char *param_values[] = {key};
+	char id_buf[64] = {0};
+	snprintf(id_buf, sizeof(id_buf), "%d", id);
+
+	const char *param_values[] = {id_buf};
 
 	conn = _get_pg_connection();
 	if (!conn)
@@ -76,25 +80,21 @@ PGresult *get_posts_by_thread_key(const char key[static MAX_KEY_SIZE]) {
 
 	res = PQexecParams(conn,
 					  "SELECT p.*, w.filename, wa.filename FROM posts AS p "
-						"JOIN threads AS t ON p.thread_id = t.id"
-						"JOIN webms AS w ON w.post_id = p.id"
-						"JOIN webm_aliases AS wa ON wa.post_id = p.id"
-						"WHERE t.oleg_key = $1",
+						"JOIN threads AS t ON p.thread_id = t.id "
+						"JOIN webms AS w ON w.post_id = p.id "
+						"JOIN webm_aliases AS wa ON wa.post_id = p.id "
+						"WHERE t.id = $1",
 					  1,
 					  NULL,
 					  param_values,
 					  NULL,
 					  NULL,
-					  1);
+					  0);
 
 	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
 		m38_log_msg(LOG_ERR, "SELECT failed: %s", PQerrorMessage(conn));
 		goto error;
 	}
-
-	webm *deserialized = deserialize_webm_from_tuples(res);
-	if (!deserialized)
-		goto error;
 
 	_finish_pg_connection(conn);
 
@@ -126,7 +126,7 @@ webm *get_image_by_oleg_key(const char image_hash[static HASH_ARRAY_SIZE], char 
 					  param_values,
 					  NULL,
 					  NULL,
-					  1);
+					  0);
 
 	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
 		m38_log_msg(LOG_ERR, "SELECT failed: %s", PQerrorMessage(conn));
@@ -149,17 +149,64 @@ error:
 	return NULL;
 }
 
-int set_image(const webm *webm) {
+unsigned int set_image(const webm *webm) {
 	char key[MAX_KEY_SIZE] = {0};
 	create_webm_key(webm->file_hash, key);
 
-	char *serialized = serialize_webm(webm);
-	m38_log_msg(LOG_INFO, "Serialized: %s", serialized);
+	PGresult *res = NULL;
+	PGconn *conn = NULL;
 
-	int ret = store_data_in_db(&oleg_conn, key, (unsigned char *)serialized, strlen(serialized));
-	free(serialized);
+	conn = _get_pg_connection();
+	if (!conn)
+		goto error;
 
-	return ret;
+	char post_id_buf[64] = {0};
+	snprintf(post_id_buf, sizeof(post_id_buf), "%d", webm->post_id);
+
+	char size_buf[64] = {0};
+	snprintf(size_buf, sizeof(size_buf), "%ld", webm->size);
+
+	const char *param_values[] = {
+		key,
+		webm->file_hash,
+		webm->filename,
+		webm->board,
+		webm->file_path,
+		post_id_buf,
+		size_buf
+	};
+	res = PQexecParams(conn,
+					  "INSERT INTO webms (oleg_key, file_hash, filename,"
+					  "board, file_path, post_id, size)"
+					  "VALUES ($1, $2, $3, $4, $5, $6, $7) "
+					  "RETURNING id;",
+					  7,
+					  NULL,
+					  param_values,
+					  NULL,
+					  NULL,
+					  0);
+
+	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+		m38_log_msg(LOG_ERR, "SELECT failed: %s", PQerrorMessage(conn));
+		goto error;
+	}
+
+	if (PQntuples(res) <= 0)
+		goto error;
+
+	unsigned int id = atoi(PQgetvalue(res, 0, 0));
+
+	PQclear(res);
+	_finish_pg_connection(conn);
+
+	return id;
+
+error:
+	if (res)
+		PQclear(res);
+	_finish_pg_connection(conn);
+	return 0;
 }
 
 webm_alias *get_aliased_image_with_key(const char key[static MAX_KEY_SIZE]) {
@@ -399,29 +446,48 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 	return rc;
 }
 
-struct thread *get_thread_by_key(const char key[static MAX_KEY_SIZE]) {
-	size_t json_size = 0;
-	char *json = (char *)fetch_data_from_db(&oleg_conn, key, &json_size);
+struct thread *get_thread_by_id(const unsigned int thread_id) {
+	PGresult *res = NULL;
+	PGconn *conn = NULL;
 
-	if (json == NULL)
-		return NULL;
+	conn = _get_pg_connection();
+	if (!conn)
+		goto error;
 
-	thread *_thread = deserialize_thread(json);
-	free(json);
-	return _thread;
+	char id_buf[64] = {0};
+	snprintf(id_buf, sizeof(id_buf), "%d", thread_id);
+	const char *param_values[] = {id_buf};
+
+	res = PQexecParams(conn,
+					  "SELECT * FROM threads WHERE id = $1",
+					  1,
+					  NULL,
+					  param_values,
+					  NULL,
+					  NULL,
+					  0);
+
+	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+		m38_log_msg(LOG_ERR, "SELECT failed: %s", PQerrorMessage(conn));
+		goto error;
+	}
+
+	thread *deserialized = deserialize_thread_from_tuples(res, 0);
+	if (!deserialized)
+		goto error;
+
+	PQclear(res);
+	_finish_pg_connection(conn);
+
+	return deserialized;
+
+error:
+	if (res)
+		PQclear(res);
+	_finish_pg_connection(conn);
+	return NULL;
 }
 
-//struct post *get_post(const char key[static MAX_KEY_SIZE]) {
-//	size_t json_size = 0;
-//	char *json = (char *)fetch_data_from_db(&oleg_conn, key, &json_size);
-//
-//	if (json == NULL)
-//		return NULL;
-//
-//	post *_post = deserialize_post(json);
-//	free(json);
-//	return _post;
-//}
 
 struct post *get_post(const unsigned int post_id) {
 	PGresult *res = NULL;
@@ -441,7 +507,7 @@ struct post *get_post(const unsigned int post_id) {
 					  param_values,
 					  NULL,
 					  NULL,
-					  1);
+					  0);
 
 	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
 		m38_log_msg(LOG_ERR, "SELECT failed: %s", PQerrorMessage(conn));
@@ -480,7 +546,7 @@ static unsigned int post_exists(const char post_key[static MAX_KEY_SIZE]) {
 					  param_values,
 					  NULL,
 					  NULL,
-					  1);
+					  0);
 
 	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
 		m38_log_msg(LOG_ERR, "SELECT failed: %s", PQerrorMessage(conn));
@@ -518,12 +584,15 @@ static unsigned int get_thread_id_for_oleg_key(const char key[static MAX_KEY_SIZ
 					  param_values,
 					  NULL,
 					  NULL,
-					  1);
+					  0);
 
 	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
 		m38_log_msg(LOG_ERR, "SELECT failed: %s", PQerrorMessage(conn));
 		goto error;
 	}
+
+	if (PQntuples(res) <= 0)
+		goto error;
 
 	unsigned int id = atoi(PQgetvalue(res, 0, 0));
 
@@ -542,32 +611,125 @@ error:
 
 
 static int _insert_thread(const thread *to_save) {
-	UNUSED(to_save);
-	m38_log_msg(LOG_ERR, "_insert_thread stub");
-	return -1;
-	// char *serialized = serialize_thread(to_save);
-	// m38_log_msg(LOG_INFO, "Serialized thread: %s", serialized);
-	//
-	// int ret = store_data_in_db(&oleg_conn, key, (unsigned char *)serialized, strlen(serialized));
-	// free(serialized);
-	//
-	// return ret;
+	PGresult *res = NULL;
+	PGconn *conn = NULL;
+
+	conn = _get_pg_connection();
+	if (!conn)
+		goto error;
+
+	const char *param_values[] = {
+		to_save->oleg_key,
+		to_save->board,
+		to_save->subject
+	};
+	res = PQexecParams(conn,
+					  "INSERT INTO threads (oleg_key, board, subject)"
+					  "VALUES ($1, $2, $3) "
+					  "RETURNING id;",
+					  3,
+					  NULL,
+					  param_values,
+					  NULL,
+					  NULL,
+					  0);
+
+	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+		m38_log_msg(LOG_ERR, "SELECT failed: %s", PQerrorMessage(conn));
+		goto error;
+	}
+
+	if (PQntuples(res) <= 0)
+		goto error;
+
+	unsigned int id = atoi(PQgetvalue(res, 0, 0));
+
+	PQclear(res);
+	_finish_pg_connection(conn);
+
+	return id;
+
+error:
+	if (res)
+		PQclear(res);
+	_finish_pg_connection(conn);
+	return 0;
 }
 
 static int _insert_post(const post *to_save) {
-	UNUSED(to_save);
-	m38_log_msg(LOG_ERR, "_insert_post stub");
-	return -1;
-	// char *serialized = serialize_post(to_save);
-	// m38_log_msg(LOG_INFO, "Serialized post: %s", serialized);
-	//
-	// int ret = store_data_in_db(&oleg_conn, key, (unsigned char *)serialized, strlen(serialized));
-	// if (ret != 1) {
-	// 	m38_log_msg(LOG_ERR, "Could not store post in database. Ret code: %i", ret);
-	// }
-	// free(serialized);
-	//
-	// return ret;
+	PGresult *res = NULL;
+	PGconn *conn = NULL;
+
+	conn = _get_pg_connection();
+	if (!conn)
+		goto error;
+
+	char thread_id[256] = {0};
+	snprintf(thread_id, sizeof(thread_id), "%d", to_save->thread_id);
+
+	char fourchan_post_id[256] = {0};
+	snprintf(fourchan_post_id, sizeof(fourchan_post_id), "%d", to_save->fourchan_post_id);
+
+	char fourchan_post_no[256] = {0};
+	snprintf(fourchan_post_no, sizeof(fourchan_post_no), "%d", to_save->fourchan_post_no);
+
+	JSON_Value *thread_keys = json_value_init_array();
+	JSON_Array *thread_keys_array = json_value_get_array(thread_keys);
+
+	unsigned int i;
+	for (i = 0; i < to_save->replied_to_keys->count; i++)
+		json_array_append_string(thread_keys_array,
+				vector_get(to_save->replied_to_keys, i));
+
+	char *replied_to_json = json_serialize_to_string(thread_keys);
+
+	json_value_free(thread_keys);
+
+	const char *param_values[] = {
+		to_save->oleg_key,
+		fourchan_post_id,
+		fourchan_post_no,
+		thread_id,
+		to_save->board,
+		to_save->body_content,
+		replied_to_json
+	};
+	res = PQexecParams(conn,
+					  "INSERT INTO posts "
+					  "(oleg_key, fourchan_post_id, fourchan_post_no, thread_id, board,"
+					  " body_content, replied_to_keys)"
+					  "VALUES ($1, $2, $3, $4, $5, $6, $7) "
+					  "RETURNING id;",
+					  7,
+					  NULL,
+					  param_values,
+					  NULL,
+					  NULL,
+					  0);
+
+	free(replied_to_json);
+
+	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+		m38_log_msg(LOG_ERR, "SELECT failed: %s", PQerrorMessage(conn));
+		goto error;
+	}
+
+	if (PQntuples(res) <= 0)
+		goto error;
+
+	unsigned int id = atoi(PQgetvalue(res, 0, 0));
+
+	PQclear(res);
+	_finish_pg_connection(conn);
+
+	return id;
+
+error:
+	if (res)
+		PQclear(res);
+	_finish_pg_connection(conn);
+	return 0;
+
 }
 
 unsigned int add_post_to_db(const struct post_match *p_match) {

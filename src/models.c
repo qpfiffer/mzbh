@@ -107,6 +107,39 @@ post *deserialize_post_from_tuples(const PGresult *res, const unsigned int idx) 
 	return to_return;
 }
 
+thread *deserialize_thread_from_tuples(const PGresult *res, const unsigned int idx) {
+	if (!res)
+		return NULL;
+
+	if (PQntuples(res) <= 0) {
+		m38_log_msg(LOG_WARN, "No tuples in PG result for thread_from_tuples.");
+		return NULL;
+	}
+
+	thread *to_return = calloc(1, sizeof(struct thread));
+
+	const int oleg_key_col = PQfnumber(res, "oleg_key");
+	const int board_col = PQfnumber(res, "board");
+	const int id_col = PQfnumber(res, "id");
+	const int created_at_col = PQfnumber(res, "created_at");
+	const int subject_col = PQfnumber(res, "replied_to_keys");
+
+	to_return->id = atoi(PQgetvalue(res, idx, id_col));
+	to_return->created_at = (time_t)atoi(PQgetvalue(res, idx, created_at_col));
+
+	strncpy(to_return->oleg_key, PQgetvalue(res, idx, oleg_key_col), sizeof(to_return->oleg_key));
+	strncpy(to_return->board, PQgetvalue(res, idx, board_col), sizeof(to_return->board));
+
+	const char *b_content = PQgetvalue(res, idx, subject_col);
+	if (b_content) {
+		to_return->subject = strdup(b_content);
+	} else {
+		to_return->subject = NULL;
+	}
+
+	return to_return;
+}
+
 
 // webm *deserialize_webm(const char *json) {
 // 	if (!json)

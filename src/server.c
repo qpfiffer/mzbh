@@ -560,24 +560,24 @@ static unsigned int _add_sorted_by_aliases(greshunkel_var *images) {
 }
 
 int by_thread_handler(const m38_http_request *request, m38_http_response *response) {
-	char thread_key[256] = {0};
-	strncpy(thread_key, request->resource + request->matches[1].rm_so, sizeof(thread_key));
+	char thread_id[256] = {0};
+	strncpy(thread_id, request->resource + request->matches[1].rm_so, sizeof(thread_id));
 
-	if (thread_key == NULL || request->resource + request->matches[1].rm_so == 0)
+	if (thread_id == NULL || request->resource + request->matches[1].rm_so == 0)
 		return 404;
 
-	thread *_thread = get_thread_by_key(thread_key);
+	thread *_thread = get_thread_by_id(atoi(thread_id));
 	if (_thread == NULL)
 		return 404;
 
 	greshunkel_ctext *ctext = gshkl_init_context();
-	gshkl_add_string(ctext, "thread_id", thread_key);
+	gshkl_add_string(ctext, "thread_id", thread_id);
 	gshkl_add_filter(ctext, "pretty_date", pretty_date, gshkl_filter_cleanup);
 	gshkl_add_filter(ctext, "thumbnail_for_image", thumbnail_for_image, gshkl_filter_cleanup);
 
 	greshunkel_var posts = gshkl_add_array(ctext, "POSTS");
 
-	PGresult *res = get_posts_by_thread_key(thread_key);
+	PGresult *res = get_posts_by_thread_id(_thread->id);
 	unsigned int total_rows = 0;
 	if (res) {
 		unsigned int i = 0;

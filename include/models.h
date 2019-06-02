@@ -84,6 +84,8 @@ void create_thread_key(const char board[static MAX_BOARD_NAME_SIZE], const char 
 		char outbuf[static MAX_KEY_SIZE]);
 char *serialize_thread(const thread *to_serialize);
 thread *deserialize_thread(const char *json);
+thread *deserialize_thread_from_tuples(const PGresult *res, const unsigned int idx);
+
 
 typedef struct post {
 	char board[MAX_BOARD_NAME_SIZE];

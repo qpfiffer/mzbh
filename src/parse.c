@@ -109,7 +109,6 @@ ol_stack *parse_thread_json(const char *all_json, const thread_match *match) {
 		strncpy(p_match->post_no, post_no, sizeof(p_match->post_no));
 		strncpy(p_match->thread_number, thread_number, sizeof(p_match->thread_number));
 		strncpy(p_match->filename, filename, sizeof(p_match->filename));
-		strncpy(p_match->subject, subject, sizeof(p_match->subject));
 		strncpy(p_match->file_ext, file_ext, sizeof(p_match->file_ext));
 		strncpy(p_match->board, match->board, sizeof(p_match->board));
 
@@ -117,6 +116,10 @@ ol_stack *parse_thread_json(const char *all_json, const thread_match *match) {
 			p_match->body_content = strdup(body_content);
 		} else {
 			p_match->body_content = NULL;
+		}
+
+		if (subject) {
+			strncpy(p_match->subject, subject, sizeof(p_match->subject));
 		}
 
 		spush(&matches, p_match);
