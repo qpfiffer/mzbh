@@ -600,8 +600,8 @@ int by_thread_handler(const m38_http_request *request, m38_http_response *respon
 				else
 					gshkl_add_string(_post_sub, "post_no", "");
 
-				const char *w_filename = PQgetvalue(res, i, PQfnumber(res, "w.filename"));
-				const char *wa_filename = PQgetvalue(res, i, PQfnumber(res, "wa.filename"));
+				const char *w_filename = PQgetvalue(res, i, PQfnumber(res, "w_filename"));
+				const char *wa_filename = PQgetvalue(res, i, PQfnumber(res, "wa_filename"));
 				if (w_filename && strlen(w_filename)) {
 					gshkl_add_string(_post_sub, "image", w_filename);
 				} else if (wa_filename && strlen(wa_filename)) {

@@ -79,10 +79,10 @@ PGresult *get_posts_by_thread_id(const unsigned int id) {
 		goto error;
 
 	res = PQexecParams(conn,
-					  "SELECT p.*, w.filename, wa.filename FROM posts AS p "
+					  "SELECT p.*, w.filename AS w_filename, wa.filename AS wa_filename FROM posts AS p "
 						"JOIN threads AS t ON p.thread_id = t.id "
-						"JOIN webms AS w ON w.post_id = p.id "
-						"JOIN webm_aliases AS wa ON wa.post_id = p.id "
+						"FULL OUTER JOIN webms AS w ON w.post_id = p.id "
+						"FULL OUTER JOIN webm_aliases AS wa ON wa.post_id = p.id "
 						"WHERE t.id = $1",
 					  1,
 					  NULL,
