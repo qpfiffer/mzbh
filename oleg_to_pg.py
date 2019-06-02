@@ -61,7 +61,11 @@ def insert_thread(conn, oconn, okey, od, should_commit):
         if post_no:
             post_no = int(post_no)
 
-        pdata = (time.time(), post_key, post_no, int(pl['post_id']),
+        created_at = pl.get('created_at', None)
+        if not created_at:
+            created_at = time.time()
+
+        pdata = (created_at, post_key, post_no, int(pl['post_id']),
                 pl['board'], body_content, json.dumps(pl['replied_to_keys']),
                 thread_id)
         cur.execute("""INSERT INTO posts
