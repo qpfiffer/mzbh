@@ -1,6 +1,7 @@
 // vim: noet ts=4 sw=4
 #pragma once
 #include <libpq-fe.h>
+#include <stdint.h>
 #include "common_defs.h"
 
 #define DB_PG_CONNECTION_INFO "postgresql:///waifu"

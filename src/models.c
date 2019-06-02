@@ -40,10 +40,10 @@ webm *deserialize_webm_from_tuples(const PGresult *res) {
 	strncpy(to_return->file_path, PQgetvalue(res, 0, file_path_col), sizeof(to_return->file_path));
 	strncpy(to_return->filename, PQgetvalue(res, 0, filename_col), sizeof(to_return->filename));
 	strncpy(to_return->board, PQgetvalue(res, 0, board_col), sizeof(to_return->board));
-	to_return->size = (size_t)atoi(PQgetvalue(res, 0, size_col));
-	to_return->post_id = (unsigned int)atoi(PQgetvalue(res, 0, post_id_col));
-	to_return->created_at = (time_t)atoi(PQgetvalue(res, 0, created_at_col));
-	to_return->id = (unsigned int)atoi(PQgetvalue(res, 0, id_col));
+	to_return->size = (size_t)atol(PQgetvalue(res, 0, size_col));
+	to_return->post_id = (unsigned int)atol(PQgetvalue(res, 0, post_id_col));
+	to_return->created_at = (time_t)atol(PQgetvalue(res, 0, created_at_col));
+	to_return->id = (unsigned int)atol(PQgetvalue(res, 0, id_col));
 
 
 	return to_return;
@@ -73,10 +73,10 @@ webm_alias *deserialize_alias_from_tuples(const PGresult *res, const unsigned in
 	strncpy(to_return->file_path, PQgetvalue(res, idx, file_path_col), sizeof(to_return->file_path));
 	strncpy(to_return->filename, PQgetvalue(res, idx, filename_col), sizeof(to_return->filename));
 	strncpy(to_return->board, PQgetvalue(res, idx, board_col), sizeof(to_return->board));
-	to_return->post_id = (unsigned int)atoi(PQgetvalue(res, idx, post_id_col));
-	to_return->webm_id = (unsigned int)atoi(PQgetvalue(res, idx, webm_id_col));
-	to_return->created_at = (time_t)atoi(PQgetvalue(res, idx, created_at_col));
-	to_return->id = (unsigned int)atoi(PQgetvalue(res, idx, id_col));
+	to_return->post_id = (unsigned int)atol(PQgetvalue(res, idx, post_id_col));
+	to_return->webm_id = (unsigned int)atol(PQgetvalue(res, idx, webm_id_col));
+	to_return->created_at = (time_t)atol(PQgetvalue(res, idx, created_at_col));
+	to_return->id = (unsigned int)atol(PQgetvalue(res, idx, id_col));
 
 	return to_return;
 }
@@ -103,11 +103,11 @@ post *deserialize_post_from_tuples(const PGresult *res, const unsigned int idx) 
 	const int replied_to_keys_col = PQfnumber(res, "replied_to_keys");
 	const int created_at_col = PQfnumber(res, "created_at");
 
-	to_return->fourchan_post_id = atoi(PQgetvalue(res, idx, fourchan_post_id_col));
-	to_return->fourchan_post_no = atoi(PQgetvalue(res, idx, fourchan_post_no_col));
-	to_return->thread_id = atoi(PQgetvalue(res, idx, thread_id_col));
-	to_return->id = atoi(PQgetvalue(res, idx, id_col));
-	to_return->created_at = (time_t)atoi(PQgetvalue(res, idx, created_at_col));
+	to_return->fourchan_post_id = atol(PQgetvalue(res, idx, fourchan_post_id_col));
+	to_return->fourchan_post_no = atol(PQgetvalue(res, idx, fourchan_post_no_col));
+	to_return->thread_id = atol(PQgetvalue(res, idx, thread_id_col));
+	to_return->id = atol(PQgetvalue(res, idx, id_col));
+	to_return->created_at = (time_t)atol(PQgetvalue(res, idx, created_at_col));
 
 	strncpy(to_return->oleg_key, PQgetvalue(res, idx, oleg_key_col), sizeof(to_return->oleg_key));
 	strncpy(to_return->board, PQgetvalue(res, idx, board_col), sizeof(to_return->board));
@@ -160,8 +160,8 @@ thread *deserialize_thread_from_tuples(const PGresult *res, const unsigned int i
 	const int created_at_col = PQfnumber(res, "created_at");
 	const int subject_col = PQfnumber(res, "replied_to_keys");
 
-	to_return->id = atoi(PQgetvalue(res, idx, id_col));
-	to_return->created_at = (time_t)atoi(PQgetvalue(res, idx, created_at_col));
+	to_return->id = atol(PQgetvalue(res, idx, id_col));
+	to_return->created_at = (time_t)atol(PQgetvalue(res, idx, created_at_col));
 
 	strncpy(to_return->oleg_key, PQgetvalue(res, idx, oleg_key_col), sizeof(to_return->oleg_key));
 	strncpy(to_return->board, PQgetvalue(res, idx, board_col), sizeof(to_return->board));

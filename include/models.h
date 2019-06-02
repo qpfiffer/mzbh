@@ -25,7 +25,7 @@ typedef struct webm {
 	char file_path[MAX_IMAGE_FILENAME_SIZE];
 	unsigned char _null_term_hax_4;
 
-	unsigned int post_id;
+	uint64_t post_id;
 	time_t created_at;
 	size_t size;
 } __attribute__((__packed__)) webm;
@@ -52,8 +52,8 @@ typedef struct webm_alias {
 	char file_path[MAX_IMAGE_FILENAME_SIZE];
 	unsigned char _null_term_hax_4;
 
-	unsigned int post_id;
-	unsigned int webm_id;
+	uint64_t post_id;
+	uint64_t webm_id;
 
 	time_t created_at;
 } __attribute__((__packed__)) webm_alias;
@@ -71,7 +71,7 @@ typedef struct thread {
 	char oleg_key[MAX_KEY_SIZE];
 	unsigned char _null_term_hax_2;
 
-	unsigned int id;
+	uint64_t id;
 	time_t created_at;
 	char *subject;
 } __attribute__((__packed__)) thread;
@@ -93,14 +93,14 @@ typedef struct post {
 	char oleg_key[MAX_KEY_SIZE];
 	unsigned char _null_term_hax_2;
 
-	unsigned int fourchan_post_id; /* post date */
-	unsigned int fourchan_post_no; /* post number */
+	uint64_t fourchan_post_id; /* post date */
+	uint64_t fourchan_post_no; /* post number */
 
 	char *body_content;
 	vector *replied_to_keys; /* keys that this post replied to. */
 
-	unsigned int id; /* DB ID */
-	unsigned int thread_id; /* "Foreign key" to thread object. */
+	uint64_t id; /* DB ID */
+	uint64_t thread_id; /* "Foreign key" to thread object. */
 	time_t created_at;
 } __attribute__((__packed__)) post;
 

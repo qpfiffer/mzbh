@@ -562,7 +562,7 @@ int by_thread_handler(const m38_http_request *request, m38_http_response *respon
 	if (thread_id == NULL || request->resource + request->matches[1].rm_so == 0)
 		return 404;
 
-	thread *_thread = get_thread_by_id(atoi(thread_id));
+	thread *_thread = get_thread_by_id(atol(thread_id));
 	if (_thread == NULL)
 		return 404;
 
@@ -665,7 +665,7 @@ int by_thread_handler(const m38_http_request *request, m38_http_response *respon
 // 	gshkl_add_int(ctext, "total", total);
 // 	return m38_render_file(ctext, "./templates/sorted_by_aliases.html", response);
 // }
- 
+
 int board_handler(const m38_http_request *request, m38_http_response *response) {
 	return _board_handler(request, response, 0);
 }

@@ -52,7 +52,7 @@ unsigned int get_record_count_in_table(const char *query_command) {
 	}
 
 	char *bytes = PQgetvalue(res, 0, 0);
-	ret = atoi(bytes);
+	ret = atol(bytes);
 
 	_finish_pg_connection(conn);
 
@@ -200,7 +200,7 @@ unsigned int set_image(const webm *webm) {
 		goto error;
 
 	char post_id_buf[64] = {0};
-	snprintf(post_id_buf, sizeof(post_id_buf), "%d", webm->post_id);
+	snprintf(post_id_buf, sizeof(post_id_buf), "%lu", webm->post_id);
 
 	char size_buf[64] = {0};
 	snprintf(size_buf, sizeof(size_buf), "%ld", webm->size);
@@ -234,7 +234,7 @@ unsigned int set_image(const webm *webm) {
 	if (PQntuples(res) <= 0)
 		goto error;
 
-	unsigned int id = atoi(PQgetvalue(res, 0, 0));
+	unsigned int id = atol(PQgetvalue(res, 0, 0));
 
 	PQclear(res);
 	_finish_pg_connection(conn);
@@ -322,13 +322,10 @@ unsigned int set_aliased_image(const webm_alias *webm) {
 		goto error;
 
 	char post_id_buf[64] = {0};
-	snprintf(post_id_buf, sizeof(post_id_buf), "%d", webm->post_id);
+	snprintf(post_id_buf, sizeof(post_id_buf), "%lu", webm->post_id);
 
 	char webm_id_buf[64] = {0};
-	snprintf(webm_id_buf, sizeof(webm_id_buf), "%d", webm->webm_id);
-
-	char size_buf[64] = {0};
-	snprintf(size_buf, sizeof(size_buf), "%ld", webm->size);
+	snprintf(webm_id_buf, sizeof(webm_id_buf), "%lu", webm->webm_id);
 
 	const char *param_values[] = {
 		key,
@@ -337,13 +334,12 @@ unsigned int set_aliased_image(const webm_alias *webm) {
 		webm->board,
 		webm->file_path,
 		post_id_buf,
-		webm_id_buf,
-		size_buf
+		webm_id_buf
 	};
 	res = PQexecParams(conn,
-					  "INSERT INTO webms (oleg_key, file_hash, filename,"
-					  "board, file_path, post_id, webm_id, size)"
-					  "VALUES ($1, $2, $3, $4, $5, $6, $7, $8) "
+					  "INSERT INTO webm_aliases (oleg_key, file_hash, filename,"
+					  "board, file_path, post_id, webm_id)"
+					  "VALUES ($1, $2, $3, $4, $5, $6, $7) "
 					  "RETURNING id;",
 					  7,
 					  NULL,
@@ -360,7 +356,7 @@ unsigned int set_aliased_image(const webm_alias *webm) {
 	if (PQntuples(res) <= 0)
 		goto error;
 
-	unsigned int id = atoi(PQgetvalue(res, 0, 0));
+	unsigned int id = atol(PQgetvalue(res, 0, 0));
 
 	PQclear(res);
 	_finish_pg_connection(conn);
@@ -410,7 +406,8 @@ static int _insert_aliased_webm(const char *file_path,
 								const char *filename,
 								const char image_hash[static HASH_IMAGE_STR_SIZE],
 								const char board[static MAX_BOARD_NAME_SIZE],
-								const unsigned int post_id) {
+								const unsigned int post_id,
+								const unsigned int webm_id) {
 	time_t modified_time = get_file_creation_date(file_path);
 	if (modified_time == 0) {
 		m38_log_msg(LOG_ERR, "IAWMT: '%s' does not exist.", file_path);
@@ -429,7 +426,8 @@ static int _insert_aliased_webm(const char *file_path,
 		.filename = {0},
 		.board = {0},
 		.created_at = modified_time,
-		.post_id = post_id
+		.post_id = post_id,
+		.webm_id = webm_id
 	};
 
 	memcpy(to_insert.file_hash, image_hash, sizeof(to_insert.file_hash));
@@ -533,7 +531,7 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 	 * an alias is it's filename.
 	 */
 	if (_old_alias == NULL) {
-		rc = _insert_aliased_webm(file_path, filename, image_hash, board, post_id);
+		rc = _insert_aliased_webm(file_path, filename, image_hash, board, post_id, _old_webm->id);
 		m38_log_msg(LOG_FUN, "%s (%s) is a new alias of %s (%s).", filename, board, _old_webm->filename, _old_webm->board);
 	} else {
 		m38_log_msg(LOG_WARN, "%s is already marked as an alias of %s. Old alias is: '%s'",
@@ -647,7 +645,7 @@ error:
 	return NULL;
 }
 
-static unsigned int post_exists(const char post_key[static MAX_KEY_SIZE]) {
+static unsigned int get_post_id_by_oleg_key(const char post_key[static MAX_KEY_SIZE]) {
 	PGresult *res = NULL;
 	PGconn *conn = NULL;
 
@@ -657,7 +655,7 @@ static unsigned int post_exists(const char post_key[static MAX_KEY_SIZE]) {
 
 	const char *param_values[] = {post_key};
 	res = PQexecParams(conn,
-					  "SELECT count(*) FROM posts WHERE oleg_key = $1",
+					  "SELECT id FROM posts WHERE oleg_key = $1",
 					  1,
 					  NULL,
 					  param_values,
@@ -670,13 +668,15 @@ static unsigned int post_exists(const char post_key[static MAX_KEY_SIZE]) {
 		goto error;
 	}
 
-	if (atoi(PQgetvalue(res, 0, 0)) <= 0)
-		goto error; // Not actually an error
+	if (PQntuples(res) <= 0)
+		goto error;
+
+	unsigned int val = atol(PQgetvalue(res, 0, 0));
 
 	PQclear(res);
 	_finish_pg_connection(conn);
 
-	return 1;
+	return val;
 
 error:
 	if (res)
@@ -711,7 +711,7 @@ static unsigned int get_thread_id_for_oleg_key(const char key[static MAX_KEY_SIZ
 	if (PQntuples(res) <= 0)
 		goto error;
 
-	unsigned int id = atoi(PQgetvalue(res, 0, 0));
+	unsigned int id = atol(PQgetvalue(res, 0, 0));
 
 	PQclear(res);
 	_finish_pg_connection(conn);
@@ -759,7 +759,7 @@ static int _insert_thread(const thread *to_save) {
 	if (PQntuples(res) <= 0)
 		goto error;
 
-	unsigned int id = atoi(PQgetvalue(res, 0, 0));
+	unsigned int id = atol(PQgetvalue(res, 0, 0));
 
 	PQclear(res);
 	_finish_pg_connection(conn);
@@ -782,13 +782,13 @@ static int _insert_post(const post *to_save) {
 		goto error;
 
 	char thread_id[256] = {0};
-	snprintf(thread_id, sizeof(thread_id), "%d", to_save->thread_id);
+	snprintf(thread_id, sizeof(thread_id), "%lu", to_save->thread_id);
 
 	char fourchan_post_id[256] = {0};
-	snprintf(fourchan_post_id, sizeof(fourchan_post_id), "%d", to_save->fourchan_post_id);
+	snprintf(fourchan_post_id, sizeof(fourchan_post_id), "%lu", to_save->fourchan_post_id);
 
 	char fourchan_post_no[256] = {0};
-	snprintf(fourchan_post_no, sizeof(fourchan_post_no), "%d", to_save->fourchan_post_no);
+	snprintf(fourchan_post_no, sizeof(fourchan_post_no), "%lu", to_save->fourchan_post_no);
 
 	JSON_Value *thread_keys = json_value_init_array();
 	JSON_Array *thread_keys_array = json_value_get_array(thread_keys);
@@ -834,7 +834,7 @@ static int _insert_post(const post *to_save) {
 	if (PQntuples(res) <= 0)
 		goto error;
 
-	unsigned int id = atoi(PQgetvalue(res, 0, 0));
+	unsigned int id = atol(PQgetvalue(res, 0, 0));
 
 	PQclear(res);
 	_finish_pg_connection(conn);
@@ -856,11 +856,13 @@ unsigned int add_post_to_db(const struct post_match *p_match) {
 	char post_key[MAX_KEY_SIZE] = {0};
 	create_post_key(p_match->board, p_match->post_date, post_key);
 
-	m38_log_msg(LOG_INFO, "Creating post with key: %s", post_key);
-
-	if (post_exists(post_key)) {
+	unsigned int existing_post_id = get_post_id_by_oleg_key(post_key);
+	if (existing_post_id) {
 		/* We already have this post saved. */
-		return 0;
+		m38_log_msg(LOG_WARN, "Post %s already exists.", post_key);
+		return existing_post_id;
+	} else {
+		m38_log_msg(LOG_INFO, "Creating post with key: %s", post_key);
 	}
 
 	/* 1. Create thread key */
@@ -907,11 +909,10 @@ unsigned int add_post_to_db(const struct post_match *p_match) {
 		.created_at = 0
 	};
 
-	to_insert.fourchan_post_id = atoi(p_match->post_date);
-	to_insert.fourchan_post_no = atoi(p_match->post_no);
+	to_insert.fourchan_post_id = atol(p_match->post_date);
+	to_insert.fourchan_post_no = atol(p_match->post_no);
 	strncpy(to_insert.board, p_match->board, sizeof(to_insert.board));
 	strncpy(to_insert.oleg_key, post_key, sizeof(to_insert.oleg_key));
-	//strncpy(to_insert.webm_key, webm_key, sizeof(to_insert.webm_key));
 
 	if (p_match->body_content != NULL)
 		to_insert.body_content = strdup(p_match->body_content);
