@@ -9,93 +9,371 @@
 #include <unistd.h>
 
 #include <38-moths/logging.h>
+#include <libpq-fe.h>
 
 #include "db.h"
 #include "benchmark.h"
 #include "http.h"
 #include "models.h"
 #include "parse.h"
+#include "parson.h"
 #include "utils.h"
 
-/* Webm get/set stuff */
-webm *get_image(const char image_hash[static HASH_ARRAY_SIZE], char out_key[static MAX_KEY_SIZE]) {
-	create_webm_key(image_hash, out_key);
+static PGconn *_get_pg_connection() {
+	PGconn *conn = PQconnectdb(DB_PG_CONNECTION_INFO);
 
-	size_t json_size = 0;
-	char *json = (char *)fetch_data_from_db(&oleg_conn, out_key, &json_size);
-	/* m38_log_msg(LOG_INFO, "Json from DB: %s", json); */
-
-	if (json == NULL)
+	if (PQstatus(conn) != CONNECTION_OK) {
+		m38_log_msg(LOG_ERR, "Could not connect to Postgres: %s", PQerrorMessage(conn));
 		return NULL;
+	}
 
-	webm *deserialized = deserialize_webm(json);
-	free(json);
-	return deserialized;
+	return conn;
 }
 
-int set_image(const webm *webm) {
+static void _finish_pg_connection(PGconn *conn) {
+	if (conn)
+		PQfinish(conn);
+}
+
+unsigned int get_record_count_in_table(const char *query_command) {
+	PGresult *res = NULL;
+	PGconn *conn = NULL;
+	unsigned int ret = 0;
+
+	conn = _get_pg_connection();
+	if (!conn)
+		goto error;
+
+	res = PQexec(conn, query_command);
+
+	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+		m38_log_msg(LOG_ERR, "SELECT failed: %s", PQerrorMessage(conn));
+		goto error;
+	}
+
+	char *bytes = PQgetvalue(res, 0, 0);
+	ret = atol(bytes);
+
+	_finish_pg_connection(conn);
+
+	return ret;
+
+error:
+	if (res)
+		PQclear(res);
+	_finish_pg_connection(conn);
+	return 0;
+}
+
+PGresult *get_posts_by_thread_id(const unsigned int id) {
+	PGresult *res = NULL;
+	PGconn *conn = NULL;
+
+	char id_buf[64] = {0};
+	snprintf(id_buf, sizeof(id_buf), "%d", id);
+
+	const char *param_values[] = {id_buf};
+
+	conn = _get_pg_connection();
+	if (!conn)
+		goto error;
+
+	res = PQexecParams(conn,
+					  "SELECT p.*, w.filename AS w_filename, wa.filename AS wa_filename FROM posts AS p "
+						"JOIN threads AS t ON p.thread_id = t.id "
+						"FULL OUTER JOIN webms AS w ON w.post_id = p.id "
+						"FULL OUTER JOIN webm_aliases AS wa ON wa.post_id = p.id "
+						"WHERE t.id = $1",
+					  1,
+					  NULL,
+					  param_values,
+					  NULL,
+					  NULL,
+					  0);
+
+	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+		m38_log_msg(LOG_ERR, "SELECT failed: %s", PQerrorMessage(conn));
+		goto error;
+	}
+
+	_finish_pg_connection(conn);
+
+	return res;
+
+error:
+	if (res)
+		PQclear(res);
+	_finish_pg_connection(conn);
+	return NULL;
+}
+
+PGresult *get_aliases_by_webm_id(const unsigned int id) {
+	PGresult *res = NULL;
+	PGconn *conn = NULL;
+
+	char id_buf[64] = {0};
+	snprintf(id_buf, sizeof(id_buf), "%d", id);
+
+	const char *param_values[] = {id_buf};
+
+	conn = _get_pg_connection();
+	if (!conn)
+		goto error;
+
+	res = PQexecParams(conn,
+					  "SELECT a.* FROM webm_aliases "
+					  "WHERE a.webm_id = $1",
+					  1,
+					  NULL,
+					  param_values,
+					  NULL,
+					  NULL,
+					  0);
+
+	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+		m38_log_msg(LOG_ERR, "SELECT failed: %s", PQerrorMessage(conn));
+		goto error;
+	}
+
+	_finish_pg_connection(conn);
+
+	return res;
+
+error:
+	if (res)
+		PQclear(res);
+	_finish_pg_connection(conn);
+	return NULL;
+}
+
+/* Webm get/set stuff */
+webm *get_image_by_oleg_key(const char image_hash[static HASH_ARRAY_SIZE], char out_key[static MAX_KEY_SIZE]) {
+	PGresult *res = NULL;
+	PGconn *conn = NULL;
+
+	create_webm_key(image_hash, out_key);
+	const char *param_values[] = {image_hash};
+
+	conn = _get_pg_connection();
+	if (!conn)
+		goto error;
+
+	res = PQexecParams(conn,
+					  "SELECT * FROM webms WHERE file_hash = $1",
+					  1,
+					  NULL,
+					  param_values,
+					  NULL,
+					  NULL,
+					  0);
+
+	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+		m38_log_msg(LOG_ERR, "SELECT failed: %s", PQerrorMessage(conn));
+		goto error;
+	}
+
+	webm *deserialized = deserialize_webm_from_tuples(res);
+	if (!deserialized)
+		goto error;
+
+	PQclear(res);
+	_finish_pg_connection(conn);
+
+	return deserialized;
+
+error:
+	if (res)
+		PQclear(res);
+	_finish_pg_connection(conn);
+	return NULL;
+}
+
+unsigned int set_image(const webm *webm) {
 	char key[MAX_KEY_SIZE] = {0};
 	create_webm_key(webm->file_hash, key);
 
-	char *serialized = serialize_webm(webm);
-	m38_log_msg(LOG_INFO, "Serialized: %s", serialized);
+	PGresult *res = NULL;
+	PGconn *conn = NULL;
 
-	int ret = store_data_in_db(&oleg_conn, key, (unsigned char *)serialized, strlen(serialized));
-	free(serialized);
+	conn = _get_pg_connection();
+	if (!conn)
+		goto error;
 
-	return ret;
+	char post_id_buf[64] = {0};
+	snprintf(post_id_buf, sizeof(post_id_buf), "%lu", webm->post_id);
+
+	char size_buf[64] = {0};
+	snprintf(size_buf, sizeof(size_buf), "%ld", webm->size);
+
+	const char *param_values[] = {
+		key,
+		webm->file_hash,
+		webm->filename,
+		webm->board,
+		webm->file_path,
+		post_id_buf,
+		size_buf
+	};
+	res = PQexecParams(conn,
+					  "INSERT INTO webms (oleg_key, file_hash, filename,"
+					  "board, file_path, post_id, size)"
+					  "VALUES ($1, $2, $3, $4, $5, $6, $7) "
+					  "RETURNING id;",
+					  7,
+					  NULL,
+					  param_values,
+					  NULL,
+					  NULL,
+					  0);
+
+	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+		m38_log_msg(LOG_ERR, "SELECT failed: %s", PQerrorMessage(conn));
+		goto error;
+	}
+
+	if (PQntuples(res) <= 0)
+		goto error;
+
+	unsigned int id = atol(PQgetvalue(res, 0, 0));
+
+	PQclear(res);
+	_finish_pg_connection(conn);
+
+	return id;
+
+error:
+	if (res)
+		PQclear(res);
+	_finish_pg_connection(conn);
+	return 0;
 }
 
 webm_alias *get_aliased_image_with_key(const char key[static MAX_KEY_SIZE]) {
-	size_t json_size = 0;
-	char *json = (char *)fetch_data_from_db(&oleg_conn, key, &json_size);
+	PGresult *res = NULL;
+	PGconn *conn = NULL;
 
-	if (json == NULL)
-		return NULL;
+	const char *param_values[] = {key};
 
-	webm_alias *alias = deserialize_alias(json);
-	free(json);
-	return alias;
+	conn = _get_pg_connection();
+	if (!conn)
+		goto error;
+
+	res = PQexecParams(conn,
+					  "SELECT * FROM webm_aliases WHERE oleg_key = $1",
+					  1,
+					  NULL,
+					  param_values,
+					  NULL,
+					  NULL,
+					  0);
+
+	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+		m38_log_msg(LOG_ERR, "SELECT failed: %s", PQerrorMessage(conn));
+		goto error;
+	}
+
+	webm_alias *deserialized = deserialize_alias_from_tuples(res, 0);
+	if (!deserialized)
+		goto error;
+
+	PQclear(res);
+	_finish_pg_connection(conn);
+
+	return deserialized;
+
+error:
+	if (res)
+		PQclear(res);
+	_finish_pg_connection(conn);
+	return NULL;
 }
 
-webm_alias *get_aliased_image(const char filepath[static MAX_IMAGE_FILENAME_SIZE], char out_key[static MAX_KEY_SIZE]) {
+webm_alias *get_aliased_image_by_oleg_key(const char filepath[static MAX_IMAGE_FILENAME_SIZE], char out_key[static MAX_KEY_SIZE]) {
 	create_alias_key(filepath, out_key);
 
 	return get_aliased_image_with_key(out_key);
 }
 
-webm_to_alias *get_webm_to_alias(const char image_hash[static HASH_ARRAY_SIZE]) {
+
+// webm_to_alias *get_webm_to_alias(const char image_hash[static HASH_ARRAY_SIZE]) {
+// 	char key[MAX_KEY_SIZE] = {0};
+// 	create_webm_to_alias_key(image_hash, key);
+//
+// 	size_t json_size = 0;
+// 	char *json = (char *)fetch_data_from_db(&oleg_conn, key, &json_size);
+//
+// 	if (json == NULL)
+// 		return NULL;
+//
+// 	webm_to_alias *w2a = deserialize_webm_to_alias(json);
+// 	free(json);
+// 	return w2a;
+// }
+
+unsigned int set_aliased_image(const webm_alias *webm) {
 	char key[MAX_KEY_SIZE] = {0};
-	create_webm_to_alias_key(image_hash, key);
+	create_alias_key(webm->file_hash, key);
 
-	size_t json_size = 0;
-	char *json = (char *)fetch_data_from_db(&oleg_conn, key, &json_size);
+	PGresult *res = NULL;
+	PGconn *conn = NULL;
 
-	if (json == NULL)
-		return NULL;
+	conn = _get_pg_connection();
+	if (!conn)
+		goto error;
 
-	webm_to_alias *w2a = deserialize_webm_to_alias(json);
-	free(json);
-	return w2a;
+	char post_id_buf[64] = {0};
+	snprintf(post_id_buf, sizeof(post_id_buf), "%lu", webm->post_id);
+
+	char webm_id_buf[64] = {0};
+	snprintf(webm_id_buf, sizeof(webm_id_buf), "%lu", webm->webm_id);
+
+	const char *param_values[] = {
+		key,
+		webm->file_hash,
+		webm->filename,
+		webm->board,
+		webm->file_path,
+		post_id_buf,
+		webm_id_buf
+	};
+	res = PQexecParams(conn,
+					  "INSERT INTO webm_aliases (oleg_key, file_hash, filename,"
+					  "board, file_path, post_id, webm_id)"
+					  "VALUES ($1, $2, $3, $4, $5, $6, $7) "
+					  "RETURNING id;",
+					  7,
+					  NULL,
+					  param_values,
+					  NULL,
+					  NULL,
+					  0);
+
+	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+		m38_log_msg(LOG_ERR, "SELECT failed: %s", PQerrorMessage(conn));
+		goto error;
+	}
+
+	if (PQntuples(res) <= 0)
+		goto error;
+
+	unsigned int id = atol(PQgetvalue(res, 0, 0));
+
+	PQclear(res);
+	_finish_pg_connection(conn);
+
+	return id;
+
+error:
+	if (res)
+		PQclear(res);
+	_finish_pg_connection(conn);
+	return 0;
 }
 
-/* Alias get/set stuff */
-int set_aliased_image(const webm_alias *alias) {
-	char key[MAX_KEY_SIZE] = {0};
-	create_alias_key(alias->file_path, key);
 
-	char *serialized = serialize_alias(alias);
-	/* m38_log_msg(LOG_INFO, "Serialized: %s", serialized); */
-
-	int ret = store_data_in_db(&oleg_conn, key, (unsigned char *)serialized, strlen(serialized));
-	free(serialized);
-
-	return ret;
-}
-
-static int _insert_webm(const char *file_path, const char filename[static MAX_IMAGE_FILENAME_SIZE], 
+static int _insert_webm(const char *file_path, const char filename[static MAX_IMAGE_FILENAME_SIZE],
 						const char image_hash[static HASH_IMAGE_STR_SIZE], const char board[static MAX_BOARD_NAME_SIZE],
-						const char post_key[MAX_KEY_SIZE]) {
+						const unsigned int post_id) {
 	time_t modified_time = get_file_creation_date(file_path);
 	if (modified_time == 0) {
 		m38_log_msg(LOG_ERR, "IWMT: '%s' does not exist.", file_path);
@@ -114,13 +392,12 @@ static int _insert_webm(const char *file_path, const char filename[static MAX_IM
 		.board = {0},
 		.created_at = modified_time,
 		.size = size,
-		.post = {0}
+		.post_id = post_id
 	};
 	memcpy(to_insert.file_hash, image_hash, sizeof(to_insert.file_hash));
 	memcpy(to_insert.file_path, file_path, sizeof(to_insert.file_path));
 	memcpy(to_insert.filename, filename, sizeof(to_insert.filename));
 	memcpy(to_insert.board, board, sizeof(to_insert.board));
-	memcpy(to_insert.post, post_key, sizeof(to_insert.post));
 
 	return set_image(&to_insert);
 }
@@ -129,7 +406,8 @@ static int _insert_aliased_webm(const char *file_path,
 								const char *filename,
 								const char image_hash[static HASH_IMAGE_STR_SIZE],
 								const char board[static MAX_BOARD_NAME_SIZE],
-								const char post_key[MAX_KEY_SIZE]) {
+								const unsigned int post_id,
+								const unsigned int webm_id) {
 	time_t modified_time = get_file_creation_date(file_path);
 	if (modified_time == 0) {
 		m38_log_msg(LOG_ERR, "IAWMT: '%s' does not exist.", file_path);
@@ -148,14 +426,14 @@ static int _insert_aliased_webm(const char *file_path,
 		.filename = {0},
 		.board = {0},
 		.created_at = modified_time,
-		.post = {0}
+		.post_id = post_id,
+		.webm_id = webm_id
 	};
 
 	memcpy(to_insert.file_hash, image_hash, sizeof(to_insert.file_hash));
 	memcpy(to_insert.filename, filename, sizeof(to_insert.filename));
 	memcpy(to_insert.file_path, file_path, sizeof(to_insert.file_path));
 	memcpy(to_insert.board, board, sizeof(to_insert.board));
-	memcpy(to_insert.post, post_key, sizeof(to_insert.post));
 
 	return set_aliased_image(&to_insert);
 }
@@ -214,17 +492,18 @@ update_time: ; /* Yes the semicolon is necessary. Fucking C. */
 	free(real_old_fpath);
 }
 int add_image_to_db(const char *file_path, const char *filename, const char board[MAX_BOARD_NAME_SIZE],
-		const char post_key[MAX_KEY_SIZE], char out_webm_key[static MAX_KEY_SIZE]) {
+		const unsigned int post_id) {
 	char image_hash[HASH_IMAGE_STR_SIZE] = {0};
 	if (!hash_file(file_path, image_hash)) {
 		m38_log_msg(LOG_ERR, "Could not hash '%s'.", file_path);
 		return 0;
 	}
 
-	webm *_old_webm = get_image(image_hash, out_webm_key);
+	char out_webm_key[MAX_KEY_SIZE] = {0};
+	webm *_old_webm = get_image_by_oleg_key(image_hash, out_webm_key);
 
 	if (!_old_webm) {
-		int rc = _insert_webm(file_path, filename, image_hash, board, post_key);
+		int rc = _insert_webm(file_path, filename, image_hash, board, post_id);
 		if (!rc)
 			m38_log_msg(LOG_ERR, "Something went wrong inserting webm.");
 		return rc;
@@ -244,7 +523,7 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 	}
 
 	/* It's not the canonical original, so insert an alias. */
-	webm_alias *_old_alias = get_aliased_image(file_path, out_webm_key);
+	webm_alias *_old_alias = get_aliased_image_by_oleg_key(file_path, out_webm_key);
 	int rc = 1;
 	/* If we DONT already have an alias for this image with this filename,
 	 * insert one.
@@ -252,7 +531,7 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 	 * an alias is it's filename.
 	 */
 	if (_old_alias == NULL) {
-		rc = _insert_aliased_webm(file_path, filename, image_hash, board, post_key);
+		rc = _insert_aliased_webm(file_path, filename, image_hash, board, post_id, _old_webm->id);
 		m38_log_msg(LOG_FUN, "%s (%s) is a new alias of %s (%s).", filename, board, _old_webm->filename, _old_webm->board);
 	} else {
 		m38_log_msg(LOG_WARN, "%s is already marked as an alias of %s. Old alias is: '%s'",
@@ -261,93 +540,329 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 
 	/* Create or update the many2many between these two: */
 	/* We should already have the alias key stored from up above. */
-	associate_alias_with_webm(_old_webm, out_webm_key);
+	//associate_alias_with_webm(_old_webm, out_webm_key);
 
-	if (rc) {
-		/* We don't want old alias, we want current alias here. Otherwise all
-		 * of the timestamps are going to be the same as old_alias's.
-		 */
-		if (_old_alias == NULL) {
-			time_t new_stamp = get_file_creation_date(file_path);
-			if (new_stamp == 0) {
-				m38_log_msg(LOG_ERR, "Could not stat new alias.");
-			}
-
-			modify_aliased_file(file_path, _old_webm, new_stamp);
-		} else {
-			modify_aliased_file(file_path, _old_webm, _old_alias->created_at);
+	/* We don't want old alias, we want current alias here. Otherwise all
+	 * of the timestamps are going to be the same as old_alias's.
+	 */
+	if (_old_alias == NULL) {
+		time_t new_stamp = get_file_creation_date(file_path);
+		if (new_stamp == 0) {
+			m38_log_msg(LOG_ERR, "Could not stat new alias.");
 		}
-	} else
-		m38_log_msg(LOG_ERR, "Something went wrong when adding image to db.");
+
+		modify_aliased_file(file_path, _old_webm, new_stamp);
+	} else {
+		modify_aliased_file(file_path, _old_webm, _old_alias->created_at);
+	}
+
 	free(_old_alias);
 	free(_old_webm);
 	return rc;
 }
 
-struct thread *get_thread(const char key[static MAX_KEY_SIZE]) {
-	size_t json_size = 0;
-	char *json = (char *)fetch_data_from_db(&oleg_conn, key, &json_size);
+struct thread *get_thread_by_id(const unsigned int thread_id) {
+	PGresult *res = NULL;
+	PGconn *conn = NULL;
 
-	if (json == NULL)
-		return NULL;
+	conn = _get_pg_connection();
+	if (!conn)
+		goto error;
 
-	thread *_thread = deserialize_thread(json);
-	free(json);
-	return _thread;
-}
+	char id_buf[64] = {0};
+	snprintf(id_buf, sizeof(id_buf), "%d", thread_id);
+	const char *param_values[] = {id_buf};
 
-struct post *get_post(const char key[static MAX_KEY_SIZE]) {
-	size_t json_size = 0;
-	char *json = (char *)fetch_data_from_db(&oleg_conn, key, &json_size);
+	res = PQexecParams(conn,
+					  "SELECT * FROM threads WHERE id = $1",
+					  1,
+					  NULL,
+					  param_values,
+					  NULL,
+					  NULL,
+					  0);
 
-	if (json == NULL)
-		return NULL;
-
-	post *_post = deserialize_post(json);
-	free(json);
-	return _post;
-}
-
-static int _insert_thread(const char key[static MAX_KEY_SIZE], const thread *to_save) {
-	char *serialized = serialize_thread(to_save);
-	m38_log_msg(LOG_INFO, "Serialized thread: %s", serialized);
-
-	int ret = store_data_in_db(&oleg_conn, key, (unsigned char *)serialized, strlen(serialized));
-	free(serialized);
-
-	return ret;
-}
-
-static int _insert_post(const char key[static MAX_KEY_SIZE], const post *to_save) {
-	char *serialized = serialize_post(to_save);
-	m38_log_msg(LOG_INFO, "Serialized post: %s", serialized);
-
-	int ret = store_data_in_db(&oleg_conn, key, (unsigned char *)serialized, strlen(serialized));
-	if (ret != 1) {
-		m38_log_msg(LOG_ERR, "Could not store post in database. Ret code: %i", ret);
+	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+		m38_log_msg(LOG_ERR, "SELECT failed: %s", PQerrorMessage(conn));
+		goto error;
 	}
-	free(serialized);
 
-	return ret;
+	thread *deserialized = deserialize_thread_from_tuples(res, 0);
+	if (!deserialized)
+		goto error;
+
+	PQclear(res);
+	_finish_pg_connection(conn);
+
+	return deserialized;
+
+error:
+	if (res)
+		PQclear(res);
+	_finish_pg_connection(conn);
+	return NULL;
 }
 
-int add_post_to_db(const struct post_match *p_match, const char webm_key[static MAX_KEY_SIZE]) {
+
+struct post *get_post(const unsigned int post_id) {
+	PGresult *res = NULL;
+	PGconn *conn = NULL;
+
+	conn = _get_pg_connection();
+	if (!conn)
+		goto error;
+
+	char post_id_buf[64] = {0};
+	snprintf(post_id_buf, sizeof(post_id_buf), "%d", post_id);
+	const char *param_values[] = {post_id_buf};
+	res = PQexecParams(conn,
+					  "SELECT * FROM posts WHERE id = $1",
+					  1,
+					  NULL,
+					  param_values,
+					  NULL,
+					  NULL,
+					  0);
+
+	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+		m38_log_msg(LOG_ERR, "SELECT failed: %s", PQerrorMessage(conn));
+		goto error;
+	}
+
+	post *deserialized = deserialize_post_from_tuples(res, 0);
+	if (!deserialized)
+		goto error;
+
+	PQclear(res);
+	_finish_pg_connection(conn);
+
+	return deserialized;
+
+error:
+	if (res)
+		PQclear(res);
+	_finish_pg_connection(conn);
+	return NULL;
+}
+
+static unsigned int get_post_id_by_oleg_key(const char post_key[static MAX_KEY_SIZE]) {
+	PGresult *res = NULL;
+	PGconn *conn = NULL;
+
+	conn = _get_pg_connection();
+	if (!conn)
+		goto error;
+
+	const char *param_values[] = {post_key};
+	res = PQexecParams(conn,
+					  "SELECT id FROM posts WHERE oleg_key = $1",
+					  1,
+					  NULL,
+					  param_values,
+					  NULL,
+					  NULL,
+					  0);
+
+	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+		m38_log_msg(LOG_ERR, "SELECT failed: %s", PQerrorMessage(conn));
+		goto error;
+	}
+
+	if (PQntuples(res) <= 0)
+		goto error;
+
+	unsigned int val = atol(PQgetvalue(res, 0, 0));
+
+	PQclear(res);
+	_finish_pg_connection(conn);
+
+	return val;
+
+error:
+	if (res)
+		PQclear(res);
+	_finish_pg_connection(conn);
+	return 0;
+}
+
+static unsigned int get_thread_id_for_oleg_key(const char key[static MAX_KEY_SIZE]) {
+	PGresult *res = NULL;
+	PGconn *conn = NULL;
+
+	conn = _get_pg_connection();
+	if (!conn)
+		goto error;
+
+	const char *param_values[] = {key};
+	res = PQexecParams(conn,
+					  "SELECT id FROM threads WHERE oleg_key = $1",
+					  1,
+					  NULL,
+					  param_values,
+					  NULL,
+					  NULL,
+					  0);
+
+	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+		m38_log_msg(LOG_ERR, "SELECT failed: %s", PQerrorMessage(conn));
+		goto error;
+	}
+
+	if (PQntuples(res) <= 0)
+		goto error;
+
+	unsigned int id = atol(PQgetvalue(res, 0, 0));
+
+	PQclear(res);
+	_finish_pg_connection(conn);
+
+	return id;
+
+error:
+	if (res)
+		PQclear(res);
+	_finish_pg_connection(conn);
+	return 0;
+}
+
+
+
+static int _insert_thread(const thread *to_save) {
+	PGresult *res = NULL;
+	PGconn *conn = NULL;
+
+	conn = _get_pg_connection();
+	if (!conn)
+		goto error;
+
+	const char *param_values[] = {
+		to_save->oleg_key,
+		to_save->board,
+		to_save->subject
+	};
+	res = PQexecParams(conn,
+					  "INSERT INTO threads (oleg_key, board, subject)"
+					  "VALUES ($1, $2, $3) "
+					  "RETURNING id;",
+					  3,
+					  NULL,
+					  param_values,
+					  NULL,
+					  NULL,
+					  0);
+
+	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+		m38_log_msg(LOG_ERR, "SELECT failed: %s", PQerrorMessage(conn));
+		goto error;
+	}
+
+	if (PQntuples(res) <= 0)
+		goto error;
+
+	unsigned int id = atol(PQgetvalue(res, 0, 0));
+
+	PQclear(res);
+	_finish_pg_connection(conn);
+
+	return id;
+
+error:
+	if (res)
+		PQclear(res);
+	_finish_pg_connection(conn);
+	return 0;
+}
+
+static int _insert_post(const post *to_save) {
+	PGresult *res = NULL;
+	PGconn *conn = NULL;
+
+	conn = _get_pg_connection();
+	if (!conn)
+		goto error;
+
+	char thread_id[256] = {0};
+	snprintf(thread_id, sizeof(thread_id), "%lu", to_save->thread_id);
+
+	char fourchan_post_id[256] = {0};
+	snprintf(fourchan_post_id, sizeof(fourchan_post_id), "%lu", to_save->fourchan_post_id);
+
+	char fourchan_post_no[256] = {0};
+	snprintf(fourchan_post_no, sizeof(fourchan_post_no), "%lu", to_save->fourchan_post_no);
+
+	JSON_Value *thread_keys = json_value_init_array();
+	JSON_Array *thread_keys_array = json_value_get_array(thread_keys);
+
+	unsigned int i;
+	for (i = 0; i < to_save->replied_to_keys->count; i++)
+		json_array_append_string(thread_keys_array,
+				vector_get(to_save->replied_to_keys, i));
+
+	char *replied_to_json = json_serialize_to_string(thread_keys);
+
+	json_value_free(thread_keys);
+
+	const char *param_values[] = {
+		to_save->oleg_key,
+		fourchan_post_id,
+		fourchan_post_no,
+		thread_id,
+		to_save->board,
+		to_save->body_content,
+		replied_to_json
+	};
+	res = PQexecParams(conn,
+					  "INSERT INTO posts "
+					  "(oleg_key, fourchan_post_id, fourchan_post_no, thread_id, board,"
+					  " body_content, replied_to_keys)"
+					  "VALUES ($1, $2, $3, $4, $5, $6, $7) "
+					  "RETURNING id;",
+					  7,
+					  NULL,
+					  param_values,
+					  NULL,
+					  NULL,
+					  0);
+
+	free(replied_to_json);
+
+	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+		m38_log_msg(LOG_ERR, "SELECT failed: %s", PQerrorMessage(conn));
+		goto error;
+	}
+
+	if (PQntuples(res) <= 0)
+		goto error;
+
+	unsigned int id = atol(PQgetvalue(res, 0, 0));
+
+	PQclear(res);
+	_finish_pg_connection(conn);
+
+	return id;
+
+error:
+	if (res)
+		PQclear(res);
+	_finish_pg_connection(conn);
+	return 0;
+
+}
+
+unsigned int add_post_to_db(const struct post_match *p_match) {
 	if (!p_match)
 		return 1;
 
 	char post_key[MAX_KEY_SIZE] = {0};
 	create_post_key(p_match->board, p_match->post_date, post_key);
 
-	m38_log_msg(LOG_INFO, "Creating post with key: %s", post_key);
-
-	post *existing_post = get_post(post_key);
-	if (existing_post != NULL) {
+	unsigned int existing_post_id = get_post_id_by_oleg_key(post_key);
+	if (existing_post_id) {
 		/* We already have this post saved. */
-		vector_free(existing_post->replied_to_keys);
-		free(existing_post->body_content);
-		free(existing_post);
-
-		return 0;
+		m38_log_msg(LOG_WARN, "Post %s already exists.", post_key);
+		return existing_post_id;
+	} else {
+		m38_log_msg(LOG_INFO, "Creating post with key: %s", post_key);
 	}
 
 	/* 1. Create thread key */
@@ -355,150 +870,57 @@ int add_post_to_db(const struct post_match *p_match, const char webm_key[static 
 	create_thread_key(p_match->board, p_match->thread_number, thread_key);
 
 	/* 2. Check database for existing thread */
-	thread *existing_thread = get_thread(thread_key);
-	if (existing_thread == NULL) {
+	unsigned int thread_id = get_thread_id_for_oleg_key(thread_key);
+	if (!thread_id) {
 		/* 3. Create it if it doesn't exist */
 		thread _new_thread = {
+			.id = 0,
 			.board = {0},
 			._null_term_hax_1 = 0,
-			.post_keys = vector_new(MAX_KEY_SIZE, 2)
+			.oleg_key = {0},
+			._null_term_hax_2 = 0,
+			.subject = NULL,
+			.created_at = 0
 		};
 
-		existing_thread = malloc(sizeof(struct thread));
 		strncpy(_new_thread.board, p_match->board, sizeof(_new_thread.board));
-		memcpy(existing_thread, &_new_thread, sizeof(struct thread));
+		strncpy(_new_thread.oleg_key, thread_key, sizeof(_new_thread.oleg_key));
+		_new_thread.subject = strdup(p_match->subject);
+
+		thread_id = _insert_thread(&_new_thread);
+
+		free(_new_thread.subject);
 	}
 
 	/* 4. There is no 4. */
-	/* 5. Add new post key to thread foreign keys */
-	unsigned int i;
-	int found = 0;
-	for (i = 0; i < existing_thread->post_keys->count; i++) {
-		const char *existing = vector_get(existing_thread->post_keys, i);
-		if (strncmp(existing, post_key, MAX_KEY_SIZE) == 0) {
-			found = 1;
-			break;
-		}
-	}
-	if (!found) {
-		vector_append(existing_thread->post_keys, post_key, sizeof(post_key));
-		/* 6. Save thread object */
-		_insert_thread(thread_key, existing_thread);
-	}
-	vector_free(existing_thread->post_keys);
-	free(existing_thread);
 
 	/* 7. Create post, Add thread key to post */
 	post to_insert = {
-		.post_id = {0},
-		._null_term_hax_1 = 0,
-		.thread_key = {0},
-		._null_term_hax_2 = 0,
 		.board = {0},
-		._null_term_hax_3 = 0,
-		.webm_key = {0},
-		._null_term_hax_4 = 0,
-		.post_no = {0},
-		._null_term_hax_5 = 0,
+		._null_term_hax_1 = 0,
+		.oleg_key = {0},
+		._null_term_hax_2 = 0,
+		.fourchan_post_no = 0,
+		.fourchan_post_id = 0,
 		.body_content = NULL,
-		.replied_to_keys = vector_new(MAX_KEY_SIZE, 2)
+		.replied_to_keys = vector_new(MAX_KEY_SIZE, 2),
+		.id = 0,
+		.thread_id = thread_id,
+		.created_at = 0
 	};
 
-	strncpy(to_insert.post_id, p_match->post_date, sizeof(to_insert.post_id));
-	strncpy(to_insert.post_no, p_match->post_no, sizeof(to_insert.post_no));
-	strncpy(to_insert.thread_key, thread_key, sizeof(to_insert.thread_key));
+	to_insert.fourchan_post_id = atol(p_match->post_date);
+	to_insert.fourchan_post_no = atol(p_match->post_no);
 	strncpy(to_insert.board, p_match->board, sizeof(to_insert.board));
-	strncpy(to_insert.webm_key, webm_key, sizeof(to_insert.webm_key));
+	strncpy(to_insert.oleg_key, post_key, sizeof(to_insert.oleg_key));
 
 	if (p_match->body_content != NULL)
 		to_insert.body_content = strdup(p_match->body_content);
 
 	/* 8. Save post object */
-	_insert_post(post_key, &to_insert);
+	const unsigned int post_id = _insert_post(&to_insert);
+
 	free(to_insert.body_content);
 	vector_free(to_insert.replied_to_keys);
-	return 0;
-}
-
-int associate_alias_with_webm(const webm *webm, const char alias_key[static MAX_KEY_SIZE]) {
-	if (!webm || strlen(alias_key) == 0)
-		return 0;
-
-	char key[MAX_KEY_SIZE] = {0};
-	create_webm_to_alias_key(webm->file_hash, key);
-
-	size_t json_size = 0;
-	char *w2a_json = (char *)fetch_data_from_db(&oleg_conn, key, &json_size);
-	if (!w2a_json) {
-		/* No existing m2m relation. */
-		vector *aliases = vector_new(MAX_KEY_SIZE, 1);
-		vector_append(aliases, alias_key, strlen(alias_key));
-
-		webm_to_alias _new_m2m = {
-			.aliases = aliases
-		};
-
-		const char *serialized = serialize_webm_to_alias(&_new_m2m);
-		if (!serialized) {
-			m38_log_msg(LOG_ERR, "Could not serialize new webm_to_alias.");
-			vector_free(aliases);
-			return 0;
-		}
-
-		if (!store_data_in_db(&oleg_conn, key, (unsigned char *)serialized, strlen(serialized))) {
-			m38_log_msg(LOG_ERR, "Could not store new webm_to_alias.");
-			free((char *)serialized);
-			vector_free(aliases);
-			return 0;
-		}
-
-		vector_free(aliases);
-		free((char *)serialized);
-		return 1;
-
-	}
-
-	webm_to_alias *deserialized = deserialize_webm_to_alias(w2a_json);
-	free(w2a_json);
-
-	if (!deserialized) {
-		m38_log_msg(LOG_ERR, "Could not deserialize webm_to_alias.");
-		return 0;
-	}
-
-	unsigned int i;
-	int found = 0;
-	for (i = 0; i < deserialized->aliases->count; i++) {
-		const char *existing = vector_get(deserialized->aliases, i);
-		if (strncmp(existing, alias_key, MAX_KEY_SIZE) == 0) {
-			found = 1;
-			break;
-		}
-	}
-
-	/* We found this alias key in the list of them. Skip it. */
-	if (found) {
-		vector_free(deserialized->aliases);
-		free(deserialized);
-		return 1;
-	}
-
-	vector_append(deserialized->aliases, alias_key, strlen(alias_key));
-	char *new_serialized = serialize_webm_to_alias(deserialized);
-	vector_free(deserialized->aliases);
-	free(deserialized);
-
-	if (!new_serialized) {
-		m38_log_msg(LOG_ERR, "Could not serialize webm_to_alias.");
-		return 0;
-	}
-
-	if (!store_data_in_db(&oleg_conn, key, (unsigned char *)new_serialized, strlen(new_serialized))) {
-		m38_log_msg(LOG_ERR, "Could not store updated webm_to_alias.");
-		free(new_serialized);
-		return 0;
-	}
-
-	free(new_serialized);
-	return 1;
+	return post_id;
 }

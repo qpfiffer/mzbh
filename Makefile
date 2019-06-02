@@ -1,15 +1,14 @@
-CFLAGS=-Werror -Wno-format-truncation -Wno-missing-field-initializers -Wextra -Wall -O2 -g3
-INCLUDES=-pthread -I./include/
-LIBS=-l38moths -loleg-http -lcurl -lm -lrt
+CFLAGS=-Werror -Wno-format-truncation -Wno-missing-field-initializers -Wextra -Wall -O0 -g3
+INCLUDES=-pthread -I./include/ `pkg-config --cflags libpq`
+LIBS=-l38moths -loleg-http -lcurl -lm -lrt `pkg-config --libs libpq`
 NAME=waifu.xyz
 COMMON_OBJ=benchmark.o blue_midnight_wish.o http.o models.o db.o parson.o utils.o
 
 
-all: ctl bin downloader test $(NAME)
+all: bin downloader test $(NAME)
 
 clean:
 	rm -f *.o
-	rm -f dbctl
 	rm -f downloader
 	rm -f unit_test
 	rm -f $(NAME)
@@ -20,10 +19,6 @@ unit_test: $(COMMON_OBJ) server.o stack.o parse.o utests.o
 
 %.o: ./src/%.c
 	$(CC) $(CFLAGS) $(LIB_INCLUDES) $(INCLUDES) -c $<
-
-ctl: dbctl
-dbctl: $(COMMON_OBJ) dbctl.o
-	$(CC) $(CLAGS) $(LIB_INCLUDES) $(INCLUDES) -o dbctl $^ $(LIBS)
 
 bin: $(NAME)
 $(NAME): $(COMMON_OBJ) server.o main.o parson.o

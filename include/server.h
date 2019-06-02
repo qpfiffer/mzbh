@@ -16,7 +16,7 @@ int user_thumbs_static_handler(const m38_http_request *request, m38_http_respons
 int board_static_handler(const m38_http_request *request, m38_http_response *response);
 int index_handler(const m38_http_request *request, m38_http_response *response);
 int webm_handler(const m38_http_request *request, m38_http_response *response);
-int by_alias_handler(const m38_http_request *request, m38_http_response *response);
+//int by_alias_handler(const m38_http_request *request, m38_http_response *response);
 int board_handler(const m38_http_request *request, m38_http_response *response);
 int paged_board_handler(const m38_http_request *request, m38_http_response *response);
 int favicon_handler(const m38_http_request *request, m38_http_response *response);

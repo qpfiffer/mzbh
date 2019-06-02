@@ -22,7 +22,8 @@
 #include "stack.h"
 #include "utils.h"
 
-const char *BOARDS[] = {"a", "b", "fit", "g", "gif", "e", "h", "o", "n", "r", "s", "sci", "soc", "v", "wsg"};
+const char *BOARDS[] = {"a", "b", "fit", "g", "gif", "e", "h", "o", "n", "r", "s", "sci", "soc", "v"};
+//const char *BOARDS[] = {"a", "b"};
 
 const char FOURCHAN_API_HOST[] = "a.4cdn.org";
 const char FOURCHAN_THUMBNAIL_HOST[] = "t.4cdn.org";
@@ -149,7 +150,7 @@ static ol_stack *build_thread_index() {
 
 				/* Check if we have an existing alias for this file. */
 				char key[MAX_KEY_SIZE] = {0};
-				webm_alias *existing = get_aliased_image(fname, key);
+				webm_alias *existing = get_aliased_image_by_oleg_key(fname, key);
 				if (existing) {
 					m38_log_msg(LOG_INFO, "Found alias for '%s', skipping.", fname);
 					free(p_match->body_content);
@@ -173,7 +174,7 @@ static ol_stack *build_thread_index() {
 	return images_to_download;
 }
 
-int download_image(const post_match *p_match, char webm_key[static MAX_KEY_SIZE]) {
+int download_image(const post_match *p_match, const unsigned int post_id) {
 	int thumb_request_fd = 0;
 	int image_request_fd = 0;
 	unsigned char *raw_thumb_resp = NULL;
@@ -291,11 +292,8 @@ int download_image(const post_match *p_match, char webm_key[static MAX_KEY_SIZE]
 	char fname_plus_extension[MAX_IMAGE_FILENAME_SIZE] = {0};
 	get_non_colliding_image_filename(fname_plus_extension, p_match);
 
-	char post_key[MAX_KEY_SIZE] = {0};
-	create_post_key(p_match->board, p_match->post_date, post_key);
-
 	/* image_filename is the full path, fname_plus_extension is the file name. */
-	int added = add_image_to_db(image_filename, fname_plus_extension, p_match->board, post_key, webm_key);
+	int added = add_image_to_db(image_filename, fname_plus_extension, p_match->board, post_id);
 	if (!added) {
 		m38_log_msg(LOG_WARN, "Could not add image to database. Continuing...");
 	}
@@ -349,13 +347,12 @@ int download_images() {
 	while (images_to_download->next != NULL) {
 		post_match *p_match = (post_match *)spop(&images_to_download);
 
-		char webm_key[MAX_KEY_SIZE] = {0};
-		if (!download_image(p_match, webm_key))
-			m38_log_msg(LOG_WARN, "Could not download image.");
+		unsigned int post_id = add_post_to_db(p_match);
+		if (!post_id)
+			m38_log_msg(LOG_ERR, "Could not add post %s to database.", p_match->post_date);
 
-		int added = add_post_to_db(p_match, webm_key);
-		if (added != 0)
-			m38_log_msg(LOG_WARN, "Could not add post %s to database.", p_match->post_date);
+		if (!download_image(p_match, post_id))
+			m38_log_msg(LOG_ERR, "Could not download image.");
 
 
 		free(p_match->body_content);

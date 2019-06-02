@@ -1,8 +1,10 @@
 *.o
+.gdb_history
 *.swp
 waifu.xyz
 dbctl
 greshunkel_test
+downloader
 unit_test
 ./webms
 .vagrant

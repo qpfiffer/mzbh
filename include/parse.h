@@ -14,6 +14,7 @@ typedef struct thread_match {
 typedef struct post_match {
 	char board[MAX_BOARD_NAME_SIZE];
 	char filename[MAX_IMAGE_FILENAME_SIZE];
+	char subject[256];
 	char file_ext[6];
 	char post_no[64]; /* The real post_number */
 	char post_date[64]; /* This is actually post date */

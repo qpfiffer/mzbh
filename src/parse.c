@@ -87,6 +87,7 @@ ol_stack *parse_thread_json(const char *all_json, const thread_match *match) {
 		const uint64_t siz = json_object_get_number(post, "fsize");
 		const uint64_t _tim = json_object_get_number(post, "tim");
 		const char *body_content = json_object_get_string(post, "com");
+		const char *subject = json_object_get_string(post, "sub");
 
 		if (file_ext == NULL)
 			continue;
@@ -115,6 +116,10 @@ ol_stack *parse_thread_json(const char *all_json, const thread_match *match) {
 			p_match->body_content = strdup(body_content);
 		} else {
 			p_match->body_content = NULL;
+		}
+
+		if (subject) {
+			strncpy(p_match->subject, subject, sizeof(p_match->subject));
 		}
 
 		spush(&matches, p_match);
