@@ -11,6 +11,8 @@
  * strings while still allowing us to use 'sizeof(webm.file_hash)'.
  */
 typedef struct webm {
+	unsigned int id;
+
 	char file_hash[HASH_IMAGE_STR_SIZE];
 	unsigned char _null_term_hax_1;
 
@@ -36,6 +38,8 @@ unsigned int webm_count();
 
 /* Aliases of webms have the same file hash but different names, boards, etc. Mostly metadata. */
 typedef struct webm_alias {
+	unsigned int id;
+
 	char file_hash[HASH_IMAGE_STR_SIZE];
 	unsigned char _null_term_hax_1;
 
@@ -49,24 +53,16 @@ typedef struct webm_alias {
 	unsigned char _null_term_hax_4;
 
 	unsigned int post_id;
+	unsigned int webm_id;
 
 	time_t created_at;
 } __attribute__((__packed__)) webm_alias;
 
 void create_alias_key(const char file_path[static MAX_IMAGE_FILENAME_SIZE], char outbuf[static MAX_KEY_SIZE]);
 char *serialize_alias(const webm_alias *to_serialize);
-webm_alias *deserialize_alias(const char *json);
+//webm_alias *deserialize_alias(const char *json);
+webm_alias *deserialize_alias_from_tuples(const PGresult *res, const unsigned int idx);
 unsigned int webm_alias_count();
-
-/* This is a one-to-many from webm objects to alias objects. The struct is
- * something akin to a vector. Probably. */
-typedef struct webm_to_alias {
-	vector *aliases;
-} webm_to_alias;
-
-void create_webm_to_alias_key(const char file_hash[static HASH_IMAGE_STR_SIZE], char outbuf[static MAX_KEY_SIZE]);
-char *serialize_webm_to_alias(const webm_to_alias *w2a);
-webm_to_alias *deserialize_webm_to_alias(const char *json);
 
 typedef struct thread {
 	char board[MAX_BOARD_NAME_SIZE];

@@ -107,6 +107,45 @@ error:
 	return NULL;
 }
 
+PGresult *get_aliases_by_webm_id(const unsigned int id) {
+	PGresult *res = NULL;
+	PGconn *conn = NULL;
+
+	char id_buf[64] = {0};
+	snprintf(id_buf, sizeof(id_buf), "%d", id);
+
+	const char *param_values[] = {id_buf};
+
+	conn = _get_pg_connection();
+	if (!conn)
+		goto error;
+
+	res = PQexecParams(conn,
+					  "SELECT a.* FROM webm_aliases "
+					  "WHERE a.webm_id = $1",
+					  1,
+					  NULL,
+					  param_values,
+					  NULL,
+					  NULL,
+					  0);
+
+	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+		m38_log_msg(LOG_ERR, "SELECT failed: %s", PQerrorMessage(conn));
+		goto error;
+	}
+
+	_finish_pg_connection(conn);
+
+	return res;
+
+error:
+	if (res)
+		PQclear(res);
+	_finish_pg_connection(conn);
+	return NULL;
+}
+
 /* Webm get/set stuff */
 webm *get_image_by_oleg_key(const char image_hash[static HASH_ARRAY_SIZE], char out_key[static MAX_KEY_SIZE]) {
 	PGresult *res = NULL;
@@ -210,51 +249,131 @@ error:
 }
 
 webm_alias *get_aliased_image_with_key(const char key[static MAX_KEY_SIZE]) {
-	size_t json_size = 0;
-	char *json = (char *)fetch_data_from_db(&oleg_conn, key, &json_size);
+	PGresult *res = NULL;
+	PGconn *conn = NULL;
 
-	if (json == NULL)
-		return NULL;
+	const char *param_values[] = {key};
 
-	webm_alias *alias = deserialize_alias(json);
-	free(json);
-	return alias;
+	conn = _get_pg_connection();
+	if (!conn)
+		goto error;
+
+	res = PQexecParams(conn,
+					  "SELECT * FROM webm_aliases WHERE oleg_key = $1",
+					  1,
+					  NULL,
+					  param_values,
+					  NULL,
+					  NULL,
+					  0);
+
+	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+		m38_log_msg(LOG_ERR, "SELECT failed: %s", PQerrorMessage(conn));
+		goto error;
+	}
+
+	webm_alias *deserialized = deserialize_alias_from_tuples(res, 0);
+	if (!deserialized)
+		goto error;
+
+	PQclear(res);
+	_finish_pg_connection(conn);
+
+	return deserialized;
+
+error:
+	if (res)
+		PQclear(res);
+	_finish_pg_connection(conn);
+	return NULL;
 }
 
-webm_alias *get_aliased_image(const char filepath[static MAX_IMAGE_FILENAME_SIZE], char out_key[static MAX_KEY_SIZE]) {
+webm_alias *get_aliased_image_by_oleg_key(const char filepath[static MAX_IMAGE_FILENAME_SIZE], char out_key[static MAX_KEY_SIZE]) {
 	create_alias_key(filepath, out_key);
 
 	return get_aliased_image_with_key(out_key);
 }
 
-webm_to_alias *get_webm_to_alias(const char image_hash[static HASH_ARRAY_SIZE]) {
+
+// webm_to_alias *get_webm_to_alias(const char image_hash[static HASH_ARRAY_SIZE]) {
+// 	char key[MAX_KEY_SIZE] = {0};
+// 	create_webm_to_alias_key(image_hash, key);
+//
+// 	size_t json_size = 0;
+// 	char *json = (char *)fetch_data_from_db(&oleg_conn, key, &json_size);
+//
+// 	if (json == NULL)
+// 		return NULL;
+//
+// 	webm_to_alias *w2a = deserialize_webm_to_alias(json);
+// 	free(json);
+// 	return w2a;
+// }
+
+unsigned int set_aliased_image(const webm_alias *webm) {
 	char key[MAX_KEY_SIZE] = {0};
-	create_webm_to_alias_key(image_hash, key);
+	create_alias_key(webm->file_hash, key);
 
-	size_t json_size = 0;
-	char *json = (char *)fetch_data_from_db(&oleg_conn, key, &json_size);
+	PGresult *res = NULL;
+	PGconn *conn = NULL;
 
-	if (json == NULL)
-		return NULL;
+	conn = _get_pg_connection();
+	if (!conn)
+		goto error;
 
-	webm_to_alias *w2a = deserialize_webm_to_alias(json);
-	free(json);
-	return w2a;
+	char post_id_buf[64] = {0};
+	snprintf(post_id_buf, sizeof(post_id_buf), "%d", webm->post_id);
+
+	char webm_id_buf[64] = {0};
+	snprintf(webm_id_buf, sizeof(webm_id_buf), "%d", webm->webm_id);
+
+	char size_buf[64] = {0};
+	snprintf(size_buf, sizeof(size_buf), "%ld", webm->size);
+
+	const char *param_values[] = {
+		key,
+		webm->file_hash,
+		webm->filename,
+		webm->board,
+		webm->file_path,
+		post_id_buf,
+		webm_id_buf,
+		size_buf
+	};
+	res = PQexecParams(conn,
+					  "INSERT INTO webms (oleg_key, file_hash, filename,"
+					  "board, file_path, post_id, webm_id, size)"
+					  "VALUES ($1, $2, $3, $4, $5, $6, $7, $8) "
+					  "RETURNING id;",
+					  7,
+					  NULL,
+					  param_values,
+					  NULL,
+					  NULL,
+					  0);
+
+	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+		m38_log_msg(LOG_ERR, "SELECT failed: %s", PQerrorMessage(conn));
+		goto error;
+	}
+
+	if (PQntuples(res) <= 0)
+		goto error;
+
+	unsigned int id = atoi(PQgetvalue(res, 0, 0));
+
+	PQclear(res);
+	_finish_pg_connection(conn);
+
+	return id;
+
+error:
+	if (res)
+		PQclear(res);
+	_finish_pg_connection(conn);
+	return 0;
 }
 
-/* Alias get/set stuff */
-int set_aliased_image(const webm_alias *alias) {
-	char key[MAX_KEY_SIZE] = {0};
-	create_alias_key(alias->file_path, key);
-
-	char *serialized = serialize_alias(alias);
-	/* m38_log_msg(LOG_INFO, "Serialized: %s", serialized); */
-
-	int ret = store_data_in_db(&oleg_conn, key, (unsigned char *)serialized, strlen(serialized));
-	free(serialized);
-
-	return ret;
-}
 
 static int _insert_webm(const char *file_path, const char filename[static MAX_IMAGE_FILENAME_SIZE],
 						const char image_hash[static HASH_IMAGE_STR_SIZE], const char board[static MAX_BOARD_NAME_SIZE],
@@ -406,7 +525,7 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 	}
 
 	/* It's not the canonical original, so insert an alias. */
-	webm_alias *_old_alias = get_aliased_image(file_path, out_webm_key);
+	webm_alias *_old_alias = get_aliased_image_by_oleg_key(file_path, out_webm_key);
 	int rc = 1;
 	/* If we DONT already have an alias for this image with this filename,
 	 * insert one.
@@ -423,24 +542,22 @@ int add_image_to_db(const char *file_path, const char *filename, const char boar
 
 	/* Create or update the many2many between these two: */
 	/* We should already have the alias key stored from up above. */
-	associate_alias_with_webm(_old_webm, out_webm_key);
+	//associate_alias_with_webm(_old_webm, out_webm_key);
 
-	if (rc) {
-		/* We don't want old alias, we want current alias here. Otherwise all
-		 * of the timestamps are going to be the same as old_alias's.
-		 */
-		if (_old_alias == NULL) {
-			time_t new_stamp = get_file_creation_date(file_path);
-			if (new_stamp == 0) {
-				m38_log_msg(LOG_ERR, "Could not stat new alias.");
-			}
-
-			modify_aliased_file(file_path, _old_webm, new_stamp);
-		} else {
-			modify_aliased_file(file_path, _old_webm, _old_alias->created_at);
+	/* We don't want old alias, we want current alias here. Otherwise all
+	 * of the timestamps are going to be the same as old_alias's.
+	 */
+	if (_old_alias == NULL) {
+		time_t new_stamp = get_file_creation_date(file_path);
+		if (new_stamp == 0) {
+			m38_log_msg(LOG_ERR, "Could not stat new alias.");
 		}
-	} else
-		m38_log_msg(LOG_ERR, "Something went wrong when adding image to db.");
+
+		modify_aliased_file(file_path, _old_webm, new_stamp);
+	} else {
+		modify_aliased_file(file_path, _old_webm, _old_alias->created_at);
+	}
+
 	free(_old_alias);
 	free(_old_webm);
 	return rc;
@@ -805,87 +922,4 @@ unsigned int add_post_to_db(const struct post_match *p_match) {
 	free(to_insert.body_content);
 	vector_free(to_insert.replied_to_keys);
 	return post_id;
-}
-
-int associate_alias_with_webm(const webm *webm, const char alias_key[static MAX_KEY_SIZE]) {
-	if (!webm || strlen(alias_key) == 0)
-		return 0;
-
-	char key[MAX_KEY_SIZE] = {0};
-	create_webm_to_alias_key(webm->file_hash, key);
-
-	size_t json_size = 0;
-	char *w2a_json = (char *)fetch_data_from_db(&oleg_conn, key, &json_size);
-	if (!w2a_json) {
-		/* No existing m2m relation. */
-		vector *aliases = vector_new(MAX_KEY_SIZE, 1);
-		vector_append(aliases, alias_key, strlen(alias_key));
-
-		webm_to_alias _new_m2m = {
-			.aliases = aliases
-		};
-
-		const char *serialized = serialize_webm_to_alias(&_new_m2m);
-		if (!serialized) {
-			m38_log_msg(LOG_ERR, "Could not serialize new webm_to_alias.");
-			vector_free(aliases);
-			return 0;
-		}
-
-		if (!store_data_in_db(&oleg_conn, key, (unsigned char *)serialized, strlen(serialized))) {
-			m38_log_msg(LOG_ERR, "Could not store new webm_to_alias.");
-			free((char *)serialized);
-			vector_free(aliases);
-			return 0;
-		}
-
-		vector_free(aliases);
-		free((char *)serialized);
-		return 1;
-
-	}
-
-	webm_to_alias *deserialized = deserialize_webm_to_alias(w2a_json);
-	free(w2a_json);
-
-	if (!deserialized) {
-		m38_log_msg(LOG_ERR, "Could not deserialize webm_to_alias.");
-		return 0;
-	}
-
-	unsigned int i;
-	int found = 0;
-	for (i = 0; i < deserialized->aliases->count; i++) {
-		const char *existing = vector_get(deserialized->aliases, i);
-		if (strncmp(existing, alias_key, MAX_KEY_SIZE) == 0) {
-			found = 1;
-			break;
-		}
-	}
-
-	/* We found this alias key in the list of them. Skip it. */
-	if (found) {
-		vector_free(deserialized->aliases);
-		free(deserialized);
-		return 1;
-	}
-
-	vector_append(deserialized->aliases, alias_key, strlen(alias_key));
-	char *new_serialized = serialize_webm_to_alias(deserialized);
-	vector_free(deserialized->aliases);
-	free(deserialized);
-
-	if (!new_serialized) {
-		m38_log_msg(LOG_ERR, "Could not serialize webm_to_alias.");
-		return 0;
-	}
-
-	if (!store_data_in_db(&oleg_conn, key, (unsigned char *)new_serialized, strlen(new_serialized))) {
-		m38_log_msg(LOG_ERR, "Could not store updated webm_to_alias.");
-		free(new_serialized);
-		return 0;
-	}
-
-	free(new_serialized);
-	return 1;
 }

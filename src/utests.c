@@ -44,30 +44,6 @@ int can_get_header_values() {
 	return 1;
 }
 
-int can_serialize_w2a() {
-	vector *new_vec = vector_new(sizeof(char) * MAX_KEY_SIZE, 2);
-	vector_append(new_vec, "test1", strlen("test1") + 1);
-	vector_append(new_vec, "test2", strlen("test2") + 1);
-	vector_append(new_vec, "test3, rabbit", strlen("test3, rabbit") + 1);
-
-	webm_to_alias _test = {
-		.aliases = new_vec
-	};
-
-	char *json = serialize_webm_to_alias(&_test);
-	m38_log_msg(LOG_FUN, "json: %s", json);
-	assert(json);
-
-	webm_to_alias *deserialized = deserialize_webm_to_alias(json);
-	assert(deserialized);
-
-	free(json);
-	vector_free(new_vec);
-	vector_free(deserialized->aliases);
-	free(deserialized);
-	return 1;
-}
-
 int vectors_are_zeroed() {
 	char k1[] = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 	vector *new_vec = vector_new(MAX_KEY_SIZE, 2);
@@ -113,7 +89,6 @@ int can_parse_range_query() {
 int run_tests() {
 	hash_stuff();
 	can_get_header_values();
-	can_serialize_w2a();
 	vectors_are_zeroed();
 	can_parse_range_query();
 

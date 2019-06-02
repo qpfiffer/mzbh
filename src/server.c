@@ -316,7 +316,7 @@ int url_search_handler(const m38_http_request *request, m38_http_response *respo
 	webm *_webm = get_image_by_oleg_key(image_hash, webm_key);
 
 	char alias_key[MAX_KEY_SIZE] = {0};
-	webm_alias *_alias = get_aliased_image(out_filepath, alias_key);
+	webm_alias *_alias = get_aliased_image_by_oleg_key(out_filepath, alias_key);
 
 	greshunkel_var results = gshkl_add_array(ctext, "RESULTS");
 
@@ -403,7 +403,7 @@ int webm_handler(const m38_http_request *request, m38_http_response *response) {
 	webm *_webm = get_image_by_oleg_key(image_hash, webm_key);
 
 	char alias_key[MAX_KEY_SIZE] = {0};
-	webm_alias *_alias = get_aliased_image(full_path, alias_key);
+	webm_alias *_alias = get_aliased_image_by_oleg_key(full_path, alias_key);
 
 	/* This code is fucking terrible. */
 	int found = 0;
@@ -446,32 +446,28 @@ int webm_handler(const m38_http_request *request, m38_http_response *response) {
 
 		/* Add known aliases from DB. We fetch every alias from the M2M,
 		 * and then fetch that key. Or try to, anyway. */
-		webm_to_alias *w2a = get_webm_to_alias(image_hash);
-		if (w2a != NULL && w2a->aliases->count > 0) {
-			unsigned int i;
-			/* TODO: Use bulk_unjar here. */
-			for (i = 0; i < w2a->aliases->count; i++) {
-				const char *alias = vector_get(w2a->aliases, i);
-				webm_alias *walias = get_aliased_image_with_key(alias);
-				if (walias) {
-					if (walias->created_at < earliest_date)
-						earliest_date = walias->created_at;
-					const size_t buf_size = UINT_LEN(walias->created_at) + strlen(", ") +
-						strnlen(walias->board, MAX_BOARD_NAME_SIZE) + strlen(", ") +
-						strnlen(walias->filename, MAX_IMAGE_FILENAME_SIZE);
+		PGresult *res = get_aliases_by_webm_id(_webm->id);
+		unsigned int total_rows = 0;
+		if (res) {
+			unsigned int i = 0;
+			total_rows = PQntuples(res);
+			for (i = 0; i < total_rows; i++) {
+				webm_alias *dsrlzd = deserialize_alias_from_tuples(res, i);
+
+				if (dsrlzd) {
+					if (dsrlzd->created_at < earliest_date)
+						earliest_date = dsrlzd->created_at;
+					const size_t buf_size = UINT_LEN(dsrlzd->created_at) + strlen(", ") +
+						strnlen(dsrlzd->board, MAX_BOARD_NAME_SIZE) + strlen(", ") +
+						strnlen(dsrlzd->filename, MAX_IMAGE_FILENAME_SIZE);
 					char buf[buf_size + 1];
 					buf[buf_size] = '\0';
-					snprintf(buf, buf_size, "%lld, %s, %s", (long long)walias->created_at, walias->board, walias->filename);
+					snprintf(buf, buf_size, "%lld, %s, %s", (long long)dsrlzd->created_at, dsrlzd->board, dsrlzd->filename);
 					gshkl_add_string_to_loop(&aliases, buf);
-					free(walias);
-				} else {
-					m38_log_msg(LOG_WARN, "Bad alias string: %s", alias);
-					m38_log_msg(LOG_WARN, "Bad alias on: %s%s", WEBM_NMSPC, image_hash);
-					gshkl_add_string_to_loop(&aliases, alias);
+					free(dsrlzd);
 				}
 			}
-			vector_free(w2a->aliases);
-			free(w2a);
+			PQclear(res);
 		} else {
 			gshkl_add_string_to_loop(&aliases, "None");
 		}
@@ -530,34 +526,34 @@ static int _board_handler(const m38_http_request *request, m38_http_response *re
 	return m38_render_file(ctext, "./templates/board.html", response);
 }
 
-static unsigned int _add_sorted_by_aliases(greshunkel_var *images) {
-	char p[MAX_KEY_SIZE] = WEBMTOALIAS_NMSPC;
-	db_key_match *key_matches = fetch_matches_from_db(&oleg_conn, p);
-	db_match *matches = fetch_bulk_from_db(&oleg_conn, key_matches, 1);
-
-	unsigned int total = 0;
-	db_match *current = matches;
-	while (current) {
-		db_match *next = current->next;
-
-		webm_to_alias *dsrlzd = deserialize_webm_to_alias((char *)current->data);
-		free((unsigned char *)current->data);
-		free(current);
-
-		unsigned int i = 0;
-		for (i = 0; i < dsrlzd->aliases->count; i++) {
-			gshkl_add_string_to_loop(images, vector_get(dsrlzd->aliases, i));
-		}
-
-		vector_free(dsrlzd->aliases);
-		free(dsrlzd);
-		total++;
-
-		current = next;
-	}
-
-	return 0;
-}
+// static unsigned int _add_sorted_by_aliases(greshunkel_var *images) {
+// 	char p[MAX_KEY_SIZE] = WEBMTOALIAS_NMSPC;
+// 	db_key_match *key_matches = fetch_matches_from_db(&oleg_conn, p);
+// 	db_match *matches = fetch_bulk_from_db(&oleg_conn, key_matches, 1);
+//
+// 	unsigned int total = 0;
+// 	db_match *current = matches;
+// 	while (current) {
+// 		db_match *next = current->next;
+//
+// 		webm_to_alias *dsrlzd = deserialize_webm_to_alias((char *)current->data);
+// 		free((unsigned char *)current->data);
+// 		free(current);
+//
+// 		unsigned int i = 0;
+// 		for (i = 0; i < dsrlzd->aliases->count; i++) {
+// 			gshkl_add_string_to_loop(images, vector_get(dsrlzd->aliases, i));
+// 		}
+//
+// 		vector_free(dsrlzd->aliases);
+// 		free(dsrlzd);
+// 		total++;
+//
+// 		current = next;
+// 	}
+//
+// 	return 0;
+// }
 
 int by_thread_handler(const m38_http_request *request, m38_http_response *response) {
 	char thread_id[256] = {0};
@@ -634,42 +630,42 @@ int by_thread_handler(const m38_http_request *request, m38_http_response *respon
 	return m38_render_file(ctext, "./templates/by_thread.html", response);
 }
 
-int by_alias_handler(const m38_http_request *request, m38_http_response *response) {
-	const unsigned int page = strtol(request->resource + request->matches[1].rm_so, NULL, 10);
-
-	greshunkel_ctext *ctext = gshkl_init_context();
-	gshkl_add_filter(ctext, "thumbnail_for_image", thumbnail_for_image, gshkl_filter_cleanup);
-	greshunkel_var images = gshkl_add_array(ctext, "IMAGES");
-	int total = _add_sorted_by_aliases(&images);
-	if (total == 0) {
-		gshkl_add_string_to_loop(&images, "None");
-	}
-
-	greshunkel_var pages = gshkl_add_array(ctext, "PAGES");
-	unsigned int i;
-	const unsigned int max = total/RESULTS_PER_PAGE;
-	for (i = 0; i < max; i++)
-		gshkl_add_int_to_loop(&pages, i);
-
-	if (page > 0) {
-		gshkl_add_int(ctext, "prev_page", page - 1);
-	} else {
-		gshkl_add_string(ctext, "prev_page", "");
-	}
-
-	if (page < max) {
-		gshkl_add_int(ctext, "next_page", page + 1);
-	} else {
-		gshkl_add_string(ctext, "next_page", "");
-	}
-
-	greshunkel_var boards = gshkl_add_array(ctext, "BOARDS");
-	_add_files_in_dir_to_arr(&boards, webm_location());
-
-	gshkl_add_int(ctext, "total", total);
-	return m38_render_file(ctext, "./templates/sorted_by_aliases.html", response);
-}
-
+// int by_alias_handler(const m38_http_request *request, m38_http_response *response) {
+// 	const unsigned int page = strtol(request->resource + request->matches[1].rm_so, NULL, 10);
+//
+// 	greshunkel_ctext *ctext = gshkl_init_context();
+// 	gshkl_add_filter(ctext, "thumbnail_for_image", thumbnail_for_image, gshkl_filter_cleanup);
+// 	greshunkel_var images = gshkl_add_array(ctext, "IMAGES");
+// 	int total = _add_sorted_by_aliases(&images);
+// 	if (total == 0) {
+// 		gshkl_add_string_to_loop(&images, "None");
+// 	}
+//
+// 	greshunkel_var pages = gshkl_add_array(ctext, "PAGES");
+// 	unsigned int i;
+// 	const unsigned int max = total/RESULTS_PER_PAGE;
+// 	for (i = 0; i < max; i++)
+// 		gshkl_add_int_to_loop(&pages, i);
+//
+// 	if (page > 0) {
+// 		gshkl_add_int(ctext, "prev_page", page - 1);
+// 	} else {
+// 		gshkl_add_string(ctext, "prev_page", "");
+// 	}
+//
+// 	if (page < max) {
+// 		gshkl_add_int(ctext, "next_page", page + 1);
+// 	} else {
+// 		gshkl_add_string(ctext, "next_page", "");
+// 	}
+//
+// 	greshunkel_var boards = gshkl_add_array(ctext, "BOARDS");
+// 	_add_files_in_dir_to_arr(&boards, webm_location());
+//
+// 	gshkl_add_int(ctext, "total", total);
+// 	return m38_render_file(ctext, "./templates/sorted_by_aliases.html", response);
+// }
+ 
 int board_handler(const m38_http_request *request, m38_http_response *response) {
 	return _board_handler(request, response, 0);
 }

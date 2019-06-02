@@ -1,28 +1,15 @@
 // vim: noet ts=4 sw=4
 #pragma once
-#include <oleg-http/oleg-http.h>
 #include <libpq-fe.h>
 #include "common_defs.h"
 
 #define DB_PG_CONNECTION_INFO "postgresql:///waifu"
 
-#define DB_HOST "localhost"
-#define DB_PORT "38080"
-
-/* Global oleg connection for this project. */
-static const struct db_conn oleg_conn = {
-	.host = DB_HOST,
-	.port = DB_PORT,
-	.db_name = WAIFU_NMSPC
-};
-
 /* Gets an aliased image from the DB. */
-struct webm_alias *get_aliased_image(const char filepath[static MAX_IMAGE_FILENAME_SIZE], char out_key[static MAX_KEY_SIZE]);
+struct webm_alias *get_aliased_image_by_oleg_key(const char filepath[static MAX_IMAGE_FILENAME_SIZE], char out_key[static MAX_KEY_SIZE]);
 /* Gets a regular webm from the DB. */
 struct webm *get_image_by_oleg_key(const char image_hash[static HASH_ARRAY_SIZE], char out_key[static MAX_KEY_SIZE]);
-/* Gets a webm2alias from the DB. */
-struct webm_to_alias *get_webm_to_alias(const char image_hash[static HASH_ARRAY_SIZE]);
-
+PGresult *get_aliases_by_webm_id(const unsigned int id);
 /* Similar to get_aliased_image(2), but by key directly. */
 struct webm_alias *get_aliased_image_with_key(const char key[static MAX_KEY_SIZE]);
 

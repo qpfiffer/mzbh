@@ -33,6 +33,7 @@ webm *deserialize_webm_from_tuples(const PGresult *res) {
 	const int file_path_col = PQfnumber(res, "file_path");
 	const int size_col = PQfnumber(res, "size");
 	const int post_id_col = PQfnumber(res, "post_id");
+	const int id_col = PQfnumber(res, "id");
 	const int created_at_col = PQfnumber(res, "created_at");
 
 	strncpy(to_return->file_hash, PQgetvalue(res, 0, file_hash_col), sizeof(to_return->file_hash));
@@ -42,9 +43,44 @@ webm *deserialize_webm_from_tuples(const PGresult *res) {
 	to_return->size = (size_t)atoi(PQgetvalue(res, 0, size_col));
 	to_return->post_id = (unsigned int)atoi(PQgetvalue(res, 0, post_id_col));
 	to_return->created_at = (time_t)atoi(PQgetvalue(res, 0, created_at_col));
+	to_return->id = (unsigned int)atoi(PQgetvalue(res, 0, id_col));
+
 
 	return to_return;
 }
+
+webm_alias *deserialize_alias_from_tuples(const PGresult *res, const unsigned int idx) {
+	if (!res)
+		return NULL;
+
+	if (PQntuples(res) <= 0) {
+		//m38_log_msg(LOG_WARN, "No tuples in PG result for alias_from_tuples.");
+		return NULL;
+	}
+
+	webm_alias *to_return = calloc(1, sizeof(webm));
+
+	const int file_hash_col = PQfnumber(res, "file_hash");
+	const int filename_col = PQfnumber(res, "filename");
+	const int board_col = PQfnumber(res, "board");
+	const int file_path_col = PQfnumber(res, "file_path");
+	const int post_id_col = PQfnumber(res, "post_id");
+	const int id_col = PQfnumber(res, "id");
+	const int webm_id_col = PQfnumber(res, "webm_id");
+	const int created_at_col = PQfnumber(res, "created_at");
+
+	strncpy(to_return->file_hash, PQgetvalue(res, idx, file_hash_col), sizeof(to_return->file_hash));
+	strncpy(to_return->file_path, PQgetvalue(res, idx, file_path_col), sizeof(to_return->file_path));
+	strncpy(to_return->filename, PQgetvalue(res, idx, filename_col), sizeof(to_return->filename));
+	strncpy(to_return->board, PQgetvalue(res, idx, board_col), sizeof(to_return->board));
+	to_return->post_id = (unsigned int)atoi(PQgetvalue(res, idx, post_id_col));
+	to_return->webm_id = (unsigned int)atoi(PQgetvalue(res, idx, webm_id_col));
+	to_return->created_at = (time_t)atoi(PQgetvalue(res, idx, created_at_col));
+	to_return->id = (unsigned int)atoi(PQgetvalue(res, idx, id_col));
+
+	return to_return;
+}
+
 
 post *deserialize_post_from_tuples(const PGresult *res, const unsigned int idx) {
 	if (!res)
@@ -139,33 +175,6 @@ thread *deserialize_thread_from_tuples(const PGresult *res, const unsigned int i
 
 	return to_return;
 }
-
-
-// webm *deserialize_webm(const char *json) {
-// 	if (!json)
-// 		return NULL;
-//
-// 	webm *to_return = calloc(1, sizeof(webm));
-//
-// 	JSON_Value *serialized = json_parse_string(json);
-// 	JSON_Object *webm_object = json_value_get_object(serialized);
-//
-// 	strncpy(to_return->file_hash, json_object_get_string(webm_object, "file_hash"), sizeof(to_return->file_hash));
-// 	strncpy(to_return->filename, json_object_get_string(webm_object, "filename"), sizeof(to_return->filename));
-// 	strncpy(to_return->board, json_object_get_string(webm_object, "board"), sizeof(to_return->board));
-// 	strncpy(to_return->file_path, json_object_get_string(webm_object, "file_path"), sizeof(to_return->file_path));
-//
-// 	//const char *post = json_object_get_string(webm_object, "post");
-// 	//if (post != NULL)
-// 	//	strncpy(to_return->post, post, sizeof(to_return->post));
-//
-//
-// 	to_return->created_at = (time_t)json_object_get_number(webm_object, "created_at");
-// 	to_return->size = (size_t)json_object_get_number(webm_object, "size");
-//
-// 	json_value_free(serialized);
-// 	return to_return;
-// }
 
 char *serialize_webm(const webm *to_serialize) {
 	if (!to_serialize)
@@ -269,53 +278,7 @@ webm_alias *deserialize_alias(const char *json) {
 	// 	strncpy(to_return->post, post, sizeof(to_return->post));
 
 	to_return->created_at = (time_t)json_object_get_number(webm_alias_object, "created_at");
-
-	json_value_free(serialized);
-	return to_return;
-}
-
-void create_webm_to_alias_key(const char file_hash[static HASH_IMAGE_STR_SIZE], char outbuf[static MAX_KEY_SIZE]) {
-	snprintf(outbuf, MAX_KEY_SIZE, "%s%s", WEBMTOALIAS_NMSPC, file_hash);
-}
-
-char *serialize_webm_to_alias(const webm_to_alias *w2a) {
-	if (!w2a)
-		return NULL;
-
-	JSON_Value *root_value = json_value_init_array();
-	JSON_Array *root_array = json_value_get_array(root_value);
-
-	char *serialized_string = NULL;
-
-	unsigned int i;
-	for (i = 0; i < w2a->aliases->count; i++) {
-		json_array_append_string(root_array, vector_get(w2a->aliases, i));
-	}
-
-	serialized_string = json_serialize_to_string(root_value);
-
-	json_value_free(root_value);
-	return serialized_string;
-}
-
-webm_to_alias *deserialize_webm_to_alias(const char *json) {
-	if (!json)
-		return NULL;
-
-	webm_to_alias *to_return = calloc(1, sizeof(webm_to_alias));
-
-	JSON_Value *serialized = json_parse_string(json);
-	JSON_Array *webm_to_alias_object = json_value_get_array(serialized);
-
-	const size_t num_aliases  = json_array_get_count(webm_to_alias_object);
-
-	to_return->aliases = vector_new(MAX_KEY_SIZE, num_aliases);
-
-	unsigned int i;
-	for (i = 0; i < num_aliases; i++) {
-		const char *alias = json_array_get_string(webm_to_alias_object, i);
-		vector_append(to_return->aliases, alias, strlen(alias));
-	}
+	to_return->id = json_object_get_number(webm_alias_object, "id");
 
 	json_value_free(serialized);
 	return to_return;
