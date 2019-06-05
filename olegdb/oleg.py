@@ -107,7 +107,7 @@ class OlegDB(object):
                 val = encoded[cursor]
                 while val != b'0':
                     cursor += 1
-                    val = encoded[cursor]
+                    val = encoded[cursor:cursor+1]
                 size = encoded[cursor:cursor + 8]
                 size = int(size)
 
