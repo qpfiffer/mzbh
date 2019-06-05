@@ -1,11 +1,13 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 from olegdb.oleg import OlegDB
-import json, psycopg2, time
+import json, psycopg2, time, multiprocessing
 
 # Left to do:
 # 1. Check that files exist when we insert webms and aliases
 
-def insert_webm(conn, oconn, okey, od, should_commit):
+olegdb_c = OlegDB(db_name="waifu")
+
+def insert_webm(conn, oconn, okey, od, should_commit=True):
     cur = conn.cursor()
     try:
         webm_loaded = json.loads(od.decode())
@@ -28,7 +30,7 @@ def insert_webm(conn, oconn, okey, od, should_commit):
     if should_commit:
         conn.commit()
 
-def insert_alias(conn, oconn, okey, od, should_commit):
+def insert_alias(conn, oconn, okey, od, should_commit=True):
     cur = conn.cursor()
     str_od = od.decode()
     try:
@@ -51,7 +53,7 @@ def insert_alias(conn, oconn, okey, od, should_commit):
     if should_commit:
         conn.commit()
 
-def insert_thread(conn, oconn, okey, od, should_commit):
+def insert_thread(conn, oconn, okey, od, should_commit=True):
     cur = conn.cursor()
     try:
         str_od = od.decode()
@@ -144,18 +146,31 @@ namespaces = (
     ("alias", insert_alias),
 )
 
+def map_func(quesy):
+    k, v = quesy
+    conn = psycopg2.connect("dbname=waifu user=quinlan")
+
+    for x, y in namespaces:
+        if k.startswith(x):
+            y(conn, olegdb_c, k, v)
+
 def main():
     should_commit = True
     if not should_commit:
         print("Dry run, not commiting...")
 
-    conn = psycopg2.connect("dbname=waifu user=quinlan")
-    create_tables(conn)
-    olegdb_c = OlegDB(db_name="waifu")
+    connECTION = psycopg2.connect("dbname=waifu user=quinlan")
+    create_tables(connECTION)
+
+
+    pool = multiprocessing.Pool()
+
     for namespace, namespace_handler in namespaces:
         values = olegdb_c.get_many(olegdb_c.get_by_prefix(namespace))
-        for key, value in values.items():
-            namespace_handler(conn, olegdb_c, key, value, should_commit)
+
+        pool.map(map_func, values.items())
+    pool.close()
+    pool.join()
     return 0
 
 if __name__ == '__main__':

@@ -103,14 +103,11 @@ class OlegDB(object):
                 size = int(size)
             except ValueError:
                 # Attempt recovery
-                print("Recovering from missuzed data...")
-                print("+5: {}".format(encoded[cursor:cursor + 5]))
-                print("+15: {}".format(encoded[cursor:cursor + 15]))
-                print("+25: {}".format(encoded[cursor:cursor + 25]))
-                print("+50: {}".format(encoded[cursor:cursor + 50]))
-                print("+150: {}".format(encoded[cursor:cursor + 150]))
-                offset = input("Please input offset: ")
-                cursor += int(offset)
+                print("Recovering from missized")
+                val = encoded[cursor]
+                while val != b'0':
+                    cursor += 1
+                    val = encoded[cursor]
                 size = encoded[cursor:cursor + 8]
                 size = int(size)
 

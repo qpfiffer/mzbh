@@ -1,4 +1,6 @@
+__pycache__
 *.o
+*.pyc
 .gdb_history
 *.swp
 waifu.xyz
