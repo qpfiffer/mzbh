@@ -7,7 +7,13 @@ import json, psycopg2, time
 
 def insert_webm(conn, oconn, okey, od, should_commit):
     cur = conn.cursor()
-    webm_loaded = json.loads(od.decode())
+    try:
+        webm_loaded = json.loads(od.decode())
+    except Exception as e:
+        print("Could not load Thread {}.".format(okey))
+        print("E: {}".format(e))
+        print("Raw Data: {}".format(od))
+        return
     webm_data = (webm_loaded['created_at'], okey, webm_loaded['filename'],
             webm_loaded['file_hash'], webm_loaded['board'],
             webm_loaded['file_path'], webm_loaded['size'])
@@ -25,7 +31,13 @@ def insert_webm(conn, oconn, okey, od, should_commit):
 def insert_alias(conn, oconn, okey, od, should_commit):
     cur = conn.cursor()
     str_od = od.decode()
-    webm_loaded = json.loads(str_od)
+    try:
+        webm_loaded = json.loads(str_od)
+    except Exception as e:
+        print("Could not load Thread {}.".format(okey))
+        print("E: {}".format(e))
+        print("Raw Data: {}".format(od))
+        return
     webm_data = (webm_loaded['created_at'], okey, webm_loaded['filename'],
             webm_loaded['file_hash'], webm_loaded['board'],
             webm_loaded['file_path'], webm_loaded['file_hash'])
