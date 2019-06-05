@@ -451,6 +451,9 @@ int webm_handler(const m38_http_request *request, m38_http_response *response) {
 		if (res) {
 			unsigned int i = 0;
 			total_rows = PQntuples(res);
+			if (total_rows == 0) {
+				gshkl_add_string_to_loop(&aliases, "None");
+			}
 			for (i = 0; i < total_rows; i++) {
 				webm_alias *dsrlzd = deserialize_alias_from_tuples(res, i);
 
