@@ -121,7 +121,7 @@ PGresult *get_aliases_by_webm_id(const unsigned int id) {
 		goto error;
 
 	res = PQexecParams(conn,
-					  "SELECT a.* FROM webm_aliases "
+					  "SELECT a.* FROM webm_aliases AS a "
 					  "WHERE a.webm_id = $1",
 					  1,
 					  NULL,
