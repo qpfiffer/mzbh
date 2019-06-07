@@ -127,7 +127,7 @@ def create_tables(conn):
 
     cur.execute("""CREATE TABLE webm_aliases (
         id SERIAL PRIMARY KEY,
-        oleg_key TEXT UNIQUE,
+        oleg_key TEXT,
         file_hash TEXT NOT NULL,
         filename TEXT,
         board TEXT,
