@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 from olegdb.oleg import OlegDB
-import json, psycopg2, time, multiprocessing
+import lz4.block, json, psycopg2, time, multiprocessing
+import mmap
 
 olegdb_c = OlegDB(db_name="waifu")
+values_file = open("./data/waifu.val", "r+b")
+values_file_map = mmap.mmap(values_file.fileno(), 0)
 
 def insert_post(conn, oconn, okey, od, should_commit=True):
     cur = conn.cursor()
@@ -53,9 +56,23 @@ def map_func(quesy):
         return
 
     key = dec.split(":")[4]
+    og_size = int(dec.split(":")[8])
+    data_size = int(dec.split(":")[10])
+    offset = int(dec.split(":")[12])
+
+    #print ("DATA: {} {}".format( data_size, og_size, offset))
+    data = values_file_map[offset:offset + data_size]
+    #print("DATA: {}".format(data))
+    try:
+        decompressed = lz4.block.decompress(data, uncompressed_size=og_size)
+    except Exception as e:
+        print("Could not decompress: {}".format(e))
+        print("data: {}".format(data))
+        return
+    #print("decompressed: {}".format(decompressed))
+
     conn = psycopg2.connect("dbname=waifu")
-    od = olegdb_c.get(key)
-    insert_post(conn, olegdb_c, key, od)
+    insert_post(conn, olegdb_c, key, decompressed)
 
 def main():
     pool = multiprocessing.Pool()
@@ -66,6 +83,7 @@ def main():
 
     pool.close()
     pool.join()
+    values_file.close()
     return 0
 
 if __name__ == '__main__':
