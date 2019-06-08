@@ -40,7 +40,7 @@ static const m38_route all_routes[] = {
 	{"GET", "paged_board_handler", "^/chug/([a-zA-Z]*)/([0-9]*)$", 2, &paged_board_handler, &m38_heap_cleanup},
 	{"GET", "webm_handler", "^/slurp/([a-zA-Z]*)/((.*)(.webm|.jpg))$", 2, &webm_handler, &m38_heap_cleanup},
 	{"GET", "board_static_handler", "^/chug/([a-zA-Z]*)/((.*)(.webm|.jpg))$", 2, &board_static_handler, &m38_mmap_cleanup},
-	//{"GET", "by_alias_handler", "^/by/alias/([0-9]*)$", 1, &by_alias_handler, &m38_heap_cleanup},
+	{"GET", "by_alias_handler", "^/by/alias/([0-9]*)$", 1, &by_alias_handler, &m38_heap_cleanup},
 	{"GET", "by_thread_handler", "^/by/thread/([A-Z]*[a-z]*[0-9]*)$", 1, &by_thread_handler, &m38_heap_cleanup},
 	{"GET", "root_handler", "^/$", 0, &index_handler, &m38_heap_cleanup},
 };

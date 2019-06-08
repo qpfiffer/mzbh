@@ -148,7 +148,50 @@ error:
 	return NULL;
 }
 
-/* Webm get/set stuff */
+PGresult *get_images_by_popularity(const unsigned int offset, const unsigned int limit) {
+	PGresult *res = NULL;
+	PGconn *conn = NULL;
+
+	conn = _get_pg_connection();
+	if (!conn)
+		goto error;
+
+	char lim_buf[64] = {0};
+	snprintf(lim_buf, sizeof(lim_buf), "%d", limit);
+
+	char off_buf[64] = {0};
+	snprintf(off_buf, sizeof(off_buf), "%d", offset);
+
+	const char *param_values[] = {lim_buf, off_buf};
+
+	res = PQexecParams(conn,
+					"SELECT EXTRACT(EPOCH FROM webms.created_at) AS created_at, webms.* "
+					"FROM webms LEFT JOIN webm_aliases ON webms.id = webm_aliases.webm_id "
+					"GROUP BY webms.id "
+					"ORDER BY count(webm_aliases.id) DESC "
+					"LIMIT $1 OFFSET $2;",
+					2,
+					NULL,
+					param_values,
+					NULL,
+					NULL,
+					0);
+
+	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+		m38_log_msg(LOG_ERR, "SELECT failed: %s", PQerrorMessage(conn));
+		goto error;
+	}
+
+	_finish_pg_connection(conn);
+
+	return res;
+
+error:
+	if (res)
+		PQclear(res);
+	_finish_pg_connection(conn);
+	return NULL;
+}
 webm *get_image_by_oleg_key(const char image_hash[static HASH_ARRAY_SIZE], char out_key[static MAX_KEY_SIZE]) {
 	PGresult *res = NULL;
 	PGconn *conn = NULL;
@@ -174,7 +217,7 @@ webm *get_image_by_oleg_key(const char image_hash[static HASH_ARRAY_SIZE], char 
 		goto error;
 	}
 
-	webm *deserialized = deserialize_webm_from_tuples(res);
+	webm *deserialized = deserialize_webm_from_tuples(res, 0);
 	if (!deserialized)
 		goto error;
 

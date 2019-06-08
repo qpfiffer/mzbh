@@ -542,34 +542,33 @@ static int _board_handler(const m38_http_request *request, m38_http_response *re
 	return m38_render_file(ctext, "./templates/board.html", response);
 }
 
-// static unsigned int _add_sorted_by_aliases(greshunkel_var *images) {
-// 	char p[MAX_KEY_SIZE] = WEBMTOALIAS_NMSPC;
-// 	db_key_match *key_matches = fetch_matches_from_db(&oleg_conn, p);
-// 	db_match *matches = fetch_bulk_from_db(&oleg_conn, key_matches, 1);
-//
-// 	unsigned int total = 0;
-// 	db_match *current = matches;
-// 	while (current) {
-// 		db_match *next = current->next;
-//
-// 		webm_to_alias *dsrlzd = deserialize_webm_to_alias((char *)current->data);
-// 		free((unsigned char *)current->data);
-// 		free(current);
-//
-// 		unsigned int i = 0;
-// 		for (i = 0; i < dsrlzd->aliases->count; i++) {
-// 			gshkl_add_string_to_loop(images, vector_get(dsrlzd->aliases, i));
-// 		}
-//
-// 		vector_free(dsrlzd->aliases);
-// 		free(dsrlzd);
-// 		total++;
-//
-// 		current = next;
-// 	}
-//
-// 	return 0;
-// }
+static unsigned int _add_sorted_by_aliases(greshunkel_var *images,
+		const unsigned int offset, const unsigned int limit) {
+	PGresult *res = get_images_by_popularity(offset, limit);
+	unsigned int total_rows = 0;
+	if (res) {
+		unsigned int i = 0;
+		total_rows = PQntuples(res);
+		for (i = 0; i < total_rows; i++) {
+			webm *dsrlzd = deserialize_webm_from_tuples(res, i);
+
+			if (dsrlzd) {
+				greshunkel_ctext *_webm_sub = gshkl_init_context();
+
+				gshkl_add_string(_webm_sub, "filename", dsrlzd->filename);
+				gshkl_add_string(_webm_sub, "board", dsrlzd->board);
+
+				gshkl_add_sub_context_to_loop(images, _webm_sub);
+			}
+
+			free(dsrlzd);
+		}
+	}
+
+	PQclear(res);
+
+	return total_rows;
+}
 
 int by_thread_handler(const m38_http_request *request, m38_http_response *response) {
 	char thread_id[256] = {0};
@@ -646,41 +645,41 @@ int by_thread_handler(const m38_http_request *request, m38_http_response *respon
 	return m38_render_file(ctext, "./templates/by_thread.html", response);
 }
 
-// int by_alias_handler(const m38_http_request *request, m38_http_response *response) {
-// 	const unsigned int page = strtol(request->resource + request->matches[1].rm_so, NULL, 10);
-//
-// 	greshunkel_ctext *ctext = gshkl_init_context();
-// 	gshkl_add_filter(ctext, "thumbnail_for_image", thumbnail_for_image, gshkl_filter_cleanup);
-// 	greshunkel_var images = gshkl_add_array(ctext, "IMAGES");
-// 	int total = _add_sorted_by_aliases(&images);
-// 	if (total == 0) {
-// 		gshkl_add_string_to_loop(&images, "None");
-// 	}
-//
-// 	greshunkel_var pages = gshkl_add_array(ctext, "PAGES");
-// 	unsigned int i;
-// 	const unsigned int max = total/RESULTS_PER_PAGE;
-// 	for (i = 0; i < max; i++)
-// 		gshkl_add_int_to_loop(&pages, i);
-//
-// 	if (page > 0) {
-// 		gshkl_add_int(ctext, "prev_page", page - 1);
-// 	} else {
-// 		gshkl_add_string(ctext, "prev_page", "");
-// 	}
-//
-// 	if (page < max) {
-// 		gshkl_add_int(ctext, "next_page", page + 1);
-// 	} else {
-// 		gshkl_add_string(ctext, "next_page", "");
-// 	}
-//
-// 	greshunkel_var boards = gshkl_add_array(ctext, "BOARDS");
-// 	_add_files_in_dir_to_arr(&boards, webm_location());
-//
-// 	gshkl_add_int(ctext, "total", total);
-// 	return m38_render_file(ctext, "./templates/sorted_by_aliases.html", response);
-// }
+int by_alias_handler(const m38_http_request *request, m38_http_response *response) {
+	const unsigned int page = strtol(request->resource + request->matches[1].rm_so, NULL, 10);
+
+	greshunkel_ctext *ctext = gshkl_init_context();
+	gshkl_add_filter(ctext, "thumbnail_for_image", thumbnail_for_image, gshkl_filter_cleanup);
+	greshunkel_var images = gshkl_add_array(ctext, "IMAGES");
+	int total = _add_sorted_by_aliases(&images, OFFSET_FOR_PAGE(page), RESULTS_PER_PAGE);
+	if (total == 0) {
+		gshkl_add_string_to_loop(&images, "None");
+	}
+
+	greshunkel_var pages = gshkl_add_array(ctext, "PAGES");
+	unsigned int i;
+	const unsigned int max = total/RESULTS_PER_PAGE;
+	for (i = 0; i < max; i++)
+		gshkl_add_int_to_loop(&pages, i);
+
+	if (page > 0) {
+		gshkl_add_int(ctext, "prev_page", page - 1);
+	} else {
+		gshkl_add_string(ctext, "prev_page", "");
+	}
+
+	if (page < max) {
+		gshkl_add_int(ctext, "next_page", page + 1);
+	} else {
+		gshkl_add_string(ctext, "next_page", "");
+	}
+
+	greshunkel_var boards = gshkl_add_array(ctext, "BOARDS");
+	_add_files_in_dir_to_arr(&boards, webm_location());
+
+	gshkl_add_int(ctext, "total", total);
+	return m38_render_file(ctext, "./templates/no_board.html", response);
+}
 
 int board_handler(const m38_http_request *request, m38_http_response *response) {
 	return _board_handler(request, response, 0);

@@ -32,8 +32,7 @@ typedef struct webm {
 
 void create_webm_key(const char file_hash[static HASH_IMAGE_STR_SIZE], char outbuf[static MAX_KEY_SIZE]);
 char *serialize_webm(const webm *to_serialize);
-//webm *deserialize_webm(const char *json);
-webm *deserialize_webm_from_tuples(const PGresult *res);
+webm *deserialize_webm_from_tuples(const PGresult *res, const unsigned int idx);
 unsigned int webm_count();
 
 /* Aliases of webms have the same file hash but different names, boards, etc. Mostly metadata. */

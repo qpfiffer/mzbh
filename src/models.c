@@ -16,7 +16,7 @@ void create_webm_key(const char file_hash[static HASH_IMAGE_STR_SIZE], char outb
 	snprintf(outbuf, MAX_KEY_SIZE, "%s%s", WEBM_NMSPC, file_hash);
 }
 
-webm *deserialize_webm_from_tuples(const PGresult *res) {
+webm *deserialize_webm_from_tuples(const PGresult *res, const unsigned int i) {
 	if (!res)
 		return NULL;
 
@@ -36,14 +36,14 @@ webm *deserialize_webm_from_tuples(const PGresult *res) {
 	const int id_col = PQfnumber(res, "id");
 	const int created_at_col = PQfnumber(res, "created_at");
 
-	strncpy(to_return->file_hash, PQgetvalue(res, 0, file_hash_col), sizeof(to_return->file_hash));
-	strncpy(to_return->file_path, PQgetvalue(res, 0, file_path_col), sizeof(to_return->file_path));
-	strncpy(to_return->filename, PQgetvalue(res, 0, filename_col), sizeof(to_return->filename));
-	strncpy(to_return->board, PQgetvalue(res, 0, board_col), sizeof(to_return->board));
-	to_return->size = (size_t)atol(PQgetvalue(res, 0, size_col));
-	to_return->post_id = (unsigned int)atol(PQgetvalue(res, 0, post_id_col));
-	to_return->created_at = (time_t)atol(PQgetvalue(res, 0, created_at_col));
-	to_return->id = (unsigned int)atol(PQgetvalue(res, 0, id_col));
+	strncpy(to_return->file_hash, PQgetvalue(res, i, file_hash_col), sizeof(to_return->file_hash));
+	strncpy(to_return->file_path, PQgetvalue(res, i, file_path_col), sizeof(to_return->file_path));
+	strncpy(to_return->filename, PQgetvalue(res, i, filename_col), sizeof(to_return->filename));
+	strncpy(to_return->board, PQgetvalue(res, i, board_col), sizeof(to_return->board));
+	to_return->size = (size_t)atol(PQgetvalue(res, i, size_col));
+	to_return->post_id = (unsigned int)atol(PQgetvalue(res, i, post_id_col));
+	to_return->created_at = (time_t)atol(PQgetvalue(res, i, created_at_col));
+	to_return->id = (unsigned int)atol(PQgetvalue(res, i, id_col));
 
 
 	return to_return;

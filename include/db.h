@@ -11,6 +11,7 @@ struct webm_alias *get_aliased_image_by_oleg_key(const char filepath[static MAX_
 /* Gets a regular webm from the DB. */
 struct webm *get_image_by_oleg_key(const char image_hash[static HASH_ARRAY_SIZE], char out_key[static MAX_KEY_SIZE]);
 PGresult *get_aliases_by_webm_id(const unsigned int id);
+PGresult *get_images_by_popularity(const unsigned int offset, const unsigned int limit);
 /* Similar to get_aliased_image(2), but by key directly. */
 struct webm_alias *get_aliased_image_with_key(const char key[static MAX_KEY_SIZE]);
 
