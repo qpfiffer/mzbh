@@ -79,7 +79,7 @@ PGresult *get_posts_by_thread_id(const unsigned int id) {
 		goto error;
 
 	res = PQexecParams(conn,
-					  "SELECT p.*, w.filename AS w_filename, wa.filename AS wa_filename FROM posts AS p "
+					  "SELECT EXTRACT(EPOCH FROM p.created_at) AS created_at, p.*, w.filename AS w_filename, wa.filename AS wa_filename FROM posts AS p "
 						"JOIN threads AS t ON p.thread_id = t.id "
 						"FULL OUTER JOIN webms AS w ON w.post_id = p.id "
 						"FULL OUTER JOIN webm_aliases AS wa ON wa.post_id = p.id "
@@ -121,7 +121,7 @@ PGresult *get_aliases_by_webm_id(const unsigned int id) {
 		goto error;
 
 	res = PQexecParams(conn,
-					  "SELECT a.* FROM webm_aliases AS a "
+					  "SELECT EXTRACT(EPOCH FROM a.created_at) AS created_at, a.* FROM webm_aliases AS a "
 					  "WHERE a.webm_id = $1 "
 						"ORDER BY created_at DESC",
 					  1,
@@ -160,7 +160,7 @@ webm *get_image_by_oleg_key(const char image_hash[static HASH_ARRAY_SIZE], char 
 		goto error;
 
 	res = PQexecParams(conn,
-					  "SELECT * FROM webms WHERE file_hash = $1",
+					  "SELECT EXTRACT(EPOCH FROM created_at) AS created_at, * FROM webms WHERE file_hash = $1",
 					  1,
 					  NULL,
 					  param_values,
