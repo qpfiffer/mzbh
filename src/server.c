@@ -751,7 +751,7 @@ int api_index_stats(const m38_http_request *request, m38_http_response *response
 
 	json_object_set_value(root_object, "webm_data", _webm_arr);
 	json_object_set_value(root_object, "alias_data", _webm_alias_arr);
-	json_object_set_value(root_object, "posts_data", _webm_alias_arr);
+	json_object_set_value(root_object, "posts_data", _posts_arr);
 
 	out = json_serialize_to_string(root_value);
 
