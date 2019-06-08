@@ -36,18 +36,31 @@
 #define OFFSET_FOR_PAGE(x) x * RESULTS_PER_PAGE
 
 static char *pretty_date(const char *argument) {
+	char *buf = NULL;
+	if (!argument || strnlen(argument, 64) == 0)
+		goto error;
+
 	const time_t tim = strtol(argument, NULL, 10);
+
+	if (tim < 0)
+		goto error;
 
 	if ((tim == LONG_MIN || tim == LONG_MAX) && errno == ERANGE)
 		return strdup(argument);
 
-	const time_t non_milli_tim = tim / 1000;
+	const time_t non_milli_tim = tim;
 
 	struct tm converted;
 	gmtime_r(&non_milli_tim, &converted);
 
-	char *buf = calloc(1, sizeof(char) * 25);
+	buf = calloc(1, sizeof(char) * 25);
     strftime(buf, 25, "%F(%a)%T", &converted);
+
+	return buf;
+
+error:
+	buf = calloc(1, sizeof(char) * 4);
+	strcpy(buf, "N/A");
 
 	return buf;
 }
@@ -420,7 +433,7 @@ int webm_handler(const m38_http_request *request, m38_http_response *response) {
 	}
 
 	if (!found) {
-		gshkl_add_int(ctext, "image_date", -1);
+		gshkl_add_string(ctext, "image_date", NULL);
 		gshkl_add_string(ctext, "post_content", NULL);
 		gshkl_add_string(ctext, "post_id", NULL);
 		gshkl_add_string(ctext, "thread_id", NULL);
