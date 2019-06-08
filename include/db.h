@@ -37,3 +37,6 @@ struct thread *get_thread_by_id(const unsigned int thread_id);
  * Returns 1 on success.
  */
 int associate_alias_with_webm(const struct webm *webm, const char alias_key[static MAX_KEY_SIZE]);
+
+PGresult *get_api_index_state_webms();
+PGresult *get_api_index_state_aliases();

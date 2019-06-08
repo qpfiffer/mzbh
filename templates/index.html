@@ -26,6 +26,7 @@
 							<h1 class="title">waifu.xyz</h1><span class="beta red">beta</span>
 						</div>
 						<div>
+							<canvas id="myChart" width="600" height="400"></canvas>
 							<p>Now serving: <span class="red">xXx @webm_count xXx</span> webms, xXx @alias_count xXx known reposted dupes and xXx @post_count xXx posts.</span>
 							<p>An open-source <code>.webm</code> aggregator. Probably <span class="red">NSFW</span>.</p>
 							<p>You have been warned.</p>
@@ -59,6 +60,8 @@
 				</div>
 			</div>
 		</div>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.3/Chart.min.js"></script>
 		<script type="text/javascript">
 			function ready(fn) {
 				if (document.readyState != 'loading'){
@@ -78,6 +81,42 @@
 				str += "</span>";
 				el.innerHTML = str;
 				return el
+			}
+
+			function charts() {
+				var timeFormat = 'YYYY-MM-DD';
+				var ctx = document.getElementById('myChart').getContext('2d');
+				var data = fetch('/api/index_stats').then(function(resp) { return resp.json(); }).then(function(jdog) {
+					var myChart = new Chart(ctx, {
+						type: 'line',
+						data: {
+							datasets: [{
+								label: 'Webms',
+								data: jdog.webm_data,
+								backgroundColor: [
+									'rgba(255, 206, 86, 0.2)',
+								],
+							}, {
+								label: 'Duplicates',
+								backgroundColor: [
+									'rgba(255, 99, 132, 0.2)',
+								],
+								data: jdog.alias_data
+							}],
+						},
+						options: {
+							responsive: true,
+							scales: {
+								xAxes: [{
+									type: 'time',
+									time: {
+										parser: timeFormat,
+									}
+								}]
+							}
+						},
+					});
+				});
 			}
 
 			function setup() {
@@ -127,6 +166,7 @@
 					request.send(JSON.stringify({'webm_url': url}));
 				});
 			}
+			ready(charts);
 			ready(setup);
 		</script>
 		<link rel="stylesheet" media="all" href="/static/css/loader.css" />

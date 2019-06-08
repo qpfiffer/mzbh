@@ -65,6 +65,42 @@ error:
 	return 0;
 }
 
+static PGresult *_generic_command(const char *query_command) {
+	PGresult *res = NULL;
+	PGconn *conn = NULL;
+
+	conn = _get_pg_connection();
+	if (!conn)
+		goto error;
+
+	res = PQexec(conn, query_command);
+
+	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+		m38_log_msg(LOG_ERR, "SELECT failed: %s", PQerrorMessage(conn));
+		goto error;
+	}
+
+	_finish_pg_connection(conn);
+
+	return res;
+
+error:
+	if (res)
+		PQclear(res);
+	_finish_pg_connection(conn);
+	return NULL;
+}
+
+PGresult *get_api_index_state_webms() {
+	const char buf[] = "select count(*) as total, date(created_at) as date from webms group by date";
+	return _generic_command(buf);
+}
+
+PGresult *get_api_index_state_aliases() {
+	const char buf[] = "select count(*) as total, date(created_at) as date from webm_aliases group by date";
+	return _generic_command(buf);
+}
+
 PGresult *get_posts_by_thread_id(const unsigned int id) {
 	PGresult *res = NULL;
 	PGconn *conn = NULL;

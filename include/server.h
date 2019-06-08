@@ -23,3 +23,5 @@ int favicon_handler(const m38_http_request *request, m38_http_response *response
 int robots_handler(const m38_http_request *request, m38_http_response *response);
 int by_thread_handler(const m38_http_request *request, m38_http_response *response);
 int url_search_handler(const m38_http_request *request, m38_http_response *response);
+
+int api_index_stats(const m38_http_request *request, m38_http_response *response);
