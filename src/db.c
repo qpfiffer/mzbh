@@ -83,7 +83,8 @@ PGresult *get_posts_by_thread_id(const unsigned int id) {
 						"JOIN threads AS t ON p.thread_id = t.id "
 						"FULL OUTER JOIN webms AS w ON w.post_id = p.id "
 						"FULL OUTER JOIN webm_aliases AS wa ON wa.post_id = p.id "
-						"WHERE t.id = $1",
+						"WHERE t.id = $1"
+						"ORDER BY fourchan_post_id DESC",
 					  1,
 					  NULL,
 					  param_values,
