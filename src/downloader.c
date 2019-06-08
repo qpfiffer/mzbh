@@ -22,7 +22,7 @@
 #include "stack.h"
 #include "utils.h"
 
-const char *BOARDS[] = {"a", "b", "fit", "g", "gif", "e", "h", "o", "n", "r", "s", "sci", "soc", "v"};
+const char *BOARDS[] = {"a", "b", "fit", "g", "gif", "e", "h", "o", "n", "r", "s", "sci", "soc", "v", "wsg"};
 //const char *BOARDS[] = {"a", "b"};
 
 const char FOURCHAN_API_HOST[] = "a.4cdn.org";

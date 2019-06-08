@@ -46,7 +46,7 @@ class OlegDB(object):
             return default
 
         raw_response = resp.raw.read()
-        return pickle.loads(raw_response)
+        return raw_response
         #try:
         #    return msgpack.unpackb(raw_response, encoding='utf-8')
         #except msgpack.ExtraData:
