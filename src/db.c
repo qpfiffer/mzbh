@@ -92,12 +92,35 @@ error:
 }
 
 PGresult *get_api_index_state_webms() {
-	const char buf[] = "select count(*) as total, date(created_at) as date from webms group by date";
+	const char buf[] = "WITH data AS ("
+"    select count(*) as total, date(created_at) as dt from webms where created_at > date(now() - '5 year'::interval) group by dt"
+")"
+"SELECT"
+"  dt,"
+"  sum(total) over (order by dt asc rows between unbounded preceding and current row)"
+"from data;";
 	return _generic_command(buf);
 }
 
 PGresult *get_api_index_state_aliases() {
-	const char buf[] = "select count(*) as total, date(created_at) as date from webm_aliases group by date";
+	const char buf[] = "WITH data AS ("
+"    select count(*) as total, date(created_at) as dt from webm_aliases where created_at > date(now() - '5 year'::interval) group by dt"
+")"
+"SELECT"
+"  dt,"
+"  sum(total) over (order by dt asc rows between unbounded preceding and current row)"
+"from data;";
+	return _generic_command(buf);
+}
+
+PGresult *get_api_index_state_posts() {
+	const char buf[] = "WITH data AS ("
+"    select count(*) as total, date(created_at) as dt from posts where created_at > date(now() - '5 year'::interval) group by dt"
+")"
+"SELECT"
+"  dt,"
+"  sum(total) over (order by dt asc rows between unbounded preceding and current row)"
+"from data;";
 	return _generic_command(buf);
 }
 

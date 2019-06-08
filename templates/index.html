@@ -93,15 +93,24 @@
 							datasets: [{
 								label: 'Webms',
 								data: jdog.webm_data,
+								lineTension: 0,
 								backgroundColor: [
-									'rgba(255, 206, 86, 0.2)',
+									'rgba(75, 192, 192, 0.2)',
 								],
 							}, {
 								label: 'Duplicates',
 								backgroundColor: [
 									'rgba(255, 99, 132, 0.2)',
 								],
-								data: jdog.alias_data
+								data: jdog.alias_data,
+								lineTension: 0,
+							}, {
+								label: 'Posts',
+								backgroundColor: [
+									'rgba(10, 172, 6, 0.2)',
+								],
+								data: jdog.posts_data,
+								lineTension: 0,
 							}],
 						},
 						options: {

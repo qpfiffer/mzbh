@@ -40,3 +40,4 @@ int associate_alias_with_webm(const struct webm *webm, const char alias_key[stat
 
 PGresult *get_api_index_state_webms();
 PGresult *get_api_index_state_aliases();
+PGresult *get_api_index_state_posts();

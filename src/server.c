@@ -706,6 +706,7 @@ int api_index_stats(const m38_http_request *request, m38_http_response *response
 
 	PGresult *webmr = get_api_index_state_webms();
 	PGresult *webm_aliasr = get_api_index_state_aliases();
+	PGresult *postsr = get_api_index_state_posts();
 
 	JSON_Value *root_value = json_value_init_object();
 	JSON_Object *root_object = json_value_get_object(root_value);
@@ -714,14 +715,16 @@ int api_index_stats(const m38_http_request *request, m38_http_response *response
 	JSON_Array *webm_arr = json_value_get_array(_webm_arr);
 	JSON_Value *_webm_alias_arr = json_value_init_array();
 	JSON_Array *webm_alias_arr = json_value_get_array(_webm_alias_arr);
+	JSON_Value *_posts_arr = json_value_init_array();
+	JSON_Array *posts_arr = json_value_get_array(_posts_arr);
 
 	int i = 0;
 	for (i = 0; i < PQntuples(webmr); i++) {
 		JSON_Value *data_point = json_value_init_object();
 		JSON_Object *obj = json_value_get_object(data_point);
 
-		json_object_set_string(obj, "x", PQgetvalue(webmr, i, 1));
-		json_object_set_number(obj, "y", atol(PQgetvalue(webmr, i, 0)));
+		json_object_set_string(obj, "x", PQgetvalue(webmr, i, 0));
+		json_object_set_number(obj, "y", atol(PQgetvalue(webmr, i, 1)));
 
 		json_array_append_value(webm_arr, data_point);
 	}
@@ -730,19 +733,31 @@ int api_index_stats(const m38_http_request *request, m38_http_response *response
 		JSON_Value *data_point = json_value_init_object();
 		JSON_Object *obj = json_value_get_object(data_point);
 
-		json_object_set_string(obj, "x", PQgetvalue(webm_aliasr, i, 1));
-		json_object_set_number(obj, "y", atol(PQgetvalue(webm_aliasr, i, 0)));
+		json_object_set_string(obj, "x", PQgetvalue(webm_aliasr, i, 0));
+		json_object_set_number(obj, "y", atol(PQgetvalue(webm_aliasr, i, 1)));
 
 		json_array_append_value(webm_alias_arr, data_point);
 	}
 
+	for (i = 0; i < PQntuples(postsr); i++) {
+		JSON_Value *data_point = json_value_init_object();
+		JSON_Object *obj = json_value_get_object(data_point);
+
+		json_object_set_string(obj, "x", PQgetvalue(postsr, i, 0));
+		json_object_set_number(obj, "y", atol(PQgetvalue(postsr, i, 1)));
+
+		json_array_append_value(posts_arr, data_point);
+	}
+
 	json_object_set_value(root_object, "webm_data", _webm_arr);
 	json_object_set_value(root_object, "alias_data", _webm_alias_arr);
+	json_object_set_value(root_object, "posts_data", _webm_alias_arr);
 
 	out = json_serialize_to_string(root_value);
 
 	PQclear(webmr);
 	PQclear(webm_aliasr);
+	PQclear(postsr);
 
 	return m38_return_raw_buffer(out, strlen(out), response);
 }
