@@ -124,7 +124,7 @@ PGresult *get_aliases_by_webm_id(const unsigned int id) {
 	res = PQexecParams(conn,
 					  "SELECT EXTRACT(EPOCH FROM a.created_at) AS created_at, a.* FROM webm_aliases AS a "
 					  "WHERE a.webm_id = $1 "
-						"ORDER BY created_at DESC",
+						"ORDER BY EXTRACT(EPOCH FROM a.created_at) DESC",
 					  1,
 					  NULL,
 					  param_values,
