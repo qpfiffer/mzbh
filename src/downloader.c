@@ -11,9 +11,7 @@
 #include <sys/stat.h>
 
 #include <curl/curl.h>
-
 #include <38-moths/38-moths.h>
-#include <oleg-http/http.h>
 
 #include "db.h"
 #include "http.h"
@@ -22,31 +20,20 @@
 #include "stack.h"
 #include "utils.h"
 
-const char *BOARDS[] = {"a", "b", "fit", "g", "gif", "e", "h", "o", "n", "r", "s", "sci", "soc", "v", "wsg"};
-//const char *BOARDS[] = {"a", "b"};
-
-const char FOURCHAN_API_HOST[] = "a.4cdn.org";
-const char FOURCHAN_THUMBNAIL_HOST[] = "t.4cdn.org";
-const char FOURCHAN_IMAGE_HOST[] = "i.4cdn.org";
-
-const char IMAGE_REQUEST[] =
-	"GET /%s/%s%.*s HTTP/1.1\r\n"
-	"User-Agent: Mozilla/5.0 (Windows NT 5.1; rv:31.0) Gecko/20100101 Firefox/31.0\r\n"
-	"Host: i.4cdn.org\r\n"
-	"Accept: */*\r\n\r\n";
-
-const char THUMB_REQUEST[] =
-	"GET /%s/%ss.jpg HTTP/1.1\r\n"
-	"User-Agent: Mozilla/5.0 (Windows NT 5.1; rv:31.0) Gecko/20100101 Firefox/31.0\r\n"
-	"Host: t.4cdn.org\r\n"
-	"Accept: */*\r\n\r\n";
+//const char *BOARDS[] = {"a", "b", "fit", "g", "gif", "e", "h", "o", "n", "r", "s", "sci", "soc", "v", "wsg"};
+const char *BOARDS[] = {"a", "wsg"};
 
 struct MemoryStruct {
 	char *memory;
 	size_t size;
 };
 
-static size_t write_memory_callback(void *contents,size_t size,
+static size_t write_file_callback(void *contents, size_t size,
+								  size_t nmemb, void *userp) {
+	return fwrite(contents, size, nmemb, (FILE *)userp);
+}
+
+static size_t write_memory_callback(void *contents, size_t size,
 									size_t nmemb, void *userp) {
 	size_t realsize = size * nmemb;
 	struct MemoryStruct *mem = (struct MemoryStruct *)userp;
@@ -64,6 +51,27 @@ static size_t write_memory_callback(void *contents,size_t size,
 	return realsize;
 }
 
+static int get_file(const char *url, FILE *out_file) {
+	CURL *curl_handle;
+	CURLcode res;
+
+	curl_handle = curl_easy_init();
+	curl_easy_setopt(curl_handle, CURLOPT_URL, url);
+	curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, write_file_callback);
+	curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, (void *)out_file);
+	curl_easy_setopt(curl_handle, CURLOPT_USERAGENT, "libcurl-agent/1.0");
+	res = curl_easy_perform(curl_handle);
+
+	if (res != CURLE_OK) {
+		const char *err = curl_easy_strerror(res);
+		m38_log_msg(LOG_WARN, "Could not receive chunked HTTP from board: %s", err);
+		curl_easy_cleanup(curl_handle);
+		return 1;
+	}
+
+	curl_easy_cleanup(curl_handle);
+	return 0;
+}
 char *get_json(const char *url) {
 	CURL *curl_handle;
 	CURLcode res;
@@ -175,37 +183,18 @@ static ol_stack *build_thread_index() {
 }
 
 int download_image(const post_match *p_match, const unsigned int post_id) {
-	int thumb_request_fd = 0;
-	int image_request_fd = 0;
-	unsigned char *raw_thumb_resp = NULL;
-	unsigned char *raw_image_resp = NULL;
 	FILE *thumb_file = NULL;
 	FILE *image_file = NULL;
 
 	if (!p_match->should_download_image)
 		goto end;
 
-	thumb_request_fd = connect_to_host(FOURCHAN_THUMBNAIL_HOST);
-	if (thumb_request_fd < 0) {
-		m38_log_msg(LOG_ERR, "Could not connect to thumbnail host.");
-		goto error;
-	}
-
-	image_request_fd = connect_to_host(FOURCHAN_IMAGE_HOST);
-	if (image_request_fd < 0) {
-		m38_log_msg(LOG_ERR, "Could not connect to image host.");
-		goto error;
-	}
-
 	char image_filename[MAX_IMAGE_FILENAME_SIZE] = {0};
 	int should_skip = get_non_colliding_image_file_path(image_filename, p_match);
 
 	/* We already have that file. */
-	if (should_skip) {
-		close(image_request_fd);
-		close(thumb_request_fd);
+	if (should_skip)
 		return 1;
-	}
 
 	char thumb_filename[MAX_IMAGE_FILENAME_SIZE] = {0};
 	ensure_thumb_directory(p_match);
@@ -213,65 +202,24 @@ int download_image(const post_match *p_match, const unsigned int post_id) {
 
 	m38_log_msg(LOG_INFO, "Downloading %s%.*s...", p_match->filename, 5, p_match->file_ext);
 
-	/* Build and send the thumbnail request. */
-	char thumb_request[256] = {0};
-	snprintf(thumb_request, sizeof(thumb_request), THUMB_REQUEST,
-			p_match->board, p_match->post_date);
-	unsigned int rc = send(thumb_request_fd, thumb_request, strlen(thumb_request), 0);
-	if (rc != strlen(thumb_request)) {
-		m38_log_msg(LOG_ERR, "Could not send all bytes to host while requesting thumbnail. Sent (%i/%i).", rc, strlen(thumb_request));
-		goto error;
-	}
-
-	/* Build and send the image request. */
-	char image_request[256] = {0};
-	snprintf(image_request, sizeof(image_request), IMAGE_REQUEST,
-			p_match->board, p_match->post_date, (int)sizeof(p_match->file_ext), p_match->file_ext);
-	rc = send(image_request_fd, image_request, strlen(image_request), 0);
-	if (rc != strlen(image_request)) {
-		m38_log_msg(LOG_ERR, "Could not send all bytes to host while requesting image.");
-		goto error;
-	}
-
-	size_t thumb_size = 0, image_size = 0;
-	raw_thumb_resp = receive_http(thumb_request_fd, &thumb_size);
-	raw_image_resp = receive_http(image_request_fd, &image_size);
-
-	if (thumb_size <= 0 || image_size <= 0) {
-		close(image_request_fd);
-		close(thumb_request_fd);
-		free(raw_thumb_resp);
-		free(raw_image_resp);
-		m38_log_msg(LOG_ERR, "Thumb or image size was zero bytes.");
-		return 0;
-	}
-
-	if (raw_thumb_resp == NULL) {
-		m38_log_msg(LOG_ERR, "No thumbnail received.");
-		goto error;
-	}
-
-	if (raw_image_resp == NULL) {
-		m38_log_msg(LOG_ERR, "No image received.");
-		goto error;
-	}
-
-	/* Write thumbnail to disk. */
 	thumb_file = fopen(thumb_filename, "wb");
 	if (!thumb_file || ferror(thumb_file)) {
 		m38_log_msg(LOG_ERR, "Could not open thumbnail file: %s", thumb_filename);
 		perror(NULL);
 		goto error;
 	}
-	const size_t rt_written = fwrite(raw_thumb_resp, 1, thumb_size, thumb_file);
-	m38_log_msg(LOG_INFO, "Wrote %i bytes of thumbnail to disk.", rt_written);
-	if (rt_written <= 0 || ferror(thumb_file)) {
-		m38_log_msg(LOG_WARN, "Could not write thumbnail to disk: %s", thumb_filename);
-		perror(NULL);
+
+	/* Build and send the thumbnail request. */
+	char templated_req[512] = {0};
+	snprintf(templated_req, sizeof(templated_req), "https://t.4cdn.org/%s/%ss.jpg",
+			p_match->board, p_match->post_date);
+	int rc = get_file(templated_req, thumb_file);
+	fclose(thumb_file);
+
+	if (rc) {
+		m38_log_msg(LOG_ERR, "Could not write thumbnail file.");
 		goto error;
 	}
-	fclose(thumb_file);
-	thumb_file = 0;
 
 	image_file = fopen(image_filename, "wb");
 	if (!image_file || ferror(image_file)) {
@@ -279,15 +227,18 @@ int download_image(const post_match *p_match, const unsigned int post_id) {
 		perror(NULL);
 		goto error;
 	}
-	const size_t iwritten = fwrite(raw_image_resp, 1, image_size, image_file);
-	if (iwritten <= 0 || ferror(image_file)) {
-		m38_log_msg(LOG_WARN, "Could not write image to disk: %s", image_filename);
-		perror(NULL);
+
+	/* Build and send the image request. */
+	char image_request[512] = {0};
+	snprintf(image_request, sizeof(image_request), "https://i.4cdn.org/%s/%s%.*s",
+			p_match->board, p_match->post_date, (int)sizeof(p_match->file_ext), p_match->file_ext);
+	rc = get_file(image_request, image_file);
+	fclose(image_file);
+
+	if (rc) {
+		m38_log_msg(LOG_ERR, "Could not write image file.");
 		goto error;
 	}
-	m38_log_msg(LOG_INFO, "Wrote %i bytes of image to disk.", iwritten);
-	fclose(image_file);
-	image_file = 0;
 
 	char fname_plus_extension[MAX_IMAGE_FILENAME_SIZE] = {0};
 	get_non_colliding_image_filename(fname_plus_extension, p_match);
@@ -299,13 +250,6 @@ int download_image(const post_match *p_match, const unsigned int post_id) {
 	}
 
 	/* Don't need the post match anymore: */
-	free(raw_image_resp);
-	raw_image_resp = NULL;
-	free(raw_thumb_resp);
-	raw_thumb_resp = NULL;
-
-	close(thumb_request_fd);
-	close(image_request_fd);
 
 	m38_log_msg(LOG_INFO, "Downloaded %s%.*s...", p_match->filename, 5, p_match->file_ext);
 
@@ -313,14 +257,6 @@ end:
 	return 1;
 
 error:
-	free(raw_thumb_resp);
-	free(raw_image_resp);
-	if (thumb_request_fd)
-		close(thumb_request_fd);
-
-	if (image_request_fd)
-		close(image_request_fd);
-
 	if (thumb_file != NULL)
 		fclose(thumb_file);
 

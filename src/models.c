@@ -5,7 +5,6 @@
 #include <string.h>
 
 #include <38-moths/logging.h>
-#include <oleg-http/oleg-http.h>
 
 #include "db.h"
 #include "models.h"
