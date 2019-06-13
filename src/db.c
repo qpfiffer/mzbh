@@ -414,9 +414,9 @@ webm_alias *get_aliased_image_by_oleg_key(const char filepath[static MAX_IMAGE_F
 // 	return w2a;
 // }
 
-unsigned int set_aliased_image(const webm_alias *webm) {
+unsigned int set_aliased_image(const webm_alias *alias) {
 	char key[MAX_KEY_SIZE] = {0};
-	create_alias_key(webm->file_hash, key);
+	create_alias_key(alias->file_path, key);
 
 	PGresult *res = NULL;
 	PGconn *conn = NULL;
@@ -426,17 +426,17 @@ unsigned int set_aliased_image(const webm_alias *webm) {
 		goto error;
 
 	char post_id_buf[64] = {0};
-	snprintf(post_id_buf, sizeof(post_id_buf), "%lu", webm->post_id);
+	snprintf(post_id_buf, sizeof(post_id_buf), "%lu", alias->post_id);
 
 	char webm_id_buf[64] = {0};
-	snprintf(webm_id_buf, sizeof(webm_id_buf), "%lu", webm->webm_id);
+	snprintf(webm_id_buf, sizeof(webm_id_buf), "%lu", alias->webm_id);
 
 	const char *param_values[] = {
 		key,
-		webm->file_hash,
-		webm->filename,
-		webm->board,
-		webm->file_path,
+		alias->file_hash,
+		alias->filename,
+		alias->board,
+		alias->file_path,
 		post_id_buf,
 		webm_id_buf
 	};
