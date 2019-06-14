@@ -6,7 +6,7 @@
 
 int generate_thumbnail(const char webm_path[static MAX_IMAGE_FILENAME_SIZE],
 					   const char thumbnail_path[static MAX_IMAGE_FILENAME_SIZE]) {
-	AVOutputFormat *fmt = NULL;
+	AVOutputFormat *fmt = av_guess_format("jpeg", NULL, NULL);;
 	AVFormatContext *oc = NULL;
 	AVStream *video_st = NULL;
 
