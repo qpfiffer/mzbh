@@ -163,14 +163,14 @@ def main():
     create_tables(connECTION)
 
 
-    pool = multiprocessing.Pool()
+    #pool = multiprocessing.Pool()
 
-    for namespace, namespace_handler in namespaces:
-        values = olegdb_c.get_many(olegdb_c.get_by_prefix(namespace))
+    #for namespace, namespace_handler in namespaces:
+    #    values = olegdb_c.get_many(olegdb_c.get_by_prefix(namespace))
 
-        pool.map(map_func, values.items())
-    pool.close()
-    pool.join()
+    #    pool.map(map_func, values.items())
+    #pool.close()
+    #pool.join()
     return 0
 
 if __name__ == '__main__':

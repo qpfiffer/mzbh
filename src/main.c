@@ -46,6 +46,14 @@ static const m38_route all_routes[] = {
 	{"GET", "root_handler", "^/$", 0, &index_handler, &m38_heap_cleanup},
 };
 
+static m38_app waifu_app = {
+	.main_sock_fd = &main_sock_fd,
+	.port = 8666,
+	.num_threads = DEFAULT_NUM_THREADS,
+	.routes = all_routes,
+	.num_routes = sizeof(all_routes)/sizeof(all_routes[0]),
+};
+
 int main(int argc, char *argv[]) {
 	signal(SIGTERM, term);
 	signal(SIGINT, term);
@@ -73,8 +81,8 @@ int main(int argc, char *argv[]) {
 	}
 
 	int rc = 0;
-	const size_t num_routes = sizeof(all_routes)/sizeof(all_routes[0]);
-	if ((rc = m38_http_serve(&main_sock_fd, 8080, num_threads, all_routes, num_routes)) != 0) {
+	waifu_app.num_threads = num_threads;
+	if ((rc = m38_http_serve(&waifu_app)) != 0) {
 		term(SIGTERM);
 		m38_log_msg(LOG_ERR, "Could not start HTTP service.");
 		return rc;
