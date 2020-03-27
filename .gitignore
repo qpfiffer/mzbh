@@ -10,3 +10,4 @@ downloader
 unit_test
 ./webms
 .vagrant
+core

@@ -7,8 +7,6 @@ import os, requests
 WEBMS_DIR = "./webms"
 
 class Command(BaseCommand):
-    help = 'Downloads porn from the internet.'
-
     def _ensure_dir(self, directory):
         if not os.path.exists(directory):
             os.makedirs(directory)
