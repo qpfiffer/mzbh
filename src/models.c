@@ -12,7 +12,7 @@
 #include "utils.h"
 
 void create_webm_key(const char file_hash[static HASH_IMAGE_STR_SIZE], char outbuf[static MAX_KEY_SIZE]) {
-	snprintf(outbuf, MAX_KEY_SIZE, "%s:%s", WEBM_NMSPC, file_hash);
+	snprintf(outbuf, MAX_KEY_SIZE, "%s%s", WEBM_NMSPC, file_hash);
 }
 
 webm *deserialize_webm_from_tuples(const PGresult *res, const unsigned int i) {
@@ -230,7 +230,7 @@ void create_alias_key(const char file_path[static MAX_IMAGE_FILENAME_SIZE], char
 	char second_hash[HASH_IMAGE_STR_SIZE] = {0};
 	hash_string_fnv1a((unsigned char *)file_path, strnlen(file_path, MAX_IMAGE_FILENAME_SIZE), second_hash);
 
-	snprintf(outbuf, MAX_KEY_SIZE, "%s:%s:%s", ALIAS_NMSPC, str_hash, second_hash);
+	snprintf(outbuf, MAX_KEY_SIZE, "%s%s%s", ALIAS_NMSPC, str_hash, second_hash);
 }
 
 char *serialize_alias(const webm_alias *to_serialize) {
@@ -285,7 +285,7 @@ webm_alias *deserialize_alias(const char *json) {
 
 void create_thread_key(const char board[static MAX_BOARD_NAME_SIZE], const char *thread_id,
 		char outbuf[static MAX_KEY_SIZE]) {
-	snprintf(outbuf, MAX_KEY_SIZE, "%s:%s:%s", THREAD_NMSPC, board, thread_id);
+	snprintf(outbuf, MAX_KEY_SIZE, "%s%s%s", THREAD_NMSPC, board, thread_id);
 }
 
 char *serialize_thread(const thread *to_serialize) {
@@ -342,7 +342,7 @@ thread *deserialize_thread(const char *json) {
 
 void create_post_key(const char board[static MAX_BOARD_NAME_SIZE], const char *post_id,
 	char outbuf[static MAX_KEY_SIZE]) {
-	snprintf(outbuf, MAX_KEY_SIZE, "%s:%s:%s", POST_NMSPC, board, post_id);
+	snprintf(outbuf, MAX_KEY_SIZE, "%s%s%s", POST_NMSPC, board, post_id);
 }
 
 char *serialize_post(const post *to_serialize) {
