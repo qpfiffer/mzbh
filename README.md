@@ -1,11 +1,9 @@
-[![Build Status](https://drone.io/github.com/qpfiffer/waifu.xyz/status.png)](https://drone.io/github.com/qpfiffer/waifu.xyz/latest)
-
 # Introduction
 
 Originally all of the web-app frameworky garbage in this app was custom from the
 ground up, but all of that has been spun-off into [38-Moths](https://github.com/qpfiffer/38-Moths).
 [OlegDB](https://olegdb.org/) is also required. Also PostgreSQL.
-`waifu.xyz`'s  job is pretty simple: Collect and host `.webm` files.
+`mzbh`'s  job is pretty simple: Collect and host `.webm` files.
 It was built with the following goals in mind:
 
 * ~~No dependencies (other than files I can embed into the project directly)~~
@@ -20,7 +18,7 @@ The webserver is something of my own design because I hate dependencies. It's
 not great but it'll get the job done. You can run just the webserver with:
 
 ```
-./waifu.xyz
+./mzbh
 ```
 
 This runs the webserver by itself.
@@ -29,7 +27,7 @@ The webserver also accepts a thread counter argument, `-t`. This specifies the
 number of threads in the acceptor pool.
 
 ```
-./waifu.xyz -t 4
+./mzbh -t 4
 ```
 
 This runs the webserver with 4 threads. The default is 2.
@@ -61,7 +59,7 @@ There is no installation. this will just build a handful of binaries you can use
 
 * `downloader` - The scraper/downloader thing. Responsible for hitting the API,
   downloading and writing files.
-* `waifu.xyz` - The main webserver/application and scraper. This is the meat of
+* `mzbh` - The main webserver/application and scraper. This is the meat of
   everything.
 * `dbctl` - Handy cli program to manage and inspect the DB state.
 * `greshunkel_test` - Tests for the GRESHUNKEL templating language.
@@ -80,7 +78,7 @@ of environment variables you can set to affect where the program will keep files
 
 ## Database
 
-You'll need to download and install [OlegDB](https://olegdb.org/). `waifu.xyz`
+You'll need to download and install [OlegDB](https://olegdb.org/). `mzbh`
 by default expects the database to be running on `localhost:38080`. Just make
 sure this is the case. I'm moving this over to PostgreSQL so you'll need that,
 too.
@@ -90,17 +88,7 @@ too.
 After compiling with `make`, just run the created binary:
 
 ```
-./waifu.xyz
+./mzbh
 ```
 
 This will run the web app frontend along with the scraper.
-
-## Running with Vagrant
-
-You can install and run everything from a Vagrant VM. It is configured to share
-and use the repo directory for data.
-
-```Bash
-vagrant up --provision
-vagrant ssh -c 'cd /waifu.xyz && ./waifu.xyz'
-```

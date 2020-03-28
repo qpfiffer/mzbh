@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include "common_defs.h"
 
-#define DB_PG_CONNECTION_INFO "postgresql:///waifu"
+#define DB_PG_CONNECTION_INFO "postgresql:///mzbh"
 
 /* Gets an aliased image from the DB. */
 struct webm_alias *get_aliased_image_by_oleg_key(const char filepath[static MAX_IMAGE_FILENAME_SIZE], char out_key[static MAX_KEY_SIZE]);
