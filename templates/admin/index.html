@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>mzbh</title>
+		xXx SCREAM templates/includes/_head.html xXx
+	</head>
+	<body>
+		<div id="app" class="main container grd">
+			<div class="row">
+				<div class="col-2">
+					xXx SCREAM templates/includes/_boards.html xXx
+				</div>
+				<div class="col-8">
+					<div class="measure txt-center">
+						<div id="landing">
+							<h1 class="title">mzbh</h1><span class="beta red">beta</span>
+						</div>
+						<div>
+							<canvas id="myChart" width="600" height="400"></canvas>
+							<ul>
+								<li><span class="red">xXx @webm_count xXx</span> webms</li>
+								<li>xXx @alias_count xXx</span> aliases</li>
+								<li>xXx @post_count xXx</span> posts</li>
+							</ul>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-2"></div>
+				<div class="col-8">
+					<p id="search_form" class="input-groups">
+						<input id="search_box" type="text" name="url" autocomplete="off" spellcheck="false" autofocus placeholder="Webm URL"/>
+						<span class="btn-append">
+							<button id="upload_btn" type='button' title="test" class="btn"></button>
+						</span>
+						<span class="btn-append">
+							<button id="search_button" class="btn btn-green">Search</button>
+						</span>
+					</p>
+					<p class="error hidden"></p>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-2"></div>
+				<div class="col-8">
+					<ol id="search_results" class="hidden">
+					</ol>
+					<div class="loader hidden">Loading...</div>
+				</div>
+			</div>
+		</div>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.3/Chart.min.js"></script>
+		<script type="text/javascript">
+			function ready(fn) {
+				if (document.readyState != 'loading'){
+					fn();
+				} else {
+					document.addEventListener('DOMContentLoaded', fn);
+				}
+			}
+
+			function searchResult(obj) {
+				var el = document.createElement("li");
+				var str = "<span class=\"post-content\">";
+				str += "<div> File: <a href=\"/slurp/" + obj.board + "/" + obj.filename + "\" class=\"p1\">" + obj.filename;
+				str += "</a> <span>" + obj.post_id + "</span></div><div> <a class=\"file_thumb\" href=\"/slurp/" + obj.board + "/" + obj.thumbnail;
+				str += "\"><img src=\"/chug/";
+				str += obj.board + "/" + obj.thumbnail + "\"></a></div></div>";
+				str += "</span>";
+				el.innerHTML = str;
+				return el
+			}
+
+			function charts() {
+				var timeFormat = 'YYYY-MM-DD';
+				var ctx = document.getElementById('myChart').getContext('2d');
+				var data = fetch('/api/index_stats').then(function(resp) { return resp.json(); }).then(function(jdog) {
+					var myChart = new Chart(ctx, {
+						type: 'line',
+						data: {
+							datasets: [{
+								label: 'Webms',
+								data: jdog.webm_data,
+								lineTension: 0,
+								backgroundColor: [
+									'rgba(75, 192, 192, 0.2)',
+								],
+							}, {
+								label: 'Duplicates',
+								backgroundColor: [
+									'rgba(255, 99, 132, 0.2)',
+								],
+								data: jdog.alias_data,
+								lineTension: 0,
+							}, {
+								label: 'Posts',
+								backgroundColor: [
+									'rgba(10, 172, 6, 0.2)',
+								],
+								data: jdog.posts_data,
+								lineTension: 0,
+							}],
+						},
+						options: {
+							responsive: true,
+							scales: {
+								xAxes: [{
+									type: 'time',
+									time: {
+										parser: timeFormat,
+									}
+								}]
+							}
+						},
+					});
+				});
+			}
+
+			function setup() {
+				var searchBtn = document.querySelectorAll('#search_button')[0];
+				var searchFormURL = document.querySelectorAll('#search_box')[0];
+				var searchResults = document.querySelectorAll('#search_results')[0];
+				var loader = document.querySelectorAll('.loader')[0];
+				var error = document.querySelectorAll('.error')[0];
+				searchBtn.addEventListener('click', function(e) {
+					loader.classList.remove('hidden');
+					var url = searchFormURL.value;
+					var request = new XMLHttpRequest();
+					request.open('POST', '/search/url.json', true);
+					request.setRequestHeader('Content-Type', 'application/json');
+					request.onload = function() {
+						loader.classList.add('hidden');
+						error.classList.add('hidden');
+						searchResults.innerHTML = "";
+						error.innerHTML = "";
+						if (this.status >= 200 && this.status < 400) {
+							// Success!
+							var data = JSON.parse(this.response);
+							if (data.success == false) {
+								error.classList.remove('hidden');
+								error.textContent = data.error;
+							} else {
+								searchResults.classList.remove('hidden');
+								if (data.data.length != 0) {
+									for (var obj_i in data.data) {
+										var obj = data.data[obj_i];
+										searchResults.appendChild(searchResult(obj));
+									}
+								} else {
+									searchResults.appendChild(document.createTextNode("No Results."));
+								}
+							}
+						} else {
+							// We reached our target server, but it returned an error
+							error.classList.remove('hidden');
+							error.textContent = "Something went wrong. Try uploading the file manually.";
+						}
+					};
+
+					request.onerror = function() {
+						loader.classList.add('hidden');
+					};
+					request.send(JSON.stringify({'webm_url': url}));
+				});
+			}
+			ready(charts);
+			ready(setup);
+		</script>
+		<link rel="stylesheet" media="all" href="/static/css/loader.css" />
+	</body>
+</html>
+<!-- vim: noet ts=4 sw=4:
+-->
