@@ -25,3 +25,5 @@ int by_thread_handler(const m38_http_request *request, m38_http_response *respon
 int url_search_handler(const m38_http_request *request, m38_http_response *response);
 
 int api_index_stats(const m38_http_request *request, m38_http_response *response);
+
+int admin_index_handler(const m38_http_request *request, m38_http_response *response);

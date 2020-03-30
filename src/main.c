@@ -36,6 +36,7 @@ static const m38_route all_routes[] = {
 	{"GET", "generic_static", "^/static/[a-zA-Z0-9/_-]*\\.[a-zA-Z]*$", 0, &static_handler, &m38_mmap_cleanup},
 	{"GET", "user_uploaded_thumbs", "^/static/user_thumbs/[a-zA-Z0-9/_-]*\\.[a-zA-Z]*$", 0, &user_thumbs_static_handler, &m38_mmap_cleanup},
 	{"POST", "search_by_url", "^/search/url.json$", 0, &url_search_handler, &m38_heap_cleanup},
+	{"GET", "admin_index", "^/admin", 0, &admin_index_handler, &m38_heap_cleanup},
 	{"GET", "board_handler_no_num", "^/chug/([a-zA-Z]*)$", 1, &board_handler, &m38_heap_cleanup},
 	{"GET", "paged_board_handler", "^/chug/([a-zA-Z]*)/([0-9]*)$", 2, &paged_board_handler, &m38_heap_cleanup},
 	{"GET", "webm_handler", "^/slurp/([a-zA-Z]*)/((.*)(.webm|.jpg))$", 2, &webm_handler, &m38_heap_cleanup},

@@ -53,7 +53,7 @@ static char *pretty_date(const char *argument) {
 	struct tm converted;
 	gmtime_r(&non_milli_tim, &converted);
 
-	buf = calloc(1, sizeof(char) * 25);
+	buf = calloc(25, sizeof(char));
     strftime(buf, 25, "%F(%a)%T", &converted);
 
 	return buf;
@@ -760,4 +760,16 @@ int api_index_stats(const m38_http_request *request, m38_http_response *response
 	PQclear(postsr);
 
 	return m38_return_raw_buffer(out, strlen(out), response);
+}
+
+int admin_index_handler(const m38_http_request *request, m38_http_response *response) {
+	UNUSED(request);
+	greshunkel_ctext *ctext = gshkl_init_context();
+	gshkl_add_int(ctext, "webm_count", webm_count());
+	gshkl_add_int(ctext, "alias_count", webm_alias_count());
+	gshkl_add_int(ctext, "post_count", post_count());
+
+	greshunkel_var boards = gshkl_add_array(ctext, "BOARDS");
+	_add_files_in_dir_to_arr(&boards, webm_location());
+	return m38_render_file(ctext, "./templates/admin/index.html", response);
 }
