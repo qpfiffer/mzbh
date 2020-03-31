@@ -1,9 +1,14 @@
-from flask import Blueprint, render_template
+from flask import Blueprint, g, render_template
 
-from mzbh.database import get_boards
+from mzbh.models import Category
 
 blueprint = Blueprint('main', __name__)
 
 @blueprint.route("/", methods=("GET",))
 def root():
-    return render_template("index.html")
+    session = g.db_session
+    d = {
+        "categories": session.query(Category).all(),
+    }
+
+    return render_template("index.html", **d)
