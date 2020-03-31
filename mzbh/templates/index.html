@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>mzbh</title>
+		{% include "includes/_head.html" %}
+	</head>
+	<body>
+		<div id="app" class="main container grd">
+			<div class="row">
+				<div class="col-2">
+					{% include "includes/_boards.html" %}
+				</div>
+				<div class="col-8">
+					<div class="measure txt-center">
+						<div id="landing">
+							<h1 class="title">mzbh</h1><span class="beta red">beta</span>
+						</div>
+						<div>
+							<p>Now serving: <span class="red">xXx @webm_count xXx</span> webms, xXx @alias_count xXx known reposted dupes and xXx @post_count xXx posts.</span>
+							<p>An open-source <code>.webm</code> aggregator. Probably <span class="red">NSFW</span>.</p>
+							<p>You have been warned.</p>
+							<p>Get the <a href="https://github.com/qpfiffer/mzbh">code</a> yourself.</p>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-2"></div>
+				<div class="col-8">
+					<p id="search_form" class="input-groups">
+						<input id="search_box" type="text" name="url" autocomplete="off" spellcheck="false" autofocus placeholder="Webm URL"/>
+						<span class="btn-append">
+							<button id="upload_btn" type='button' title="test" class="btn"></button>
+						</span>
+						<span class="btn-append">
+							<button id="search_button" class="btn btn-green">Search</button>
+						</span>
+					</p>
+					<p class="error hidden"></p>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-2"></div>
+				<div class="col-8">
+					<ol id="search_results" class="hidden">
+					</ol>
+					<div class="loader hidden">Loading...</div>
+				</div>
+			</div>
+		</div>
+	</body>
+</html>
+<!-- vim: noet ts=4 sw=4:
+-->

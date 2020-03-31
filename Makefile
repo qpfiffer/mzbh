@@ -1,7 +1,7 @@
 CFLAGS=-Werror -Wno-format-truncation -Wno-missing-field-initializers -Wextra -Wall -O0 -g3
 INCLUDES=-pthread -I./include/ `pkg-config --cflags libpq`
 LIBS=-l38moths -lcurl -lm -lrt `pkg-config --libs libpq`
-NAME=mzbh
+NAME=mzbh_server
 COMMON_OBJ=benchmark.o blue_midnight_wish.o http.o models.o db.o parson.o utils.o
 
 

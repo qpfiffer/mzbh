@@ -1,0 +1,12 @@
+/* vim: set ts=4 sw=4 noet : */
+body {
+    font-size: 18px;
+}
+.image {
+	display: inline-block;
+	width: 90%;
+	height: 200px;
+	margin-bottom: 2em;
+	vertical-align: top;
+	overflow: hidden;
+}

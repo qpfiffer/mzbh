@@ -1,9 +1,9 @@
+mzbh_server
 __pycache__
 *.o
 *.pyc
 .gdb_history
 *.swp
-mzbh
 dbctl
 greshunkel_test
 downloader
@@ -11,3 +11,16 @@ unit_test
 ./webms
 .vagrant
 core
+
+*.pyc
+__pycache__/
+
+instance/
+
+.pytest_cache/
+.coverage
+htmlcov/
+
+dist/
+build/
+*.egg-info/
