@@ -1,35 +1,35 @@
-from sqlalchemy import Column, DateTime, String
-from sqlalchemy.ext.declarative import declarative_base
-
-Base = declarative_base()
+from mzbh.database import db
 
 
-class Category(Base):
-    __tablename__ = 'mzbh.category'
+class Category(db.Model):
+    __tablename__ = 'category'
+    __table_args__ = { 'schema': 'mzbh' }
 
-    id = Column(String, primary_key=True)
-    created_at = Column(DateTime)
-    updated_at = Column(DateTime)
+    id = db.Column(db.String, primary_key=True)
+    created_at = db.Column(db.DateTime)
+    updated_at = db.Column(db.DateTime)
 
-    name = Column(String, nullable=False)
-    host_id = Column(String)
-
-
-class Host(Base):
-    __tablename__ = 'mzbh.host'
-
-    id = Column(String, primary_key=True)
-    created_at = Column(DateTime)
-    updated_at = Column(DateTime)
-
-    name = Column(String, nullable=False)
+    name = db.Column(db.String, nullable=False)
+    host_id = db.Column(db.String)
 
 
-class User(Base):
-    __tablename__ = 'mzbh.user'
+class Host(db.Model):
+    __tablename__ = 'host'
+    __table_args__ = { 'schema': 'mzbh' }
 
-    id = Column(String, primary_key=True)
-    created_at = Column(DateTime)
-    updated_at = Column(DateTime)
-    email_address = Column(String)
-    password = Column(String)
+    id = db.Column(db.String, primary_key=True)
+    created_at = db.Column(db.DateTime)
+    updated_at = db.Column(db.DateTime)
+
+    name = db.Column(db.String, nullable=False)
+
+
+class User(db.Model):
+    __tablename__ = 'user'
+    __table_args__ = { 'schema': 'mzbh' }
+
+    id = db.Column(db.String, primary_key=True)
+    created_at = db.Column(db.DateTime)
+    updated_at = db.Column(db.DateTime)
+    email_address = db.Column(db.String)
+    password = db.Column(db.String)

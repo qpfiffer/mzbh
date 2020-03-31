@@ -11,9 +11,10 @@ def create_app():
         SECRET_KEY=settings.SECRET_KEY,
     )
 
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
     app.register_blueprint(main.blueprint)
 
-    with app.app_context():
-        db_init()
+    db_init(app)
 
     return app
