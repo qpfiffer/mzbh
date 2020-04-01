@@ -3,3 +3,4 @@ Flask-SQLAlchemy==2.4.1
 psycopg2==2.8.4
 requests==2.23.0
 ipdb==0.13.2
+Pillow==7.1.0
