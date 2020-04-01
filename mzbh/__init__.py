@@ -1,6 +1,8 @@
 from flask import Flask
 
+from mzbh.commands.downloader import downloader_4ch
 from mzbh import settings
+
 
 def create_app():
     from mzbh.blueprints import main
@@ -16,5 +18,9 @@ def create_app():
     app.register_blueprint(main.blueprint)
 
     db_init(app)
+
+    @app.cli.command("downloader_4ch")
+    def f():
+        return downloader_4ch()
 
     return app

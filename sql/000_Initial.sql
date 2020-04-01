@@ -72,8 +72,9 @@ CREATE TABLE IF NOT EXISTS mzbh.thread (
     updated_at TIMESTAMPTZ DEFAULT now(),
 
     oleg_key TEXT UNIQUE,
-    board uuid REFERENCES mzbh.category,
+    category_id uuid REFERENCES mzbh.category,
     subject TEXT,
+    thread_ident BIGINT,
 
     CONSTRAINT "thread_pkey" PRIMARY KEY ("id") NOT DEFERRABLE INITIALLY IMMEDIATE
 );
@@ -90,13 +91,13 @@ CREATE TABLE mzbh.post (
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now(),
 
+    posted_at TIMESTAMPTZ DEFAULT now(),
+    source_post_id BIGINT, -- The actual post ID on 4chan
     oleg_key TEXT UNIQUE,
-    fourchan_post_id BIGINT, -- The date of the post (unsignedix timestamp)
-    fourchan_post_no BIGINT, -- The actual post ID on 4chan
-    thread_uuid uuid REFERENCES mzbh.thread,
-    board uuid REFERENCES mzbh.category,
-    body_content TEXT,
+    thread_id uuid REFERENCES mzbh.thread,
+    category_id uuid REFERENCES mzbh.category,
     replied_to_keys JSONB, -- JSON list of posts replied to ITT
+    body_content TEXT,
 
     CONSTRAINT "post_pkey" PRIMARY KEY ("id") NOT DEFERRABLE INITIALLY IMMEDIATE
 );
@@ -109,14 +110,15 @@ CREATE TRIGGER set_updated_at
 -- WEBM
 CREATE TABLE mzbh.webm (
     id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now(),
+
     oleg_key TEXT UNIQUE,
     file_hash TEXT UNIQUE NOT NULL,
     filename TEXT,
-    board uuid REFERENCES mzbh.category,
+    category_id uuid REFERENCES mzbh.category,
     file_path TEXT,
     post_id uuid REFERENCES mzbh.post,
-    created_at TIMESTAMPTZ DEFAULT now(),
-    updated_at TIMESTAMPTZ DEFAULT now(),
     size INTEGER,
     CONSTRAINT "webm_pkey" PRIMARY KEY ("id") NOT DEFERRABLE INITIALLY IMMEDIATE
 );
@@ -131,15 +133,17 @@ CREATE TRIGGER set_updated_at
 -- Aliases
 CREATE TABLE webm_alias (
     id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now(),
+
     oleg_key TEXT,
     file_hash TEXT NOT NULL,
     filename TEXT,
-    board uuid REFERENCES mzbh.category,
+    category_id uuid REFERENCES mzbh.category,
     file_path TEXT,
     post_id uuid REFERENCES mzbh.post,
     webm_id uuid REFERENCES mzbh.webm,
-    created_at TIMESTAMPTZ DEFAULT now(),
-    updated_at TIMESTAMPTZ DEFAULT now(),
+
     CONSTRAINT "webm_alias_pkey" PRIMARY KEY ("id") NOT DEFERRABLE INITIALLY IMMEDIATE
 );
 CREATE INDEX webm_aliases_oleg_key ON mzbh.webm_alias (oleg_key);

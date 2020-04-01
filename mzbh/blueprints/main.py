@@ -8,6 +8,9 @@ blueprint = Blueprint('main', __name__)
 @blueprint.route("/", methods=("GET",))
 def root():
     d = {
+        "webm_count": 0,
+        "alias_count": 0,
+        "post_count": 0,
         "categories": Category.query.all(),
     }
 

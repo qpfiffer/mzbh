@@ -16,7 +16,7 @@
 							<h1 class="title">mzbh</h1><span class="beta red">beta</span>
 						</div>
 						<div>
-							<p>Now serving: <span class="red">xXx @webm_count xXx</span> webms, xXx @alias_count xXx known reposted dupes and xXx @post_count xXx posts.</span>
+							<p>Now serving: <span class="red">{{ webm_count }}</span> webms, {{ alias_count }} known reposted dupes and {{ post_count }} posts.</span>
 							<p>An open-source <code>.webm</code> aggregator. Probably <span class="red">NSFW</span>.</p>
 							<p>You have been warned.</p>
 							<p>Get the <a href="https://github.com/qpfiffer/mzbh">code</a> yourself.</p>
@@ -24,6 +24,7 @@
 					</div>
 				</div>
 			</div>
+			{#
 			<div class="row">
 				<div class="col-2"></div>
 				<div class="col-8">
@@ -39,14 +40,7 @@
 					<p class="error hidden"></p>
 				</div>
 			</div>
-			<div class="row">
-				<div class="col-2"></div>
-				<div class="col-8">
-					<ol id="search_results" class="hidden">
-					</ol>
-					<div class="loader hidden">Loading...</div>
-				</div>
-			</div>
+			#}
 		</div>
 	</body>
 </html>
