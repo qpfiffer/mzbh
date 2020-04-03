@@ -93,6 +93,7 @@ def downloader_4ch():
                         if WebmAlias.query.filter_by(
                                 post_id=post_obj.id,
                                 file_hash=md5,
+                                category_id=category.id,
                                 filename=filename).count() > 0:
                             print("Skipping {}".format(filename))
                             continue
@@ -103,6 +104,7 @@ def downloader_4ch():
                                 filename=filename,
                                 file_hash=md5,
                                 post_id=post_obj.id,
+                                category_id=category.id,
                                 webm_id=webm.id)
                             db.session.add(alias)
                             db.session.commit()
@@ -122,6 +124,7 @@ def downloader_4ch():
                             filename=valuable_data["filename"],
                             file_path=filepath,
                             post_id=post_obj.id,
+                            category_id=category.id,
                             size=valuable_data["siz"],
                         )
                         db.session.add(webm)

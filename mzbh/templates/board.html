@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>mzbh - {{ current_board }}</title>
+		{% include "includes/_head.html" %}
+	</head>
+	<body>
+		<div class="grd">
+			<div class="row">
+				<div class="col-1">
+					{% include "includes/_boards.html" %}
+				</div>
+				<div class="col-6">
+					<p>/{{ current_board }}/ - {{ webm_count }} Webms, {{ alias_count }} Aliases</p>
+					<div class="images">
+						xXx LOOP image IMAGES xXx
+						<div class="image bg--light-gray">
+							<!-- <a href="/slurp/xXx @current_board xXx/xXx @image xXx" class="p1">xXx @image xXx</a> -->
+							<a href="/slurp/xXx @current_board xXx/xXx @image xXx">
+								<!-- <img src="/static/img/blank.gif" data-echo="/chug/xXx @current_board xXx/XxX thumbnail_for_image xXx @image xXx XxX"> -->
+								<img src="/chug/xXx @current_board xXx/XxX thumbnail_for_image xXx @image xXx XxX">
+							</a>
+						</div>
+						xXx BBL xXx
+						<div class="pages">
+							<span>Page:</span>
+							<a href="/chug/xXx @current_board xXx/xXx @prev_page xXx">&laquo;</a>
+							xXx LOOP page PAGES xXx
+							<a href="/chug/xXx @current_board xXx/xXx @page xXx">xXx @page xXx</a>
+							xXx BBL xXx
+							<a href="/chug/xXx @current_board xXx/xXx @next_page xXx">&raquo;</a>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<script src="/static/js/echo.js"></script>
+		<script>
+			echo.init({
+				unload: false,
+			});
+		</script>
+	</body>
+</html>
+<!-- vim: noet ts=4 sw=4:
+-->
