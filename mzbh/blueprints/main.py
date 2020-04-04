@@ -1,9 +1,17 @@
-from flask import abort, Blueprint, g, render_template
+from flask import abort, Blueprint, g, render_template, send_file, safe_join
 
 from mzbh.database import db
 from mzbh.models import Category, Webm, WebmAlias, Post
 
+from urllib.parse import unquote
+
 blueprint = Blueprint('main', __name__)
+
+@blueprint.route('/chug/<board>/t/<filename>')
+def thumbnail_view(board, filename):
+    dequoted = unquote(filename)
+    path = safe_join('webms', board, 't', dequoted)
+    return send_file(path)
 
 @blueprint.route("/chug/<board>", methods=("GET",))
 def board(board):
@@ -12,11 +20,13 @@ def board(board):
         abort(404)
 
     boards = Category.query.all()
+    webms = Webm.query.filter_by(category_id=board.id)
     d = {
         "current_board": board.name,
         "boards": [x.name for x in boards],
-        "webm_count": Webm.query.filter_by(category_id=board.id).count(),
+        "webm_count": webms.count(),
         "alias_count": WebmAlias.query.filter_by(category_id=board.id).count(),
+        "images": webms.all(),
     }
 
     return render_template("board.html", **d)

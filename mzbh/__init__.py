@@ -1,12 +1,12 @@
 from flask import Flask
 
-from mzbh.commands.downloader import downloader_4ch
-from mzbh import settings
-
 
 def create_app():
+    from mzbh import settings
     from mzbh.blueprints import main
-    from mzbh.database import init as db_init
+    from mzbh.commands import command_init
+    from mzbh.database import db_init
+    from mzbh.utils import template_init
 
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_mapping(
@@ -17,10 +17,8 @@ def create_app():
 
     app.register_blueprint(main.blueprint)
 
+    command_init(app)
     db_init(app)
-
-    @app.cli.command("downloader_4ch")
-    def f():
-        return downloader_4ch()
+    template_init(app)
 
     return app

@@ -5,6 +5,6 @@ from mzbh.settings import DATABASE_URI
 
 db = SQLAlchemy()
 
-def init(app):
+def db_init(app):
     app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URI
     db.init_app(app)

@@ -1,8 +1,10 @@
+import ffmpeg
 import os
 import requests
 from datetime import datetime, timezone
 from flask import Flask
 from mzbh.database import db
+from mzbh.filters import _get_thumb_filename
 from mzbh.models import Category, Host, Post, Thread, Webm, WebmAlias
 from mzbh.utils import get_or_create
 
@@ -25,17 +27,25 @@ def _create_index_for_catalog(board):
         for thread in threads:
             replies = thread.get("last_replies", [])
             thread_num = thread["no"]
-            file_ext = thread["ext"]
+            file_ext = thread.get("ext", None)
             post = thread.get("com", "")
 
-            found_webm_in_reply = False
+            try:
+                post_is_webm = file_ext and ".webm" in file_ext
+                gif_in_post = "gif" in thread["com"]
+                webm_in_post = "webm" in thread["com"]
+
+                if post_is_webm or gif_in_post or webm_in_post:
+                    matches.append(thread_num)
+                    continue
+            except KeyError:
+                pass
+
             for thread_reply in replies:
                 reply_ext = thread_reply.get("ext", None)
-                if reply_ext and (
-                        ".webm" in reply_ext or
-                        "webm" in post.lower() or
-                        "gif" in post.lower()):
-                    found_webm_in_reply = True
+                gif_in_reply = "gif" in post.lower()
+                webm_in_reply = "webm" in post.lower()
+                if reply_ext and ".webm" in reply_ext:
                     matches.append(thread_num)
                     break
     return matches
@@ -48,6 +58,17 @@ def _download(url, filename):
             if chunk:
                 f.write(chunk)
 
+
+def _thumbnail(filepath):
+    outname, path = _get_thumb_filename(filepath)
+    _ensure_dir(path)
+    outname = path + outname
+    (
+        ffmpeg
+        .input(filepath)
+        .output(outname, **{'qscale:v': 3, 'frames:v': 1})
+        .run()
+    )
 
 def downloader_4ch():
     host, _ = get_or_create(Host, name="4chan")
@@ -119,7 +140,7 @@ def downloader_4ch():
                         url = "https://i.4cdn.org/{}/{}{}".format(board, post["tim"], post["ext"])
                         print("Downloading {}".format(valuable_data["filename"]))
                         _download(url, filepath)
-                        # MAKE THUMBNAILS!
+                        _thumbnail(filepath)
                         webm = Webm(file_hash=md5,
                             filename=valuable_data["filename"],
                             file_path=filepath,
