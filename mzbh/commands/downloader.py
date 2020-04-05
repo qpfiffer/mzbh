@@ -1,8 +1,10 @@
+import click
 import ffmpeg
 import os
 import requests
 from datetime import datetime, timezone
 from flask import Flask
+from flask.cli import with_appcontext
 from mzbh.database import db
 from mzbh.filters import _get_thumb_filename
 from mzbh.models import Category, Host, Post, Thread, Webm, WebmAlias
@@ -70,6 +72,8 @@ def _thumbnail(filepath):
         .run()
     )
 
+@click.command('downloader_4ch')
+@with_appcontext
 def downloader_4ch():
     host, _ = get_or_create(Host, name="4chan")
     _ensure_dir(WEBMS_DIR)
