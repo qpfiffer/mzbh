@@ -87,7 +87,7 @@ def downloader_4ch():
             thread_data = requests.get("https://a.4cdn.org/{}/thread/{}.json".format(board, t_num))
             thread_data = thread_data.json()
 
-            thread_obj, _ = get_or_create(Thread, category_id=category.id, thread_ident=t_num)
+            thread_obj, _ = get_or_create(Thread, category_id=category.id, thread_ident=t_num, subject=thread_data.get("sub", None))
             for post in thread_data["posts"]:
                 valuable_data = {
                     "file_ext": post.get("ext", None),
