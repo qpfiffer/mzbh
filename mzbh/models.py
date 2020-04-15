@@ -9,6 +9,7 @@ class Post(db.Model):
     __table_args__ = { 'schema': 'mzbh' }
 
     id = db.Column(UUID(as_uuid=True), server_default=sqlalchemy.text("uuid_generate_v4()"), primary_key=True)
+    old_id = db.Column(db.Integer)
     created_at = db.Column(db.DateTime)
     updated_at = db.Column(db.DateTime)
 
@@ -26,6 +27,7 @@ class Thread(db.Model):
     __table_args__ = { 'schema': 'mzbh' }
 
     id = db.Column(UUID(as_uuid=True), server_default=sqlalchemy.text("uuid_generate_v4()"), primary_key=True)
+    old_id = db.Column(db.Integer)
     created_at = db.Column(db.DateTime)
     updated_at = db.Column(db.DateTime)
 
@@ -77,6 +79,7 @@ class Webm(db.Model):
     __table_args__ = { 'schema': 'mzbh' }
 
     id = db.Column(UUID(as_uuid=True), server_default=sqlalchemy.text("uuid_generate_v4()"), primary_key=True)
+    old_id = db.Column(db.Integer)
     created_at = db.Column(db.DateTime)
     updated_at = db.Column(db.DateTime)
 
@@ -94,6 +97,7 @@ class WebmAlias(db.Model):
     __table_args__ = { 'schema': 'mzbh' }
 
     id = db.Column(UUID(as_uuid=True), server_default=sqlalchemy.text("uuid_generate_v4()"), primary_key=True)
+    old_id = db.Column(db.Integer)
     created_at = db.Column(db.DateTime)
     updated_at = db.Column(db.DateTime)
 

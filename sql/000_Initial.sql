@@ -74,7 +74,7 @@ CREATE TABLE IF NOT EXISTS mzbh.thread (
     oleg_key TEXT UNIQUE,
     category_id uuid REFERENCES mzbh.category,
     subject TEXT,
-    thread_ident BIGINT,
+    thread_ident BIGINT, -- 4Chan thread identifier.
 
     CONSTRAINT "thread_pkey" PRIMARY KEY ("id") NOT DEFERRABLE INITIALLY IMMEDIATE
 );
