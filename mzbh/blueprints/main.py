@@ -40,7 +40,7 @@ def paginated_board(board, page):
         "boards": [x.name for x in boards],
         "webm_count": webm_count,
         "alias_count": WebmAlias.query.filter_by(category_id=board.id).count(),
-        "images": webms.all()[IMAGE_COUNT * page:(IMAGE_COUNT * page) + IMAGE_COUNT],
+        "images": webms.all()[IMAGE_COUNT * int(page):(IMAGE_COUNT * int(page)) + IMAGE_COUNT],
     }
 
     return render_template("board.html", **d)
