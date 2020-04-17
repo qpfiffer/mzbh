@@ -1,3 +1,4 @@
+import os
 from flask import abort, Blueprint, g, render_template, send_file, safe_join
 
 from mzbh.database import db
@@ -11,6 +12,8 @@ blueprint = Blueprint('main', __name__)
 def thumbnail_view(board, filename):
     dequoted = unquote(filename)
     path = safe_join('webms', board, 't', dequoted)
+    if not os.path.exists(path):
+        return send_file("static/img/404.bmp")
     return send_file(path)
 
 @blueprint.route("/chug/<board>", methods=("GET",))
