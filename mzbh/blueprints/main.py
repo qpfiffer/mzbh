@@ -33,7 +33,7 @@ def paginated_board(board, page):
         abort(404)
 
     boards = Category.query.order_by(Category.name).all()
-    webms = Webm.query.filter_by(category_id=board.id)
+    webms = Webm.query.order_by(Webm.created_at.desc()).filter_by(category_id=board.id)
     webm_count = webms.count()
     pages = int(webm_count / IMAGE_COUNT)
 
