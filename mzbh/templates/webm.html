@@ -14,27 +14,27 @@
 					<p>/{{ category.name }}/ - {{ filename }}</p>
 					<div>
 						<div class="bg--light-gray">
-							<p><a href="/chug/{{ category.name }}/{{ webm.id }}" class="p1">Download {{ webm.filename }}</a></p>
+							<p><a href="/slomp/{{ webm.id }}" class="p1">Download {{ webm.filename }}</a></p>
 							<video id="webm" autoplay="true" loop="true" controls="true">
-								<source src="/chug/xXx @current_board xXx/xXx @image xXx" type="video/webm" />
+								<source src="/slomp/{{ webm.id }}" type="video/webm" />
 							</video>
-							xXx UNLESS NOT @post_id xXx
+							{% if post %}
 							<div class="post-content">
-								<span>XxX pretty_date xXx @post_id xXx XxX</span>
-								<blockquote>xXx @post_content xXx</blockquote>
+								<span>{{ post.posted_at }}</span>
+								<blockquote>{{ post.body_content|safe }}</blockquote>
 							</div>
-							xXx ENDLESS xXx
+							{% endif %}
 							<p>Information:</p>
 							<ul>
-								xXx UNLESS NOT @thread_id xXx
-								<li><a href="/by/thread/xXx @thread_id xXx">See other posts from this thread</a></li>
-								xXx ENDLESS xXx
-								<li>First found: XxX pretty_date xXx @image_date xXx XxX</li>
+								{% if thread.id %}
+								<li><a href="/by/thread/{{ thread.id }}">See other posts from this thread</a></li>
+								{% endif %}
+								<li>First found: {{ webm.created_at }}</li>
 								<li>Aliases:
 									<ul>
-									xXx LOOP alias aliases xXx
-										<li>xXx @alias xXx</li>
-									xXx BBL xXx
+									{% for alias in aliases %}
+										<li>{{alias}}</li>
+									{% endfor %}
 									</ul>
 								</li>
 							</ul>

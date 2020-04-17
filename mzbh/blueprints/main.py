@@ -2,7 +2,7 @@ import os
 from flask import abort, Blueprint, g, render_template, send_file, safe_join
 
 from mzbh.database import db
-from mzbh.models import Category, Webm, WebmAlias, Post
+from mzbh.models import Category, Webm, WebmAlias, Post, Thread
 
 from urllib.parse import unquote
 
@@ -20,6 +20,11 @@ def thumbnail_view(board, filename):
         return send_file("static/img/404.bmp")
     return send_file(path)
 
+@blueprint.route('/slomp/<webm_id>')
+def slomp_view(webm_id):
+    webm = Webm.query.filter_by(id=webm_id).first()
+    return send_file(webm.file_path)
+
 @blueprint.route("/chug/<board>/<page>", methods=("GET",))
 def paginated_board(board, page):
     IMAGE_COUNT = 100
@@ -27,7 +32,7 @@ def paginated_board(board, page):
     if board is None:
         abort(404)
 
-    boards = Category.query.all()
+    boards = Category.query.order_by(Category.name).all()
     webms = Webm.query.filter_by(category_id=board.id)
     webm_count = webms.count()
     pages = int(webm_count / IMAGE_COUNT)
@@ -40,7 +45,7 @@ def paginated_board(board, page):
         "boards": [x.name for x in boards],
         "webm_count": webm_count,
         "alias_count": WebmAlias.query.filter_by(category_id=board.id).count(),
-        "images": webms.all()[IMAGE_COUNT * int(page):(IMAGE_COUNT * int(page)) + IMAGE_COUNT],
+        "images": webms.offset(IMAGE_COUNT * page).limit(IMAGE_COUNT).all(),
     }
 
     return render_template("board.html", **d)
@@ -51,21 +56,26 @@ def board(board):
 
 @blueprint.route("/slurp/<image_id>", methods=("GET",))
 def webm_view(image_id):
+    boards = Category.query.order_by(Category.name).all()
     webm = Webm.query.filter_by(id=image_id).first()
-    category = Category.query.filter_by(id=webm.category_id).first()
+    aliases = WebmAlias.query.filter_by(webm_id=webm.id).all()
     post = Post.query.filter_by(id=webm.post_id).first()
+    category = Category.query.filter_by(id=webm.category_id).first()
+    thread = Thread.query.filter_by(id=post.thread_id).first()
 
     d = {
-        "aliases": [],
+        "aliases": aliases,
+        "boards": [x.name for x in boards],
         "webm": webm,
         "category": category,
         "post": post,
+        "thread": thread,
     }
     return render_template("webm.html", **d)
 
 @blueprint.route("/", methods=("GET",))
 def root():
-    boards = Category.query.all()
+    boards = Category.query.order_by(Category.name).all()
     d = {
         "boards": [x.name for x in boards],
         "webm_count": Webm.query.count(),
