@@ -13,6 +13,10 @@ def thumbnail_view(board, filename):
     dequoted = unquote(filename)
     path = safe_join('webms', board, 't', dequoted)
     if not os.path.exists(path):
+        new_path = path.replace(".webm.jpg", ".jpg")
+        if os.path.exists(new_path):
+            # coimpatibility with old-style thumbnails.
+            return send_file(new_path)
         return send_file("static/img/404.bmp")
     return send_file(path)
 
