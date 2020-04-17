@@ -29,7 +29,7 @@ def board(board):
         "boards": [x.name for x in boards],
         "webm_count": webms.count(),
         "alias_count": WebmAlias.query.filter_by(category_id=board.id).count(),
-        "images": webms.all(),
+        "images": webms.all()[:100],
     }
 
     return render_template("board.html", **d)
