@@ -20,23 +20,48 @@ def thumbnail_view(board, filename):
         return send_file("static/img/404.bmp")
     return send_file(path)
 
-@blueprint.route("/chug/<board>", methods=("GET",))
-def board(board):
+@blueprint.route("/chug/<board>/<page>", methods=("GET",))
+def paginated_board(board, page):
+    IMAGE_COUNT = 100
     board = Category.query.filter_by(name=board).first()
     if board is None:
         abort(404)
 
     boards = Category.query.all()
     webms = Webm.query.filter_by(category_id=board.id)
+    webm_count = webms.count()
+    pages = int(webm_count / IMAGE_COUNT)
+
     d = {
+        "prev_page": int(page) - 1 if int(page) - 1 > 0 else 0,
+        "next_page": int(page) + 1 if int(page) + 1 < pages else pages,
+        "pages": range(0, pages),
         "current_board": board.name,
         "boards": [x.name for x in boards],
-        "webm_count": webms.count(),
+        "webm_count": webm_count,
         "alias_count": WebmAlias.query.filter_by(category_id=board.id).count(),
-        "images": webms.all()[:100],
+        "images": webms.all()[IMAGE_COUNT * page:(IMAGE_COUNT * page) + IMAGE_COUNT],
     }
 
     return render_template("board.html", **d)
+
+@blueprint.route("/chug/<board>", methods=("GET",))
+def board(board):
+    return paginated_board(board, 0)
+
+@blueprint.route("/slurp/<image_id>", methods=("GET",))
+def webm_view(image_id):
+    webm = Webm.query.filter_by(id=image_id).first()
+    category = Category.query.filter_by(id=webm.category_id).first()
+    post = Post.query.filter_by(id=webm.post_id).first()
+
+    d = {
+        "aliases": [],
+        "webm": webm,
+        "category": category,
+        "post": post,
+    }
+    return render_template("webm.html", **d)
 
 @blueprint.route("/", methods=("GET",))
 def root():

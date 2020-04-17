@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>mzbh - Image {{ webm.filename }}</title>
+		{% include "includes/_head.html" %}
+	</head>
+	<body>
+		<div class="grd">
+			<div class="row">
+				<div class="col-1">
+					{% include "includes/_boards.html" %}
+				</div>
+				<div class="col-6">
+					<p>/{{ category.name }}/ - {{ filename }}</p>
+					<div>
+						<div class="bg--light-gray">
+							<p><a href="/chug/{{ category.name }}/{{ webm.id }}" class="p1">Download {{ webm.filename }}</a></p>
+							<video id="webm" autoplay="true" loop="true" controls="true">
+								<source src="/chug/xXx @current_board xXx/xXx @image xXx" type="video/webm" />
+							</video>
+							xXx UNLESS NOT @post_id xXx
+							<div class="post-content">
+								<span>XxX pretty_date xXx @post_id xXx XxX</span>
+								<blockquote>xXx @post_content xXx</blockquote>
+							</div>
+							xXx ENDLESS xXx
+							<p>Information:</p>
+							<ul>
+								xXx UNLESS NOT @thread_id xXx
+								<li><a href="/by/thread/xXx @thread_id xXx">See other posts from this thread</a></li>
+								xXx ENDLESS xXx
+								<li>First found: XxX pretty_date xXx @image_date xXx XxX</li>
+								<li>Aliases:
+									<ul>
+									xXx LOOP alias aliases xXx
+										<li>xXx @alias xXx</li>
+									xXx BBL xXx
+									</ul>
+								</li>
+							</ul>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</body>
+</html>
+<!-- vim: noet ts=4 sw=4:
+-->

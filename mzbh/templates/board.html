@@ -15,19 +15,19 @@
 					<div class="images">
 						{% for image in images %}
 						<div class="image bg--light-gray">
-							<a href="/slurp/{{ current_board }}/{{ image.id }}" class="p1">{{ image.filename }}</a>
-							<a href="/slurp/{{ current_board }}/{{ image.id }}">
+							<a href="/slurp/{{ image.id }}" class="p1">{{ image.filename }}</a>
+							<a href="/slurp/{{ image.id }}">
 								<img src="/chug/{{ current_board }}/t/{{ image|thumbnail }}">
 							</a>
 						</div>
 						{% endfor %}
 						<div class="pages">
 							<span>Page:</span>
-							<a href="/chug/xXx @current_board xXx/xXx @prev_page xXx">&laquo;</a>
-							xXx LOOP page PAGES xXx
-							<a href="/chug/xXx @current_board xXx/xXx @page xXx">xXx @page xXx</a>
-							xXx BBL xXx
-							<a href="/chug/xXx @current_board xXx/xXx @next_page xXx">&raquo;</a>
+							<a href="/chug/{{ current_board }}/{{ prev_page }}">&laquo;</a>
+							{% for page in pages %}
+							<a href="/chug/{{ current_board }}/{{ page }}">{{ page }}</a>
+							{% endfor %}
+							<a href="/chug/{{ current_board }}/{{ next_page }}">&raquo;</a>
 						</div>
 					</div>
 				</div>
