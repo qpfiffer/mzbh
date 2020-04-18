@@ -55,10 +55,14 @@ def _create_index_for_catalog(board):
 
 def _download(url, filename):
     r = requests.get(url, stream=True)
-    with open(filename, 'wb') as f:
-        for chunk in r.iter_content(chunk_size=1024):
-            if chunk:
-                f.write(chunk)
+    try:
+        with open(filename, 'wb') as f:
+            for chunk in r.iter_content(chunk_size=1024):
+                if chunk:
+                    f.write(chunk)
+    except OSError as e:
+        print(f"Could not download {filename}: {e}")
+        return
 
 
 def _thumbnail(filepath):
