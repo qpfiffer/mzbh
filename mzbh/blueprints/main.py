@@ -45,7 +45,7 @@ def _paginated(page, pages, current_board, webm_count, webms, webm_alias_count):
 
 @blueprint.route("/by/alias/<page>", methods=("GET",))
 def paginated_by_alias(page):
-    webms = Webm.query.outerjoin(Webm.webm_aliases).order_by(Webm.webm_aliases)
+    webms = Webm.query.outerjoin(WebmAlias).group_by(Webm.id).order_by(db.func.count(WebmAlias.id), Webm.created_at.desc())
     webm_count = webms.count()
     webm_alias_count = WebmAlias.query.count()
     page = int(page)
