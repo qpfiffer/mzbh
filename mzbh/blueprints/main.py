@@ -8,6 +8,8 @@ from urllib.parse import unquote
 
 blueprint = Blueprint('main', __name__)
 
+IMAGE_COUNT = 100
+
 @blueprint.route('/chug/<board>/t/<filename>')
 def thumbnail_view(board, filename):
     dequoted = unquote(filename)
@@ -25,30 +27,63 @@ def slomp_view(webm_id):
     webm = Webm.query.filter_by(id=webm_id).first()
     return send_file(webm.file_path)
 
+def _paginated(page, pages, current_board, webm_count, webms, webm_alias_count):
+    boards = Category.query.order_by(Category.name).all()
+
+    d = {
+        "prev_page": page - 1 if page - 1 > 0 else 0,
+        "next_page": page + 1 if page + 1 < pages else pages,
+        "pages": range(0, pages),
+        "current_board": current_board,
+        "boards": [x.name for x in boards],
+        "webm_count": webm_count,
+        "alias_count": webm_alias_count,
+        "images": webms.offset(IMAGE_COUNT * page).limit(IMAGE_COUNT),
+    }
+
+    return render_template("board.html", **d)
+
+@blueprint.route("/by/alias/<page>", methods=("GET",))
+def paginated_by_alias(page):
+    webms = Webm.query.outerjoin(Webm.webm_aliases).order_by(Webm.webm_aliases)
+    webm_count = webms.count()
+    webm_alias_count = WebmAlias.query.count()
+    page = int(page)
+    pages = int(webm_count / IMAGE_COUNT)
+
+    return _paginated(page, pages, "N/A", webm_count, webms, webm_alias_count)
+
+@blueprint.route("/by/alias/<page>", methods=("GET",))
+def by_alias(board, page):
+    return paginated_by_newest(0)
+
+@blueprint.route("/by/newest/<page>", methods=("GET",))
+def paginated_by_newest(page):
+    webms = Webm.query.order_by(Webm.created_at.desc())
+    webm_count = webms.count()
+    webm_alias_count = WebmAlias.query.count()
+    page = int(page)
+    pages = int(webm_count / IMAGE_COUNT)
+
+    return _paginated(page, pages, "N/A", webm_count, webms, webm_alias_count)
+
+@blueprint.route("/by/newest/<page>", methods=("GET",))
+def by_newest(board, page):
+    return paginated_by_newest(0)
+
 @blueprint.route("/chug/<board>/<page>", methods=("GET",))
 def paginated_board(board, page):
-    IMAGE_COUNT = 100
     board = Category.query.filter_by(name=board).first()
     if board is None:
         abort(404)
 
-    boards = Category.query.order_by(Category.name).all()
     webms = Webm.query.order_by(Webm.created_at.desc()).filter_by(category_id=board.id)
     webm_count = webms.count()
+    webm_alias_count = WebmAlias.query.filter_by(category_id=board.id).count()
+    page = int(page)
     pages = int(webm_count / IMAGE_COUNT)
 
-    d = {
-        "prev_page": int(page) - 1 if int(page) - 1 > 0 else 0,
-        "next_page": int(page) + 1 if int(page) + 1 < pages else pages,
-        "pages": range(0, pages),
-        "current_board": board.name,
-        "boards": [x.name for x in boards],
-        "webm_count": webm_count,
-        "alias_count": WebmAlias.query.filter_by(category_id=board.id).count(),
-        "images": webms.offset(IMAGE_COUNT * int(page)).limit(IMAGE_COUNT),
-    }
-
-    return render_template("board.html", **d)
+    return _paginated(page, pages, board.name, webm_count, webms, webm_alias_count)
 
 @blueprint.route("/chug/<board>", methods=("GET",))
 def board(board):

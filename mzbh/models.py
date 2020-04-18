@@ -1,5 +1,6 @@
 import sqlalchemy
 from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.orm import relationship
 
 from mzbh.database import db
 
@@ -16,8 +17,8 @@ class Post(db.Model):
     posted_at = db.Column(db.DateTime)
     source_post_id = db.Column(db.BigInteger)
     oleg_key = db.Column(db.String)
-    thread_id = db.Column(db.String)
-    category_id = db.Column(db.String)
+    thread_id = db.Column(db.String, db.ForeignKey('mzbh.thread.id'))
+    category_id = db.Column(db.String, db.ForeignKey('mzbh.category.id'))
     replied_to_keys = db.Column(JSONB)
     body_content = db.Column(db.String)
 
@@ -32,7 +33,7 @@ class Thread(db.Model):
     updated_at = db.Column(db.DateTime, server_default=sqlalchemy.text("NOW()"))
 
     oleg_key = db.Column(db.String)
-    category_id = db.Column(db.String)
+    category_id = db.Column(db.String, db.ForeignKey('mzbh.category.id'))
     subject = db.Column(db.String)
     thread_ident = db.Column(db.BigInteger)
 
@@ -49,7 +50,7 @@ class Category(db.Model):
     updated_at = db.Column(db.DateTime, server_default=sqlalchemy.text("NOW()"))
 
     name = db.Column(db.String, nullable=False)
-    host_id = db.Column(db.String)
+    host_id = db.Column(db.String, db.ForeignKey('mzbh.host.id'))
 
 
 class Host(db.Model):
@@ -86,10 +87,12 @@ class Webm(db.Model):
     oleg_key = db.Column(db.String)
     file_hash = db.Column(db.String, nullable=False)
     filename = db.Column(db.String)
-    category_id = db.Column(db.String)
+    category_id = db.Column(db.String, db.ForeignKey('mzbh.category.id'))
     file_path = db.Column(db.String)
-    post_id = db.Column(db.String)
+    post_id = db.Column(db.String, db.ForeignKey('mzbh.post.id'))
     size = db.Column(db.Integer)
+
+    webm_aliases = relationship("WebmAlias")
 
 
 class WebmAlias(db.Model):
@@ -104,7 +107,9 @@ class WebmAlias(db.Model):
     oleg_key = db.Column(db.String)
     file_hash = db.Column(db.String, nullable=False)
     filename = db.Column(db.String)
-    category_id = db.Column(db.String)
+    category_id = db.Column(db.String, db.ForeignKey('mzbh.category.id'))
     file_path = db.Column(db.String)
-    post_id = db.Column(db.String)
-    webm_id = db.Column(db.String)
+    post_id = db.Column(db.String, db.ForeignKey('mzbh.post.id'))
+    webm_id = db.Column(db.String, db.ForeignKey('mzbh.webm.id'))
+
+    webm = relationship("Webm", back_populates="webm_aliases")
