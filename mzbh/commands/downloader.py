@@ -140,7 +140,7 @@ def downloader_4ch():
                     else:
                         # DOWNLOAD WEBM!
                         filename_len = len(filename)
-                        all_else_len = len(board) + len(valuable_data["siz"]) + len(valuable_data["file_ext"])
+                        all_else_len = len(board) + len(str(valuable_data["siz"])) + len(valuable_data["file_ext"])
                         new_filename_len = 250 - all_else_len
 
                         non_collideable_name = "{}_{}_{}{}".format(board,
