@@ -27,7 +27,7 @@ def slomp_view(webm_id):
     webm = Webm.query.filter_by(id=webm_id).first()
     return send_file(webm.file_path)
 
-def _paginated(page, pages, current_board, webm_count, webms, webm_alias_count):
+def _paginated(page, pages, current_board, webm_count, webms, webm_alias_count, template="board.html"):
     boards = Category.query.order_by(Category.name).all()
 
     d = {
@@ -41,20 +41,20 @@ def _paginated(page, pages, current_board, webm_count, webms, webm_alias_count):
         "images": webms.offset(IMAGE_COUNT * page).limit(IMAGE_COUNT),
     }
 
-    return render_template("board.html", **d)
+    return render_template(template, **d)
 
 @blueprint.route("/by/alias/<page>", methods=("GET",))
 def paginated_by_alias(page):
     webms = Webm.query\
-            .join(WebmAlias)\
+            .outerjoin(WebmAlias)\
             .group_by(Webm.id)\
-            .order_by(db.func.count(WebmAlias.id), Webm.created_at.desc())
+            .order_by(db.func.count(WebmAlias.id).desc(), Webm.created_at.desc())
     webm_count = webms.count()
     webm_alias_count = WebmAlias.query.count()
     page = int(page)
     pages = int(webm_count / IMAGE_COUNT)
 
-    return _paginated(page, pages, "xxx", webm_count, webms, webm_alias_count)
+    return _paginated(page, pages, "xxx", webm_count, webms, webm_alias_count, template="aliased.html")
 
 @blueprint.route("/by/alias/<page>", methods=("GET",))
 def by_alias(board, page):
