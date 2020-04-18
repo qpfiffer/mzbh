@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>mzbh - {{ current_board }}</title>
+		{% include "includes/_head.html" %}
+	</head>
+	<body>
+		<div class="grd">
+			<div class="row">
+				<div class="col-1">
+					{% include "includes/_boards.html" %}
+				</div>
+				<div class="col-6">
+					<p>{{ webm_count }} Webms, {{ alias_count }} Aliases</p>
+					<div class="images">
+						{% for image in images %}
+						<div class="image bg--light-gray">
+							<a href="/slurp/{{ image.id }}" class="p1">{{ image.filename }}</a>
+							<a href="/slurp/{{ image.id }}">
+								<img src="/chug/{{ image.category_id|id_to_board }}/t/{{ image|thumbnail }}">
+							</a>
+						</div>
+						{% endfor %}
+						<div class="pages">
+							<span>Page:</span>
+							<a href="/by/alias/{{ prev_page }}">&laquo;</a>
+							{% for page in pages %}
+							<a href="/by/alias/{{ page }}">{{ page }}</a>
+							{% endfor %}
+							<a href="/by/alias/{{ next_page }}">&raquo;</a>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</body>
+</html>
+<!-- vim: noet ts=4 sw=4:
+-->
