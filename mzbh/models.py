@@ -1,6 +1,5 @@
 import sqlalchemy
 from sqlalchemy.dialects.postgresql import UUID, JSONB
-from sqlalchemy.orm import relationship
 
 from mzbh.database import db
 
@@ -92,7 +91,7 @@ class Webm(db.Model):
     post_id = db.Column(db.String, db.ForeignKey('mzbh.post.id'))
     size = db.Column(db.Integer)
 
-    webm_aliases = relationship("WebmAlias")
+    webm_aliases = db.relationship("WebmAlias")
 
 
 class WebmAlias(db.Model):
@@ -112,4 +111,4 @@ class WebmAlias(db.Model):
     post_id = db.Column(db.String, db.ForeignKey('mzbh.post.id'))
     webm_id = db.Column(db.String, db.ForeignKey('mzbh.webm.id'))
 
-    webm = relationship("Webm", back_populates="webm_aliases")
+    webm = db.relationship("Webm", back_populates="webm_aliases")
