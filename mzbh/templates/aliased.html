@@ -17,7 +17,7 @@
 						<div class="image bg--light-gray">
 							<a href="/slurp/{{ image.id }}" class="p1">{{ image.filename }}</a>
 							<a href="/slurp/{{ image.id }}">
-								<img src="/chug/{{ current_board }}/t/{{ image|thumbnail }}">
+								<img src="/chug/{{ image.category_id|id_to_board }}/t/{{ image|thumbnail }}">
 							</a>
 						</div>
 						{% endfor %}

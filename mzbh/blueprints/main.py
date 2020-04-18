@@ -1,6 +1,8 @@
 import os
 from flask import abort, Blueprint, g, render_template, send_file, safe_join
+from flask_caching import Cache
 
+from mzbh.cache import cache
 from mzbh.database import db
 from mzbh.models import Category, Webm, WebmAlias, Post, Thread
 
