@@ -51,7 +51,7 @@ def paginated_by_alias(page):
     page = int(page)
     pages = int(webm_count / IMAGE_COUNT)
 
-    return _paginated(page, pages, "N/A", webm_count, webms, webm_alias_count)
+    return _paginated(page, pages, "xxx", webm_count, webms, webm_alias_count)
 
 @blueprint.route("/by/alias/<page>", methods=("GET",))
 def by_alias(board, page):
