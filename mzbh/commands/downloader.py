@@ -89,7 +89,10 @@ def downloader_4ch():
             _ensure_dir(os.path.join(WEBMS_DIR, board))
 
             thread_data = requests.get("https://a.4cdn.org/{}/thread/{}.json".format(board, t_num))
-            thread_data = thread_data.json()
+            try:
+                thread_data = thread_data.json()
+            except json.decoder.JSONDecodeError:
+                continue
 
             thread_obj, _ = get_or_create(Thread, category_id=category.id, thread_ident=t_num, subject=thread_data.get("sub", None))
             for post in thread_data["posts"]:
