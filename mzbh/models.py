@@ -10,8 +10,8 @@ class Post(db.Model):
 
     id = db.Column(UUID(as_uuid=True), server_default=sqlalchemy.text("uuid_generate_v4()"), primary_key=True)
     old_id = db.Column(db.Integer)
-    created_at = db.Column(db.DateTime)
-    updated_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, server_default=sqlalchemy.text("NOW()"))
+    updated_at = db.Column(db.DateTime, server_default=sqlalchemy.text("NOW()"))
 
     posted_at = db.Column(db.DateTime)
     source_post_id = db.Column(db.BigInteger)
@@ -28,8 +28,8 @@ class Thread(db.Model):
 
     id = db.Column(UUID(as_uuid=True), server_default=sqlalchemy.text("uuid_generate_v4()"), primary_key=True)
     old_id = db.Column(db.Integer)
-    created_at = db.Column(db.DateTime)
-    updated_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, server_default=sqlalchemy.text("NOW()"))
+    updated_at = db.Column(db.DateTime, server_default=sqlalchemy.text("NOW()"))
 
     oleg_key = db.Column(db.String)
     category_id = db.Column(db.String)
@@ -45,8 +45,8 @@ class Category(db.Model):
     __table_args__ = { 'schema': 'mzbh' }
 
     id = db.Column(UUID(as_uuid=True), server_default=sqlalchemy.text("uuid_generate_v4()"), primary_key=True)
-    created_at = db.Column(db.DateTime)
-    updated_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, server_default=sqlalchemy.text("NOW()"))
+    updated_at = db.Column(db.DateTime, server_default=sqlalchemy.text("NOW()"))
 
     name = db.Column(db.String, nullable=False)
     host_id = db.Column(db.String)
@@ -57,8 +57,8 @@ class Host(db.Model):
     __table_args__ = { 'schema': 'mzbh' }
 
     id = db.Column(UUID(as_uuid=True), server_default=sqlalchemy.text("uuid_generate_v4()"), primary_key=True)
-    created_at = db.Column(db.DateTime)
-    updated_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, server_default=sqlalchemy.text("NOW()"))
+    updated_at = db.Column(db.DateTime, server_default=sqlalchemy.text("NOW()"))
 
     name = db.Column(db.String, nullable=False)
 
@@ -68,8 +68,8 @@ class User(db.Model):
     __table_args__ = { 'schema': 'mzbh' }
 
     id = db.Column(UUID(as_uuid=True), server_default=sqlalchemy.text("uuid_generate_v4()"), primary_key=True)
-    created_at = db.Column(db.DateTime)
-    updated_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, server_default=sqlalchemy.text("NOW()"))
+    updated_at = db.Column(db.DateTime, server_default=sqlalchemy.text("NOW()"))
     email_address = db.Column(db.String)
     password = db.Column(db.String)
 
@@ -80,8 +80,8 @@ class Webm(db.Model):
 
     id = db.Column(UUID(as_uuid=True), server_default=sqlalchemy.text("uuid_generate_v4()"), primary_key=True)
     old_id = db.Column(db.Integer)
-    created_at = db.Column(db.DateTime)
-    updated_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, server_default=sqlalchemy.text("NOW()"))
+    updated_at = db.Column(db.DateTime, server_default=sqlalchemy.text("NOW()"))
 
     oleg_key = db.Column(db.String)
     file_hash = db.Column(db.String, nullable=False)
@@ -98,8 +98,8 @@ class WebmAlias(db.Model):
 
     id = db.Column(UUID(as_uuid=True), server_default=sqlalchemy.text("uuid_generate_v4()"), primary_key=True)
     old_id = db.Column(db.Integer)
-    created_at = db.Column(db.DateTime)
-    updated_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, server_default=sqlalchemy.text("NOW()"))
+    updated_at = db.Column(db.DateTime, server_default=sqlalchemy.text("NOW()"))
 
     oleg_key = db.Column(db.String)
     file_hash = db.Column(db.String, nullable=False)
