@@ -6,6 +6,7 @@ import re
 import binascii
 import hashlib
 import psycopg2
+import sqlalchemy
 from datetime import datetime
 from flask import Flask
 from flask.cli import with_appcontext
@@ -84,7 +85,7 @@ def spider():
                     try:
                         db.session.add(new_webm)
                         db.session.commit()
-                    except psycopg2.errors.UniqueViolation:
+                    except (psycopg2.errors.UniqueViolation, sqlalchemy.exc.IntegrityError,):
                         log.error("Filehash violation for file: {}".format(file_path))
                         db.session.rollback()
                 else:
