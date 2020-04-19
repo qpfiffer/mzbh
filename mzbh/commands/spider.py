@@ -62,7 +62,8 @@ def spider():
                     new_webm = Webm(
                         created_at=tim,
                         category_id=category.id,
-                        post_id=-1,
+                        old_id=-1,
+                        post_id = None,
                         file_path=file_path,
                         filename=filename,
                         size=0,
