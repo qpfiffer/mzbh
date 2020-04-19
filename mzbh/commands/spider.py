@@ -1,9 +1,12 @@
 import click
 import logging
 import os
+import time
+import re
+from datetime import datetime
 from flask import Flask
 from flask.cli import with_appcontext
-from mzbh.models import Webm, WebmAlias
+from mzbh.models import Webm, WebmAlias, Category
 from os.path import join, getsize, islink, exists
 
 PATH = "./webms/"
@@ -45,7 +48,20 @@ def spider():
                 exists_in_db = Webm.query.filter_by(file_path=file_path).count() > 0
                 if not exists_in_db:
                     unknown_webms += 1
-                    log.info(f"{file_path} is a good Webm, but does not exist in DB.")
+                    tim = datetime.fromtimestamp(os.path.getctime(file_path))
+                    log.info(f"Creating unknown Webm: {file_path} ({tim}).")
+                    split_name = filename.split("_")
+                    unwebm = filename.split(".webm")[0]
+                    category = Category.query.filter_by(name=root.split("/")[2]).first()
+                    original_filename = re.search(r"^[a-zA-Z_]*[0-9]*?_(.*).webm", filename).groups(0)[0]
+                    new_webm = Webm(
+                        created_at=tim,
+                        category_id=category.id,
+                        post_id=-1,
+                        file_path=file_path,
+                        filename=filename,
+                        size=0,
+                    )
                 else:
                     known_webms += 1
     log.info(f"Webm Aliases: Found {bad_links + good_links} on filesystem out of {webm_aliases_in_db_total} in the database.")
