@@ -43,14 +43,20 @@ def spider():
                 if exists(file_path):
                     good_links += 1
                     # Check the DB for this alias.
-                    exists_in_db = WebmAlias.query.filter_by(file_path=file_path).count() > 0
+                    try:
+                        exists_in_db = WebmAlias.query.filter_by(file_path=file_path).count() > 0
+                    except UnicodeEncodeError:
+                        continue
                     if not exists_in_db:
                         log.info(f"{file_path} is a good link, but does not exist in DB.")
                 else:
                     bad_links += 1
                     log.warning(f"{file_path} is a bad link.")
             else:
-                exists_in_db = Webm.query.filter_by(file_path=file_path).count() > 0
+                try:
+                    exists_in_db = Webm.query.filter_by(file_path=file_path).count() > 0
+                except UnicodeEncodeError:
+                    continue
                 if not exists_in_db:
                     unknown_webms += 1
                     tim = datetime.fromtimestamp(os.path.getctime(file_path))
