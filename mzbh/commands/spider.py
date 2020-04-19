@@ -3,6 +3,8 @@ import logging
 import os
 import time
 import re
+import binascii
+import hashlib
 from datetime import datetime
 from flask import Flask
 from flask.cli import with_appcontext
@@ -59,17 +61,27 @@ def spider():
                         log.error("Fucked up filename, skipping: {}".format(filename))
                         continue
                     log.info(f"Creating unknown Webm: {tim}: {file_path} as {original_filename}.")
+
+                    md5_hash = hashlib.md5()
+                    with open(file_path, "rb") as a_file:
+                        content = a_file.read()
+                        md5_hash.update(content)
+
+                    digest = md5_hash.hexdigest()
+                    # 4chan does this: binascii.hexlify(binascii.a2b_base64(thing))
+                    file_hash = binascii.b2a_base64(binascii.unhexlify(digest)).strip().decode()
                     new_webm = Webm(
                         created_at=tim,
                         category_id=category.id,
                         old_id=-1,
+                        file_hash=digest,
                         post_id = None,
                         file_path=file_path,
                         filename=filename,
                         size=0,
                     )
-                    db.session.add(new_webm)
-                    db.session.commit()
+                    #db.session.add(new_webm)
+                    #db.session.commit()
                 else:
                     known_webms += 1
     log.info(f"Webm Aliases: Found {bad_links + good_links} on filesystem out of {webm_aliases_in_db_total} in the database.")
