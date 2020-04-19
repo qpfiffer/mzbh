@@ -49,15 +49,15 @@ def spider():
                 if not exists_in_db:
                     unknown_webms += 1
                     tim = datetime.fromtimestamp(os.path.getctime(file_path))
-                    log.info(f"Creating unknown Webm: {file_path} ({tim}).")
                     split_name = filename.split("_")
                     unwebm = filename.split(".webm")[0]
                     category = Category.query.filter_by(name=root.split("/")[2]).first()
                     try:
                         original_filename = re.search(r"^[a-zA-Z_]*[0-9]*?_(.*).webm", filename).groups(0)[0]
                     except AttributeError:
-                        log.error("fucked up filename, skipping: {}".format(filename))
+                        log.error("Fucked up filename, skipping: {}".format(filename))
                         continue
+                    log.info(f"Creating unknown Webm: {tim}: {file_path} as {original_filename}.")
                     new_webm = Webm(
                         created_at=tim,
                         category_id=category.id,
