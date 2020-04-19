@@ -80,8 +80,8 @@ def spider():
                         filename=filename,
                         size=0,
                     )
-                    #db.session.add(new_webm)
-                    #db.session.commit()
+                    db.session.add(new_webm)
+                    db.session.commit()
                 else:
                     known_webms += 1
     log.info(f"Webm Aliases: Found {bad_links + good_links} on filesystem out of {webm_aliases_in_db_total} in the database.")
