@@ -26,10 +26,11 @@
 							{% endif %}
 							<p>Information:</p>
 							<ul>
-								{% if thread.id %}
+								{% if thread and thread.id %}
 								<li><a href="/by/thread/{{ thread.id }}">See other posts from this thread</a></li>
 								{% endif %}
 								<li>First found: {{ webm.created_at }}</li>
+								{% if aliases %}
 								<li>Aliases:
 									<ul>
 									{% for alias in aliases %}
@@ -37,6 +38,7 @@
 									{% endfor %}
 									</ul>
 								</li>
+								{% endif %}
 							</ul>
 						</div>
 					</div>

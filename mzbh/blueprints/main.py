@@ -101,7 +101,9 @@ def webm_view(image_id):
     aliases = WebmAlias.query.filter_by(webm_id=webm.id).all()
     post = Post.query.filter_by(id=webm.post_id).first()
     category = Category.query.filter_by(id=webm.category_id).first()
-    thread = Thread.query.filter_by(id=post.thread_id).first()
+    thread = None
+    if post:
+        thread = Thread.query.filter_by(id=post.thread_id).first()
 
     d = {
         "aliases": aliases,
