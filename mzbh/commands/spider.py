@@ -5,6 +5,7 @@ import time
 import re
 import binascii
 import hashlib
+import psycopg2
 from datetime import datetime
 from flask import Flask
 from flask.cli import with_appcontext
@@ -74,14 +75,18 @@ def spider():
                         created_at=tim,
                         category_id=category.id,
                         old_id=-1,
-                        file_hash=digest,
+                        file_hash=file_hash,
                         post_id = None,
                         file_path=file_path,
                         filename=filename,
                         size=0,
                     )
-                    db.session.add(new_webm)
-                    db.session.commit()
+                    try:
+                        db.session.add(new_webm)
+                        db.session.commit()
+                    except psycopg2.errors.UniqueViolation:
+                        log.error("Filehash violation for file: {}".format(file_path))
+                        db.session.rollback()
                 else:
                     known_webms += 1
     log.info(f"Webm Aliases: Found {bad_links + good_links} on filesystem out of {webm_aliases_in_db_total} in the database.")
