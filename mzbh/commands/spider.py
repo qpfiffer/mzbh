@@ -53,7 +53,11 @@ def spider():
                     split_name = filename.split("_")
                     unwebm = filename.split(".webm")[0]
                     category = Category.query.filter_by(name=root.split("/")[2]).first()
-                    original_filename = re.search(r"^[a-zA-Z_]*[0-9]*?_(.*).webm", filename).groups(0)[0]
+                    try:
+                        original_filename = re.search(r"^[a-zA-Z_]*[0-9]*?_(.*).webm", filename).groups(0)[0]
+                    except AttributeError:
+                        log.error("fucked up filename, skipping: {}".format(filename))
+                        continue
                     new_webm = Webm(
                         created_at=tim,
                         category_id=category.id,
