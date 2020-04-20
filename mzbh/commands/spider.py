@@ -54,7 +54,8 @@ def spider():
                     log.warning(f"{file_path} is a bad link.")
             else:
                 try:
-                    exists_in_db = Webm.query.filter_by(file_path=file_path).count() > 0
+                    webm_in_db = Webm.query.filter_by(file_path=file_path).first()
+                    exists_in_db = webm_in_db is not None
                 except UnicodeEncodeError:
                     continue
                 if not exists_in_db:
@@ -96,6 +97,18 @@ def spider():
                         db.session.rollback()
                 else:
                     known_webms += 1
+
+                    md5_hash = hashlib.md5()
+                    with open(file_path, "rb") as a_file:
+                        content = a_file.read()
+                        md5_hash.update(content)
+
+                    digest = md5_hash.hexdigest()
+                    file_hash = binascii.b2a_base64(binascii.unhexlify(digest)).strip().decode()
+                    webm_in_db.file_hash = file_hash
+                    db.session.add(web_in_db)
+                    db.session.commit()
+                    log.error(f"Updated hash for {webm_in_db.id} to {file_hash}.")
     log.info(f"Webm Aliases: Found {bad_links + good_links} on filesystem out of {webm_aliases_in_db_total} in the database.")
     log.info(f"Webm Aliases: {bad_links}/{webm_aliases_total} were bad.")
     log.info(f"Webm Aliases: {good_links}/{webm_aliases_total} were good.")
