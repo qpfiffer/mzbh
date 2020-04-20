@@ -109,8 +109,8 @@ def spider():
                         webm_in_db.file_hash = file_hash
                         db.session.add(webm_in_db)
                         db.session.commit()
-                    except Exception as e:
-                        log.error(f"Cannot rehash {webm_in_db.id}: {e}")
+                    except (psycopg2.errors.UniqueViolation, sqlalchemy.exc.IntegrityError,):
+                        log.error(f"Cannot rehash {webm_in_db.id}. Probably file hash collision.")
                         db.session.rollback()
                     else:
                         log.info(f"Updated hash for {webm_in_db.id} to {file_hash}.")
