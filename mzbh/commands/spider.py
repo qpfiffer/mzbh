@@ -106,7 +106,7 @@ def spider():
                     digest = md5_hash.hexdigest()
                     file_hash = binascii.b2a_base64(binascii.unhexlify(digest)).strip().decode()
                     webm_in_db.file_hash = file_hash
-                    db.session.add(web_in_db)
+                    db.session.add(webm_in_db)
                     db.session.commit()
                     log.error(f"Updated hash for {webm_in_db.id} to {file_hash}.")
     log.info(f"Webm Aliases: Found {bad_links + good_links} on filesystem out of {webm_aliases_in_db_total} in the database.")
