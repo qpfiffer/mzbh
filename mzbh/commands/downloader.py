@@ -155,7 +155,11 @@ def downloader_4ch():
                         url = "https://i.4cdn.org/{}/{}{}".format(board, post["tim"], post["ext"])
                         print("Downloading {}".format(valuable_data["filename"]))
                         _download(url, filepath)
-                        _thumbnail(filepath)
+                        try:
+                            _thumbnail(filepath)
+                        except Exception as e:
+                            print(f"Could not thumbnail webm. Brutal: {e}")
+                            continue
                         webm = Webm(file_hash=md5,
                             filename=valuable_data["filename"],
                             file_path=filepath,
