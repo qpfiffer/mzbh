@@ -105,12 +105,13 @@ def spider():
 
                     digest = md5_hash.hexdigest()
                     file_hash = binascii.b2a_base64(binascii.unhexlify(digest)).strip().decode()
+                    current_id = webm_in_db.id
                     try:
                         webm_in_db.file_hash = file_hash
                         db.session.add(webm_in_db)
                         db.session.commit()
                     except (psycopg2.errors.UniqueViolation, sqlalchemy.exc.IntegrityError,):
-                        log.error(f"Cannot rehash {webm_in_db.id}. Probably file hash collision.")
+                        log.error(f"Cannot rehash {current_id}. Probably file hash collision.")
                         db.session.rollback()
                     else:
                         log.info(f"Updated hash for {webm_in_db.id} to {file_hash}.")
